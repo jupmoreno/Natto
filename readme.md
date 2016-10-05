@@ -1,0 +1,32 @@
+# Nato
+
+> This project was made for our Communication Protocols subject at ITBA University (Buenos Aires, Argentina).
+
+# Development
+
+Run the following commands from the project's root directory. 
+
+If gradle isn't installed in your system, replace `gradle` command below with `./gradlew`.
+
+## Command Line
+
+### Build
+
+    gradle build
+    
+### Run
+
+    gradle run
+
+## Intellij's IDEA
+
+### Setup
+
+    gradle idea
+    
+Then open the recently created `.ipr` file with Intellij's IDEA.
+    
+### Clean
+
+    gradle cleanIdea
+    gradle cleanWorkspace
