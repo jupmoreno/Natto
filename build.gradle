@@ -2,13 +2,14 @@ apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'idea'
 
-// mainClassName = 'Main'
+ mainClassName = 'ar.edu.itba.pdc.tpe.Main'
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {
+    compile group: 'args4j', name: 'args4j', version: '2.33'
     compile group: 'org.slf4j', name:'slf4j-api', version: '1.7.21'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.6.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.6.2'
