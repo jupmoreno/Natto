@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'idea'
 
- mainClassName = 'ar.edu.itba.pdc.tpe.Main'
+mainClassName = 'ar.edu.itba.pdc.tpe.Main'
 
 repositories {
     mavenCentral()
