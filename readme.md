@@ -1,4 +1,4 @@
-# Nato
+# Natto
 
 > This project was made for our Communication Protocols subject at ITBA University (Buenos Aires, Argentina).
 
