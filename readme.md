@@ -22,6 +22,10 @@ If gradle isn't installed in your system, replace `gradle` command below with `.
 
 ### Setup
 
+Select `Import project`, then navigate to the project's root directory.
+
+Or from the command line run:
+
     gradle idea
     
 Then open the recently created `.ipr` file with Intellij's IDEA.
