@@ -1,10 +1,10 @@
 package ar.edu.itba.pdc.tpe;
 
-import ar.edu.itba.pdc.tpe.proxy.ProxyServer;
-import org.kohsuke.args4j.CmdLineException;
+        import ar.edu.itba.pdc.tpe.proxy.ProxyServer;
+        import org.kohsuke.args4j.CmdLineException;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
+        import java.io.IOException;
+        import java.net.InetSocketAddress;
 
 public class Main {
     public static void main(String[] args) {
@@ -12,13 +12,14 @@ public class Main {
 
         try {
             arguments.set(args);
-        } catch (CmdLineException e) {
+        } catch (CmdLineException exception) {
             // Wrong arguments
-            System.err.println(e.getMessage());
+            System.err.println(exception.getMessage());
             arguments.printUsage(System.err);
         }
 
-        InetSocketAddress serverAddress = new InetSocketAddress(arguments.getServerAddress(), arguments.getServerPort());
+        InetSocketAddress serverAddress = new InetSocketAddress(arguments.getServerAddress(),
+                arguments.getServerPort());
         if (serverAddress.isUnresolved()) {
             System.err.println("Unresolved server address: " + serverAddress);
             return;
@@ -28,9 +29,9 @@ public class Main {
 
         try {
             proxyServer.start();
-        } catch (IOException e) {
+        } catch (IOException exception) {
             System.err.println("Failed to start Proxy Server");
-//            return;
+            //return;
         }
     }
 }

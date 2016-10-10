@@ -1,5 +1,9 @@
 package ar.edu.itba.pdc.tpe.proxy.handlers;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import ar.edu.itba.pdc.tpe.buffers.ByteBufferPool;
 import ar.edu.itba.pdc.tpe.buffers.CachedByteBufferPool;
 import org.slf4j.Logger;
@@ -10,11 +14,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 public class IOHandler implements Handler {
     private final Logger logger = LoggerFactory.getLogger(IOHandler.class);
@@ -67,7 +66,7 @@ public class IOHandler implements Handler {
 
         try {
             bytesRead = from.read(bufferRead);
-        } catch (IOException e) {
+        } catch (IOException exception) {
             bytesRead = -1;
         }
 
@@ -87,10 +86,10 @@ public class IOHandler implements Handler {
 
         try {
             to.write(bufferWrite);
-        } catch (IOException e) {
+        } catch (IOException exception) {
             // TODO: Remove
             // This should never happen.
-            e.printStackTrace();
+            exception.printStackTrace();
         }
 
         if (bufferWrite.remaining() == 0) {

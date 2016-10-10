@@ -1,5 +1,9 @@
 package ar.edu.itba.pdc.tpe.proxy;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 import ar.edu.itba.pdc.tpe.proxy.handlers.AcceptHandler;
 import ar.edu.itba.pdc.tpe.proxy.handlers.Handler;
 import org.slf4j.Logger;
@@ -14,9 +18,6 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ProxyServer {
     private final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
@@ -40,9 +41,7 @@ public class ProxyServer {
     }
 
     public void start() throws IOException {
-        if (isRunning()) {
-            throw new IllegalStateException(); // TODO:
-        }
+        checkState(!isRunning());
 
         try (
                 Selector selector = Selector.open();
@@ -57,10 +56,10 @@ public class ProxyServer {
 
             running = true;
             handleConnections(selector);
-        } catch (IOException e) {
-            logger.error("Couldn't start ProxyServer", e);
+        } catch (IOException exception) {
+            logger.error("Couldn't start ProxyServer", exception);
             // TODO:
-            throw e;
+            throw exception;
         }
     }
 
@@ -78,9 +77,9 @@ public class ProxyServer {
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException exception) {
             running = false;
-            logger.error("Server closed", e);
+            logger.error("Server closed", exception);
             // TODO:
         }
     }
@@ -94,8 +93,8 @@ public class ProxyServer {
 
         try {
             handler.handle(key.readyOps()); // TODO: Sacar throws IOException?
-        } catch (IOException e) {
-            logger.error("Handling error", e);
+        } catch (IOException exception) {
+            logger.error("Handling error", exception);
             // TODO:
         }
     }

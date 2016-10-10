@@ -15,7 +15,7 @@ public class CachedByteBufferPool implements ByteBufferPool {
 
     @Override
     public ByteBuffer acquire() {
-        if(buffers.size() == 0) {
+        if (buffers.size() == 0) {
             return ByteBuffer.allocate(bufferSize);
         }
 
@@ -24,7 +24,7 @@ public class CachedByteBufferPool implements ByteBufferPool {
 
     @Override
     public boolean release(final ByteBuffer buffer) {
-        if(buffer.capacity() < bufferSize) {
+        if (buffer.capacity() < bufferSize) {
             return false;
         }
 

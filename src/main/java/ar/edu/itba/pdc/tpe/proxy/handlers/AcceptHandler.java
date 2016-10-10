@@ -1,5 +1,8 @@
 package ar.edu.itba.pdc.tpe.proxy.handlers;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,9 +12,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class AcceptHandler implements Handler {
     private final Logger logger = LoggerFactory.getLogger(AcceptHandler.class);
@@ -55,11 +55,12 @@ public class AcceptHandler implements Handler {
                 server.connect(serverAddress);
                 logger.info(clientAddress + " requested server connection");
 
-                server.register(selector, SelectionKey.OP_CONNECT, new ConnectionHandler(selector, client, server));
+                server.register(selector, SelectionKey.OP_CONNECT, new ConnectionHandler(selector,
+                        client, server));
                 selector.wakeup(); // TODO: Sacar? ASK: Hay que hacerlo? Cuando?
             } // TODO: else?
-        } catch (IOException e) {
-            logger.error(serverAddress + " couldn't establish connection with client", e);
+        } catch (IOException exception) {
+            logger.error(serverAddress + " couldn't establish connection with client", exception);
             // TODO: Close
         }
     }
