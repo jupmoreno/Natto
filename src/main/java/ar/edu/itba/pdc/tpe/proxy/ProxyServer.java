@@ -15,6 +15,9 @@ import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class ProxyServer {
     private final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
 
@@ -26,6 +29,10 @@ public class ProxyServer {
     private boolean running = false;
 
     public ProxyServer(final InetSocketAddress serverAddress, final int port) {
+        checkNotNull(serverAddress, "Null server address");
+        checkArgument(!serverAddress.isUnresolved(), "Invalid server address");
+        checkArgument(port > 0, "Invalid port number");
+
         this.serverAddress = serverAddress;
         this.port = port;
 
@@ -33,7 +40,7 @@ public class ProxyServer {
     }
 
     public void start() throws IOException {
-        if(isRunning()) {
+        if (isRunning()) {
             throw new IllegalStateException(); // TODO:
         }
 
@@ -44,9 +51,11 @@ public class ProxyServer {
             ServerSocket socket = channel.socket();
 
             channel.configureBlocking(false);
-            channel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(selector, channel, serverAddress));
+            channel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(selector,
+                    channel, serverAddress));
             socket.bind(new InetSocketAddress(port));
 
+            running = true;
             handleConnections(selector);
         } catch (IOException e) {
             logger.error("Couldn't start ProxyServer", e);
@@ -56,8 +65,6 @@ public class ProxyServer {
     }
 
     private void handleConnections(final Selector selector) {
-        running = true;
-
         try {
             while (isRunning()) {
                 if (selector.select() != 0) { // TODO: Timeout

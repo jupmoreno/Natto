@@ -2,6 +2,8 @@ package ar.edu.itba.pdc.tpe.proxy.handlers;
 
 import ar.edu.itba.pdc.tpe.buffers.ByteBufferPool;
 import ar.edu.itba.pdc.tpe.buffers.CachedByteBufferPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,7 +12,13 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 public class IOHandler implements Handler {
+    private final Logger logger = LoggerFactory.getLogger(IOHandler.class);
+
     private static final int BUFFER_SIZE = 1024;
     private static final ByteBufferPool buffers = new CachedByteBufferPool(BUFFER_SIZE);
 
@@ -21,27 +29,41 @@ public class IOHandler implements Handler {
     private ByteBuffer bufferRead;
     private ByteBuffer bufferWrite;
 
-    public IOHandler(Selector selector, SocketChannel from, SocketChannel to) {
+    public IOHandler(final Selector selector, final SocketChannel from,
+                     final SocketChannel to) {
+        checkNotNull(selector, "Null selector");
+        checkArgument(selector.isOpen(), "Invalid selector");
+        checkNotNull(from, "Null from channel");
+        checkArgument(from.isOpen(), "Invalid from channel");
+        checkNotNull(to, "Null to channel");
+        checkArgument(to.isOpen(), "Invalid to channel");
+
         this.selector = selector;
         this.from = from;
         this.to = to;
     }
 
     @Override
-    public void handle(int readyOps) throws IOException {
+    public void handle(final int readyOps) throws IOException {
+        boolean error = true;
+
         if ((readyOps & SelectionKey.OP_READ) != 0) {
+            error = false;
             read();
         }
 
         if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+            error = false;
             write();
         }
+
+        checkState(!error);
     }
 
     private void read() throws IOException {
         // TODO: Improve
         int bytesRead = 0;
-        bufferRead = buffers.adquire();
+        bufferRead = buffers.acquire();
 
         try {
             bytesRead = from.read(bufferRead);
@@ -73,6 +95,7 @@ public class IOHandler implements Handler {
 
         if (bufferWrite.remaining() == 0) {
             buffers.release(bufferWrite);
+            bufferWrite = null;
             from.register(selector, SelectionKey.OP_READ, this); // TODO:
         }
     }

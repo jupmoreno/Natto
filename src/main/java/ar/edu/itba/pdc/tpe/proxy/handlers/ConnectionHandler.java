@@ -8,6 +8,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class ConnectionHandler implements Handler {
     private final Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
 
@@ -15,22 +18,31 @@ public class ConnectionHandler implements Handler {
     private final SocketChannel client;
     private final SocketChannel server;
 
-    public ConnectionHandler(Selector selector, SocketChannel client, SocketChannel server) {
+    public ConnectionHandler(final Selector selector, final SocketChannel client,
+                             final SocketChannel server) {
+        checkNotNull(selector, "Null selector");
+        checkArgument(selector.isOpen(), "Invalid selector");
+        checkNotNull(client, "Null client channel");
+        checkArgument(client.isOpen(), "Invalid client channel");
+        checkNotNull(server, "Null server channel");
+        checkArgument(server.isOpen(), "Invalid server channel");
+
         this.selector = selector;
         this.client = client;
         this.server = server;
     }
 
     @Override
-    public void handle(int readyOps) throws IOException {
-        // TODO: if((readyOps & SelectionKey.OP_CONNECT) == 0) return; ?
+    public void handle(final int readyOps) throws IOException {
+        checkArgument((readyOps & SelectionKey.OP_CONNECT) != 0);
 
         try {
             String clientAddress = client.socket().getRemoteSocketAddress().toString();
+            String serverAddress;
 
             server.finishConnect(); // TODO: if(!finishConnect()) throw new IOException?
-            logger.info(clientAddress + " established connection with server on " +
-                    server.socket().getRemoteSocketAddress());
+            serverAddress = server.socket().getRemoteSocketAddress().toString();
+            logger.info(clientAddress + " established connection with server on " + serverAddress);
 
             client.register(selector, SelectionKey.OP_READ, new IOHandler(selector, client, server));
             server.register(selector, SelectionKey.OP_READ, new IOHandler(selector, server, client));

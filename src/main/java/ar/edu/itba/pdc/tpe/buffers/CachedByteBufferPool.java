@@ -8,12 +8,13 @@ public class CachedByteBufferPool implements ByteBufferPool {
     private List<ByteBuffer> buffers = new LinkedList<>();
     private int bufferSize;
 
-    public CachedByteBufferPool(int bufferSize) {
+    public CachedByteBufferPool(final int bufferSize) {
         this.bufferSize = bufferSize;
+        this.buffers.add(ByteBuffer.allocate(bufferSize)); // TODO: Remove?
     }
 
     @Override
-    public ByteBuffer adquire() {
+    public ByteBuffer acquire() {
         if(buffers.size() == 0) {
             return ByteBuffer.allocate(bufferSize);
         }
@@ -22,7 +23,7 @@ public class CachedByteBufferPool implements ByteBufferPool {
     }
 
     @Override
-    public boolean release(ByteBuffer buffer) {
+    public boolean release(final ByteBuffer buffer) {
         if(buffer.capacity() < bufferSize) {
             return false;
         }

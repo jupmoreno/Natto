@@ -10,6 +10,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class AcceptHandler implements Handler {
     private final Logger logger = LoggerFactory.getLogger(AcceptHandler.class);
 
@@ -17,16 +20,23 @@ public class AcceptHandler implements Handler {
     private final ServerSocketChannel channel;
     private final InetSocketAddress serverAddress;
 
-    public AcceptHandler(Selector selector, ServerSocketChannel channel, InetSocketAddress
-            serverAddress) {
+    public AcceptHandler(final Selector selector, final ServerSocketChannel channel,
+                         final InetSocketAddress serverAddress) {
+        checkNotNull(selector, "Null selector");
+        checkArgument(selector.isOpen(), "Invalid selector");
+        checkNotNull(channel, "Null channel");
+        checkArgument(channel.isOpen(), "Invalid channel");
+        checkNotNull(serverAddress, "Null server address");
+        checkArgument(!serverAddress.isUnresolved(), "Invalid server address");
+
         this.selector = selector;
         this.channel = channel;
         this.serverAddress = serverAddress;
     }
 
     @Override
-    public void handle(int readyOps) throws IOException {
-        // TODO: if((readyOps & SelectionKey.OP_ACCEPT) == 0) return; ?
+    public void handle(final int readyOps) throws IOException {
+        checkArgument((readyOps & SelectionKey.OP_ACCEPT) != 0);
 
         SocketChannel client;
         SocketChannel server;
