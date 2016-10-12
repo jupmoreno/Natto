@@ -1,10 +1,10 @@
 package ar.edu.itba.pdc.tpe;
 
-        import ar.edu.itba.pdc.tpe.proxy.ProxyServer;
-        import org.kohsuke.args4j.CmdLineException;
+import ar.edu.itba.pdc.tpe.proxy.ProxyServer;
+import org.kohsuke.args4j.CmdLineException;
 
-        import java.io.IOException;
-        import java.net.InetSocketAddress;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
 public class Main {
     public static void main(String[] args) {

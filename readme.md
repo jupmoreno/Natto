@@ -2,6 +2,10 @@
 
 > This project was made for our Communication Protocols subject at ITBA University (Buenos Aires, Argentina).
 
+# Usage
+
+
+
 # Development
 
 Run the following commands from the project's root directory. 
@@ -22,7 +26,7 @@ If gradle isn't installed in your system, replace `gradle` command below with `.
 
 ### Setup
 
-Select `Import project`, then navigate to the project's root directory.
+Select `Import project`, then navigate to the project's root directory. Then check `Import project from external model` and select `Gradle`.
 
 Or from the command line run:
 

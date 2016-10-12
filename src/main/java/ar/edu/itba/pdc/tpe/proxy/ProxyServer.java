@@ -32,7 +32,6 @@ public class ProxyServer {
     public ProxyServer(final InetSocketAddress serverAddress, final int port) {
         checkNotNull(serverAddress, "Null server address");
         checkArgument(!serverAddress.isUnresolved(), "Invalid server address");
-        checkArgument(port > 0, "Invalid port number");
 
         this.serverAddress = serverAddress;
         this.port = port;
@@ -49,9 +48,14 @@ public class ProxyServer {
         ) {
             ServerSocket socket = channel.socket();
 
+            // Adjusts channel to non blocking mode
             channel.configureBlocking(false);
+
+            // Register channel with the selector
             channel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(selector,
-                    channel, serverAddress));
+                    channel));
+
+            // Configures the socket to listen for connections
             socket.bind(new InetSocketAddress(port));
 
             running = true;
@@ -66,14 +70,16 @@ public class ProxyServer {
     private void handleConnections(final Selector selector) {
         try {
             while (isRunning()) {
-                if (selector.select() != 0) { // TODO: Timeout
+                if (selector.select() != 0) { // TODO: Timeout (?
                     Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 
                     while (it.hasNext()) {
                         SelectionKey key = it.next();
                         it.remove(); // http://stackoverflow.com/q/7132057/3349531
 
-                        dispatch(key);
+                        if (key.isValid()) {
+                            dispatch(key);
+                        }
                     }
                 }
             }
@@ -85,14 +91,10 @@ public class ProxyServer {
     }
 
     private void dispatch(final SelectionKey key) {
-        if (!key.isValid()) {
-            return;
-        }
-
         Handler handler = (Handler) key.attachment();
 
         try {
-            handler.handle(key.readyOps()); // TODO: Sacar throws IOException?
+            handler.handle(key.readyOps());
         } catch (IOException exception) {
             logger.error("Handling error", exception);
             // TODO:

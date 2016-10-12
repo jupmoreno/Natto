@@ -49,9 +49,7 @@ public class IOHandler implements Handler {
         if ((readyOps & SelectionKey.OP_READ) != 0) {
             error = false;
             read();
-        }
-
-        if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+        } else if ((readyOps & SelectionKey.OP_WRITE) != 0) {
             error = false;
             write();
         }
@@ -60,25 +58,33 @@ public class IOHandler implements Handler {
     }
 
     private void read() throws IOException {
-        // TODO: Improve
-        int bytesRead = 0;
+        int bytesRead;
+
         bufferRead = buffers.acquire();
 
         try {
             bytesRead = from.read(bufferRead);
         } catch (IOException exception) {
+            // TODO: Close & Cancel diferente al del if (bytesRead == -1)?
             bytesRead = -1;
         }
 
+        // The channel has reached end-of-stream or error
         if (bytesRead == -1) {
-            // TODO: Close
+            // TODO: Close & Cancel
+            return;
+        }
+
+        // Cannot read more bytes than are immediately available
+        if (bytesRead == 0) {
             return;
         }
 
         bufferRead.flip();
         bufferWrite = bufferRead;
         bufferRead = null;
-        from.register(selector, SelectionKey.OP_WRITE, this); // TODO:
+
+        // TODO: Parse & Change key ops
     }
 
     private void write() throws IOException {
