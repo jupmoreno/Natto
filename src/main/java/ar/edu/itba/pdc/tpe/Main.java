@@ -16,22 +16,19 @@ public class Main {
             // Wrong arguments
             System.err.println(exception.getMessage());
             arguments.printUsage(System.err);
+            return;
         }
 
         InetSocketAddress serverAddress = new InetSocketAddress(arguments.getServerAddress(),
                 arguments.getServerPort());
-        if (serverAddress.isUnresolved()) {
-            System.err.println("Unresolved server address: " + serverAddress);
-            return;
-        }
-
-        ProxyServer proxyServer = new ProxyServer(serverAddress, arguments.getListenPort());
+        ProxyServer proxyServer = new ProxyServer(serverAddress, arguments.getProxyXMPPPort(),
+                arguments.getProxyPSPPort());
 
         try {
             proxyServer.start();
         } catch (IOException exception) {
             System.err.println("Failed to start Proxy Server");
-            //return;
+            return;
         }
     }
 }

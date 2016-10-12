@@ -4,8 +4,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import ar.edu.itba.pdc.tpe.proxy.handlers.AcceptHandler;
 import ar.edu.itba.pdc.tpe.proxy.handlers.Handler;
+import ar.edu.itba.pdc.tpe.proxy.handlers.ProxyAcceptHandler;
+import ar.edu.itba.pdc.tpe.proxy.handlers.ServerAcceptHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,18 +24,23 @@ public class ProxyServer {
     private final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
 
     private final InetSocketAddress serverAddress;
-    private final int port;
+    private final int xmppPort;
+    private final int pspPort;
 
     private final ExecutorService executors;
 
     private boolean running = false;
 
-    public ProxyServer(final InetSocketAddress serverAddress, final int port) {
-        checkNotNull(serverAddress, "Null server address");
-        checkArgument(!serverAddress.isUnresolved(), "Invalid server address");
+    public ProxyServer(final InetSocketAddress serverAddress, final int xmppPort,
+                       final int pspPort) {
+        checkNotNull(serverAddress, "Server address is NULL");
+        checkArgument(!serverAddress.isUnresolved(), "Unresolved server address");
+        checkArgument(xmppPort > 0, "Invalid XMPP port number");
+        checkArgument(pspPort > 0, "Invalid PSP port number");
 
         this.serverAddress = serverAddress;
-        this.port = port;
+        this.xmppPort = xmppPort;
+        this.pspPort = pspPort;
 
         executors = Executors.newCachedThreadPool(); // TODO: Aca? O en start()?
     }
@@ -44,30 +50,40 @@ public class ProxyServer {
 
         try (
                 Selector selector = Selector.open();
-                ServerSocketChannel channel = ServerSocketChannel.open();
+                ServerSocketChannel xmppChannel = ServerSocketChannel.open();
+                ServerSocketChannel pspChannel = ServerSocketChannel.open();
         ) {
-            ServerSocket socket = channel.socket();
+            final ServerSocket xmppSocket = xmppChannel.socket();
+            final ServerSocket pspSocket = pspChannel.socket();
 
             // Adjusts channel to non blocking mode
-            channel.configureBlocking(false);
+            xmppChannel.configureBlocking(false);
+            pspChannel.configureBlocking(false);
 
             // Register channel with the selector
-            channel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(selector,
-                    channel));
+            xmppChannel.register(selector, SelectionKey.OP_ACCEPT, new ProxyAcceptHandler(selector,
+                    xmppChannel, serverAddress));
+            pspChannel.register(selector, SelectionKey.OP_ACCEPT, new ServerAcceptHandler(selector,
+                    pspChannel));
 
             // Configures the socket to listen for connections
-            socket.bind(new InetSocketAddress(port));
+            xmppSocket.bind(new InetSocketAddress(xmppPort));
+            pspSocket.bind(new InetSocketAddress(pspPort));
 
             running = true;
-            handleConnections(selector);
+            serve(selector);
         } catch (IOException exception) {
             logger.error("Couldn't start ProxyServer", exception);
-            // TODO:
             throw exception;
         }
     }
 
-    private void handleConnections(final Selector selector) {
+    public void stop() {
+        // TODO:
+        throw new UnsupportedOperationException();
+    }
+
+    private void serve(final Selector selector) {
         try {
             while (isRunning()) {
                 if (selector.select() != 0) { // TODO: Timeout (?
@@ -84,14 +100,17 @@ public class ProxyServer {
                 }
             }
         } catch (IOException exception) {
-            running = false;
             logger.error("Server closed", exception);
             // TODO:
+        } finally {
+            running = false;
         }
     }
 
     private void dispatch(final SelectionKey key) {
         Handler handler = (Handler) key.attachment();
+
+        checkNotNull(handler, "Handler shouldn't be null");
 
         try {
             handler.handle(key.readyOps());

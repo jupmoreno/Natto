@@ -72,19 +72,22 @@ public class IOHandler implements Handler {
         // The channel has reached end-of-stream or error
         if (bytesRead == -1) {
             // TODO: Close & Cancel
+            checkNotNull(from.keyFor(selector), "No registered key").cancel();
+            from.close();
+            checkNotNull(to.keyFor(selector), "No registered key").cancel();
+            to.close();
             return;
         }
 
         // Cannot read more bytes than are immediately available
-        if (bytesRead == 0) {
-            return;
+        if (bytesRead > 0) {
+            bufferRead.flip();
+            bufferWrite = bufferRead;
+            bufferRead = null;
+
+            from.register(selector, SelectionKey.OP_WRITE, this);
+            // TODO: Parse & Change key ops
         }
-
-        bufferRead.flip();
-        bufferWrite = bufferRead;
-        bufferRead = null;
-
-        // TODO: Parse & Change key ops
     }
 
     private void write() throws IOException {
@@ -93,9 +96,10 @@ public class IOHandler implements Handler {
         try {
             to.write(bufferWrite);
         } catch (IOException exception) {
-            // TODO: Remove
+            // TODO:
             // This should never happen.
-            exception.printStackTrace();
+            exception.printStackTrace(); // TODO: Remove
+            checkState(false); // TODO: Remove
         }
 
         if (bufferWrite.remaining() == 0) {

@@ -7,20 +7,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-public class AcceptHandler implements Handler {
-    private final Logger logger = LoggerFactory.getLogger(AcceptHandler.class);
+public class ServerAcceptHandler implements Handler {
+    private final Logger logger = LoggerFactory.getLogger(ServerAcceptHandler.class);
 
-    private final Selector selector;
-    private final ServerSocketChannel channel;
+    protected final Selector selector;
+    protected final ServerSocketChannel channel;
+
+    protected SocketChannel client;
 
     // TODO: Sacar selector (?
-    public AcceptHandler(final Selector selector, final ServerSocketChannel channel) {
+    public ServerAcceptHandler(final Selector selector, final ServerSocketChannel channel) {
         checkNotNull(selector, "Null selector");
         checkArgument(selector.isOpen(), "Invalid selector");
         checkNotNull(channel, "Null channel");
@@ -34,7 +35,7 @@ public class AcceptHandler implements Handler {
     public void handle(final int readyOps) throws IOException {
         checkArgument((readyOps & SelectionKey.OP_ACCEPT) != 0);
 
-        SocketChannel client = null;
+        client = null;
 
         try {
             // Will immediately return null if there are no pending connections
@@ -43,19 +44,26 @@ public class AcceptHandler implements Handler {
             if (client != null) {
                 // There are pending connections
                 String clientAddress = client.socket().getRemoteSocketAddress().toString();
-
                 client.configureBlocking(false);
+
                 logger.info("Accepted connection from " + clientAddress);
+
                 // TODO: Change key ops
+                client.register(selector, SelectionKey.OP_READ, new IOHandler(selector,
+                        client, client));
             }
         } catch (IOException exception) {
             logger.error("Error while accepting new client connection", exception);
 
-            if(client != null) {
-                client.close();
-            }
+            close();
 
             throw exception;
+        }
+    }
+
+    protected void close() throws IOException {
+        if (client != null) {
+            client.close();
         }
     }
 }

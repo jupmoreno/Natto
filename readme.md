@@ -4,7 +4,12 @@
 
 # Usage
 
-
+    [<server_address> [<server_port>]] [--psp-port <port>] [--xmpp-port <port>]
+    Where:
+     <server_address>   : Sets the XMPP server address
+     <server_port>      : Sets the XMPP server port number (default: 5222)
+     --psp-port <port>  : Sets the proxy's PSP listening port number (default: 1081)
+     --xmpp-port <port> : Sets the proxy's XMPP listening port number (default: 1080)
 
 # Development
 
