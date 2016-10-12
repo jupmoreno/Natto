@@ -11,15 +11,15 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
-public class ConnectionHandler implements Handler {
-    private final Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
+public class ProxyConnectionHandler implements Handler {
+    private final Logger logger = LoggerFactory.getLogger(ProxyConnectionHandler.class);
 
     private final Selector selector;
     private final SocketChannel client;
     private final SocketChannel server;
 
-    public ConnectionHandler(final Selector selector, final SocketChannel client,
-                             final SocketChannel server) {
+    public ProxyConnectionHandler(final Selector selector, SocketChannel client,
+                                  final SocketChannel server) {
         checkNotNull(selector, "Null selector");
         checkArgument(selector.isOpen(), "Invalid selector");
         checkNotNull(client, "Null client channel");
@@ -36,22 +36,27 @@ public class ConnectionHandler implements Handler {
     public void handle(final int readyOps) throws IOException {
         checkArgument((readyOps & SelectionKey.OP_CONNECT) != 0);
 
+        String serverAddress;
+
         try {
-            String clientAddress = client.socket().getRemoteSocketAddress().toString();
-            String serverAddress;
+            // If this channel is in non-blocking mode then this method will return
+            // false if the connection process is not yet complete.
+            if (server.finishConnect()) {
+                // Connection completed
+                serverAddress = server.socket().getRemoteSocketAddress().toString();
+                logger.info("Established connection with server on " + serverAddress);
 
-            server.finishConnect(); // TODO: if(!finishConnect()) throw new IOException?
-            serverAddress = server.socket().getRemoteSocketAddress().toString();
-            logger.info(clientAddress + " established connection with server on " + serverAddress);
-
-            client.register(selector, SelectionKey.OP_READ, new IOHandler(selector, client,
-                    server));
-            server.register(selector, SelectionKey.OP_READ, new IOHandler(selector, server,
-                    client));
-            selector.wakeup(); // TODO: Sacar? ASK: Hay que hacerlo? Cuando?
-        } catch (Exception exception) {
+                // TODO: Change key ops
+                client.register(selector, SelectionKey.OP_READ, new IOHandler(selector, client,
+                        server));
+                server.register(selector, SelectionKey.OP_READ, new IOHandler(selector, server,
+                        client));
+            }
+        } catch (IOException exception) {
             logger.error("Couldn't establish connection with server", exception);
-            // TODO: Close
+
+            server.close();
+            // TODO: Close client
         }
     }
 }
