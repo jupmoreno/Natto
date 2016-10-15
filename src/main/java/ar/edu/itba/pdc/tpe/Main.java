@@ -28,6 +28,7 @@ public class Main {
             proxyServer.start();
         } catch (IOException exception) {
             System.err.println("Failed to start Proxy Server");
+            System.err.println(exception.getMessage());
             return;
         }
     }
