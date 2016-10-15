@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.tpe.buffers;
+package ar.edu.itba.pdc.tpe.io;
 
 import java.nio.ByteBuffer;
 

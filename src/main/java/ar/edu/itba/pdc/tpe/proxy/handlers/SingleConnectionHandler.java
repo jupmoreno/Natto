@@ -4,8 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import ar.edu.itba.pdc.tpe.buffers.ByteBufferPool;
-import ar.edu.itba.pdc.tpe.buffers.CachedByteBufferPool;
+import ar.edu.itba.pdc.tpe.io.ByteBufferPool;
+import ar.edu.itba.pdc.tpe.io.CachedByteBufferPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,32 +14,31 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 
-public class IOHandler implements Handler {
-    private final Logger logger = LoggerFactory.getLogger(IOHandler.class);
+@SuppressWarnings("Duplicates") // TODO: Remove
+public class SingleConnectionHandler implements Handler {
+    private static final Logger logger = LoggerFactory.getLogger(SingleConnectionHandler.class);
 
     private static final int BUFFER_SIZE = 1024;
+    // TODO: En otro lado
     private static final ByteBufferPool buffers = new CachedByteBufferPool(BUFFER_SIZE);
 
     private final Selector selector;
-    private final SocketChannel from;
-    private final SocketChannel to;
+    private final SocketChannel channel;
 
     private ByteBuffer bufferRead;
-    private ByteBuffer bufferWrite;
+    private ByteBuffer bufferWrite = bufferRead;
 
-    public IOHandler(final Selector selector, final SocketChannel from,
-                     final SocketChannel to) {
-        checkNotNull(selector, "Null selector");
-        checkArgument(selector.isOpen(), "Invalid selector");
-        checkNotNull(from, "Null from channel");
-        checkArgument(from.isOpen(), "Invalid from channel");
-        checkNotNull(to, "Null to channel");
-        checkArgument(to.isOpen(), "Invalid to channel");
+    public SingleConnectionHandler(final Selector selector, final SocketChannel channel) {
+        checkNotNull(selector, "Selector can't be null");
+        checkArgument(selector.isOpen(), "Selector isn't open");
+
+        checkNotNull(channel, "Channel can't be null");
+        checkArgument(channel.isOpen(), "Channel isn't open");
 
         this.selector = selector;
-        this.from = from;
-        this.to = to;
+        this.channel = channel;
     }
 
     @Override
@@ -49,7 +48,10 @@ public class IOHandler implements Handler {
         if ((readyOps & SelectionKey.OP_READ) != 0) {
             error = false;
             read();
-        } else if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+        }
+
+        // TODO: En else?
+        if ((readyOps & SelectionKey.OP_WRITE) != 0) {
             error = false;
             write();
         }
@@ -63,7 +65,7 @@ public class IOHandler implements Handler {
         bufferRead = buffers.acquire();
 
         try {
-            bytesRead = from.read(bufferRead);
+            bytesRead = channel.read(bufferRead);
         } catch (IOException exception) {
             // TODO: Close & Cancel diferente al del if (bytesRead == -1)?
             bytesRead = -1;
@@ -71,11 +73,8 @@ public class IOHandler implements Handler {
 
         // The channel has reached end-of-stream or error
         if (bytesRead == -1) {
-            // TODO: Close & Cancel
-            checkNotNull(from.keyFor(selector), "No registered key").cancel();
-            from.close();
-            checkNotNull(to.keyFor(selector), "No registered key").cancel();
-            to.close();
+            // TODO: Close & Cancel & Logger
+            closeConnection();
             return;
         }
 
@@ -85,27 +84,41 @@ public class IOHandler implements Handler {
             bufferWrite = bufferRead;
             bufferRead = null;
 
-            from.register(selector, SelectionKey.OP_WRITE, this);
+            // TODO: Remove
+            System.out.println("Read: " + new String(bufferWrite.array(), bufferWrite.position(),
+                    bufferWrite.limit(), Charset.forName("UTF-8")));
+
             // TODO: Parse & Change key ops
+            channel.register(selector, SelectionKey.OP_WRITE, this);
         }
     }
 
     private void write() throws IOException {
         // TODO: Improve
+        int bytesWritten;
 
         try {
-            to.write(bufferWrite);
+            bytesWritten = channel.write(bufferWrite);
         } catch (IOException exception) {
-            // TODO:
-            // This should never happen.
-            exception.printStackTrace(); // TODO: Remove
-            checkState(false); // TODO: Remove
+            // TODO: Close & Cancel & Logger
+            closeConnection();
+            return;
         }
 
-        if (bufferWrite.remaining() == 0) {
+        if (!bufferWrite.hasRemaining()) {
             buffers.release(bufferWrite);
             bufferWrite = null;
-            from.register(selector, SelectionKey.OP_READ, this); // TODO:
+            channel.register(selector, SelectionKey.OP_READ, this); // TODO:
+        }
+    }
+
+    private void closeConnection() {
+        checkNotNull(channel.keyFor(selector)).cancel();
+
+        try {
+            channel.close();
+        } catch (IOException closeException) {
+            logger.error("Can't properly close connection", closeException);
         }
     }
 }

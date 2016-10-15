@@ -4,9 +4,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import ar.edu.itba.pdc.tpe.proxy.handlers.AcceptHandler;
+import ar.edu.itba.pdc.tpe.proxy.handlers.DualConnectionHandlerFactory;
 import ar.edu.itba.pdc.tpe.proxy.handlers.Handler;
-import ar.edu.itba.pdc.tpe.proxy.handlers.ProxyAcceptHandler;
-import ar.edu.itba.pdc.tpe.proxy.handlers.ServerAcceptHandler;
+
+import ar.edu.itba.pdc.tpe.proxy.handlers.SingleConnectionHandlerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ProxyServer {
-    private final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProxyServer.class);
 
     private final InetSocketAddress serverAddress;
     private final int xmppPort;
@@ -33,10 +35,10 @@ public class ProxyServer {
 
     public ProxyServer(final InetSocketAddress serverAddress, final int xmppPort,
                        final int pspPort) {
-        checkNotNull(serverAddress, "Server address is NULL");
+        checkNotNull(serverAddress, "Server address can't be null");
         checkArgument(!serverAddress.isUnresolved(), "Unresolved server address");
-        checkArgument(xmppPort > 0, "Invalid XMPP port number");
-        checkArgument(pspPort > 0, "Invalid PSP port number");
+        checkArgument(xmppPort > 0 && xmppPort <= 65535, "Invalid XMPP port number");
+        checkArgument(pspPort > 0 && pspPort <= 65535, "Invalid PSP port number");
 
         this.serverAddress = serverAddress;
         this.xmppPort = xmppPort;
@@ -61,26 +63,34 @@ public class ProxyServer {
             pspChannel.configureBlocking(false);
 
             // Register channel with the selector
-            xmppChannel.register(selector, SelectionKey.OP_ACCEPT, new ProxyAcceptHandler(selector,
-                    xmppChannel, serverAddress));
-            pspChannel.register(selector, SelectionKey.OP_ACCEPT, new ServerAcceptHandler(selector,
-                    pspChannel));
+            xmppChannel.register(selector, SelectionKey.OP_ACCEPT,
+                    new AcceptHandler(selector, xmppChannel, new DualConnectionHandlerFactory()));
+            pspChannel.register(selector, SelectionKey.OP_ACCEPT,
+                    new AcceptHandler(selector, pspChannel, new SingleConnectionHandlerFactory()));
 
             // Configures the socket to listen for connections
             xmppSocket.bind(new InetSocketAddress(xmppPort));
             pspSocket.bind(new InetSocketAddress(pspPort));
 
+            logger.info("Proxy Server now listening");
             running = true;
             serve(selector);
         } catch (IOException exception) {
-            logger.error("Couldn't start ProxyServer", exception);
+            logger.error("Couldn't start Proxy Server", exception);
             throw exception;
         }
     }
 
     public void stop() {
+        checkState(isRunning());
+
         // TODO:
+        running = false;
         throw new UnsupportedOperationException();
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 
     private void serve(final Selector selector) {
@@ -103,14 +113,12 @@ public class ProxyServer {
             logger.error("Server closed", exception);
             // TODO:
         } finally {
-            running = false;
+            stop();
         }
     }
 
     private void dispatch(final SelectionKey key) {
-        Handler handler = (Handler) key.attachment();
-
-        checkNotNull(handler, "Handler shouldn't be null");
+        Handler handler = checkNotNull((Handler) key.attachment());
 
         try {
             handler.handle(key.readyOps());
@@ -118,9 +126,5 @@ public class ProxyServer {
             logger.error("Handling error", exception);
             // TODO:
         }
-    }
-
-    public boolean isRunning() {
-        return running;
     }
 }
