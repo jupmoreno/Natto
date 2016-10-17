@@ -1,4 +1,6 @@
-package ar.edu.itba.pdc.tpe.protocol;
+package ar.edu.itba.pdc.natto.protocol.psp;
+
+import ar.edu.itba.pdc.natto.protocol.Protocol;
 
 import static com.google.common.base.Preconditions.checkState;
 

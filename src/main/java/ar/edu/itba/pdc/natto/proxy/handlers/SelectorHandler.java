@@ -1,7 +1,7 @@
-package ar.edu.itba.pdc.tpe.proxy.handlers;
+package ar.edu.itba.pdc.natto.proxy.handlers;
 
 import java.io.IOException;
 
-public interface Handler {
+public interface SelectorHandler {
     void handle(final int readyOps) throws IOException;
 }

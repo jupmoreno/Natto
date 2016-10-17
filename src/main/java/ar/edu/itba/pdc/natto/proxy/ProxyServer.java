@@ -1,14 +1,15 @@
-package ar.edu.itba.pdc.tpe.proxy;
+package ar.edu.itba.pdc.natto.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import ar.edu.itba.pdc.tpe.proxy.handlers.AcceptHandler;
-import ar.edu.itba.pdc.tpe.proxy.handlers.DualConnectionHandlerFactory;
-import ar.edu.itba.pdc.tpe.proxy.handlers.Handler;
+import ar.edu.itba.pdc.natto.protocol.ParserFactory;
+import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.xmpp.StringParserFactory;
+import ar.edu.itba.pdc.natto.protocol.xmpp.StringProtocolFactory;
+import ar.edu.itba.pdc.natto.proxy.handlers.*;
 
-import ar.edu.itba.pdc.tpe.proxy.handlers.SingleConnectionHandlerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,24 +54,29 @@ public class ProxyServer {
         try (
                 Selector selector = Selector.open();
                 ServerSocketChannel xmppChannel = ServerSocketChannel.open();
-                ServerSocketChannel pspChannel = ServerSocketChannel.open();
+//                ServerSocketChannel pspChannel = ServerSocketChannel.open();
         ) {
             final ServerSocket xmppSocket = xmppChannel.socket();
-            final ServerSocket pspSocket = pspChannel.socket();
+//            final ServerSocket pspSocket = pspChannel.socket();
 
             // Adjusts channel to non blocking mode
             xmppChannel.configureBlocking(false);
-            pspChannel.configureBlocking(false);
+//            pspChannel.configureBlocking(false);
+
+            ParserFactory xmppParserFactory = new StringParserFactory();
+            ProtocolFactory xmppProtocolFactory = new StringProtocolFactory();
+            ConnectionHandlerFactory xmppHandlerFactory = new DualConnectionHandlerFactory(
+                    xmppParserFactory, xmppProtocolFactory);
 
             // Register channel with the selector
             xmppChannel.register(selector, SelectionKey.OP_ACCEPT,
                     new AcceptHandler(selector, xmppChannel, new DualConnectionHandlerFactory()));
-            pspChannel.register(selector, SelectionKey.OP_ACCEPT,
-                    new AcceptHandler(selector, pspChannel, new SingleConnectionHandlerFactory()));
+//            pspChannel.register(selector, SelectionKey.OP_ACCEPT,
+//                    new AcceptHandler(selector, pspChannel, new SingleConnectionHandlerFactory()));
 
             // Configures the socket to listen for connections
             xmppSocket.bind(new InetSocketAddress(xmppPort));
-            pspSocket.bind(new InetSocketAddress(pspPort));
+//            pspSocket.bind(new InetSocketAddress(pspPort));
 
             logger.info("Proxy Server now listening");
             running = true;
@@ -118,7 +124,7 @@ public class ProxyServer {
     }
 
     private void dispatch(final SelectionKey key) {
-        Handler handler = checkNotNull((Handler) key.attachment());
+        SelectorHandler handler = checkNotNull((SelectorHandler) key.attachment());
 
         try {
             handler.handle(key.readyOps());

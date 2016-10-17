@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.tpe.proxy.handlers;
+package ar.edu.itba.pdc.natto.proxy.handlers;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -13,7 +13,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-public class AcceptHandler implements Handler {
+public class AcceptHandler implements SelectorHandler {
     private static final Logger logger = LoggerFactory.getLogger(AcceptHandler.class);
 
     private final Selector selector;
@@ -28,7 +28,7 @@ public class AcceptHandler implements Handler {
         checkNotNull(channel, "Channel can't be null");
         checkArgument(channel.isOpen(), "Channel isn't open");
 
-        checkNotNull(handlers, "Handler factory can't be null");
+        checkNotNull(handlers, "SelectorHandler factory can't be null");
 
         this.selector = selector;
         this.channel = channel;
