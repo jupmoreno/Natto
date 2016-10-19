@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import ar.edu.itba.pdc.natto.server.DispatcherSubscriber;
-import ar.edu.itba.pdc.natto.server.io.Channels;
+import ar.edu.itba.pdc.natto.io.Channels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
