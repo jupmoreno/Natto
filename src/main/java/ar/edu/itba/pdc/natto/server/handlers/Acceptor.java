@@ -18,14 +18,17 @@ public class Acceptor implements AcceptHandler {
     private static final Logger logger = LoggerFactory.getLogger(Acceptor.class);
 
     private final DispatcherSubscriber subscriber;
+    private final ConnectionHandlerFactory handlers;
     private final ServerSocketChannel channel;
 
-    public Acceptor(final ServerSocketChannel channel, final DispatcherSubscriber subscriber) {
+    public Acceptor(final ServerSocketChannel channel, final DispatcherSubscriber subscriber,
+                    final ConnectionHandlerFactory handlers) {
         checkNotNull(channel, "Channel can't be null");
         checkArgument(channel.isOpen(), "Channel isn't open");
 
         this.channel = channel;
         this.subscriber = checkNotNull(subscriber, "Register can't be null");
+        this.handlers = checkNotNull(handlers, "Handler factory can't be null");
     }
 
     @Override
@@ -48,7 +51,7 @@ public class Acceptor implements AcceptHandler {
 
                 logger.info("Accepted connection from " + clientAddress);
 
-                subscriber.subscribe(client, SelectionKey.OP_READ, ); // TODO:
+                subscriber.subscribe(client, SelectionKey.OP_READ, handlers.getHandler(client));
             }
 
         } catch (IOException exception) {

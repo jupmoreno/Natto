@@ -4,12 +4,15 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import ar.edu.itba.pdc.natto.server.handlers.AcceptHandler;
+import ar.edu.itba.pdc.natto.server.handlers.Acceptor;
+import ar.edu.itba.pdc.natto.server.handlers.ConnectionHandlerFactory;
+import ar.edu.itba.pdc.natto.server.handlers.ProxyConnectionHandlerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 
@@ -41,15 +44,18 @@ public class ProxyServer {
                 Dispatcher dispatcher = new ConcreteDispatcher();
                 ServerSocketChannel xmppChannel = ServerSocketChannel.open()
         ) {
-            final ServerSocket xmppSocket = xmppChannel.socket();
+            DispatcherSubscriber subscriber = dispatcher.getSubscriber();
 
             // Adjusts channel to non blocking mode
             xmppChannel.configureBlocking(false);
 
-            dispatcher.getSubscriber().subscribe(xmppChannel, SelectionKey.OP_ACCEPT, ); // TODO
+            ConnectionHandlerFactory connectionHandlers = new ProxyConnectionHandlerFactory(
+                    subscriber);
+            AcceptHandler acceptHandler = new Acceptor(xmppChannel, subscriber, connectionHandlers);
+            subscriber.subscribe(xmppChannel, SelectionKey.OP_ACCEPT, acceptHandler);
 
             // Configures the socket to listen for connections
-            xmppSocket.bind(new InetSocketAddress(xmppPort));
+            xmppChannel.socket().bind(new InetSocketAddress(xmppPort));
             logger.info("Proxy Server now listening");
 
             running = true;

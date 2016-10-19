@@ -4,8 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-import ar.edu.itba.pdc.natto.server.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Channels;
+import ar.edu.itba.pdc.natto.server.DispatcherSubscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,85 +16,101 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class ProxyConnectionHandler<T> implements ConnectionHandler, Connection {
+public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
     private static final int BUFFER_SIZE = 1024;
 
     private final DispatcherSubscriber subscriber;
 
-    private final SocketChannel from;
-    private SocketChannel to;
+    private final SocketChannel channel;
+    private Connection connection;
 
-    Queue<ByteBuffer> messages;
+    private Queue<ByteBuffer> messages;
 
-    public ProxyConnectionHandler(final DispatcherSubscriber subscriber, final SocketChannel from) {
-        checkNotNull(from, "Channel can't be null");
-        checkArgument(from.isOpen(), "Channel isn't open");
+    public ProxyConnectionHandler(final SocketChannel channel,
+                                  final DispatcherSubscriber subscriber) {
+        checkNotNull(channel, "Channel can't be null");
+        checkArgument(channel.isOpen(), "Channel isn't open");
 
         this.subscriber = checkNotNull(subscriber, "Register can't be null");
-        this.from = from;
-        this.to = from;
+        this.channel = channel;
+        this.connection = this;
+        this.messages = new ConcurrentLinkedQueue<>();
     }
 
     public void requestConnect(final InetSocketAddress serverAddress) throws IOException {
-        checkState(from.equals(to));
+        checkState(connection == this);
         checkNotNull(serverAddress, "Address can't be null");
         checkArgument(!serverAddress.isUnresolved(), "Invalid address");
 
-        this.to = SocketChannel.open();
-        this.to.configureBlocking(false);
-        this.to.bind(serverAddress);
+        logger.info("Channel " + channel.getRemoteAddress() + " requested connection to: "
+                + serverAddress);
 
-        subscriber.unsubscribe(from);
-        subscriber.subscribe(to, SelectionKey.OP_CONNECT, this);
+        SocketChannel server = SocketChannel.open();
+        server.configureBlocking(false);
+        server.connect(serverAddress);
+
+        ProxyConnectionHandler serverHandler = new ProxyConnectionHandler(server, subscriber);
+        serverHandler.connection = this;
+        this.connection = serverHandler;
+
+        subscriber.unsubscribe(channel, SelectionKey.OP_READ | SelectionKey.OP_WRITE); // TODO:
+        subscriber.subscribe(server, SelectionKey.OP_CONNECT, serverHandler);
     }
 
     @Override
     public void handle_connect() throws IOException {
         try {
-            if (to.finishConnect()) {
-                SocketAddress serverAddress = to.socket().getRemoteSocketAddress();
+            if (channel.finishConnect()) {
+                SocketAddress serverAddress = channel.socket().getRemoteSocketAddress();
 
                 logger.info("Established connection with server on " + serverAddress);
 
-                subscriber.subscribe(to, SelectionKey.OP_READ, getSwappedHandler(this));
-                subscriber.subscribe(from, SelectionKey.OP_READ, this);
+                subscriber.unsubscribe(channel, SelectionKey.OP_CONNECT);
+                subscriber.subscribe(channel, SelectionKey.OP_READ, this);
+                connection.requestRead();
             }
         } catch (IOException exception) {
             logger.error("Couldn't establish connection with server", exception);
 
             logger.info("Closing connection with client");
-            subscriber.unsubscribe(to);
-            try {
-                to.close();
-                from.close();
-            } catch (IOException closeException) {
-                logger.error("Can't properly close connection", closeException);
-            }
+            // TODO: Cerrar la otra conexion (? && Cerrar key?
+            Channels.closeSilently(channel);
         }
     }
 
     @Override
     public void requestRead() throws IOException {
-        subscriber.subscribe(from, SelectionKey.OP_READ, this);
+        subscriber.subscribe(channel, SelectionKey.OP_READ, this);
     }
 
     @Override
     public void handle_read() throws IOException {
-        ByteBuffer bufferRead = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
+        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
         int bytesRead;
 
-        try {
-            bytesRead = from.read(bufferRead);
-        } catch (IOException exception) {
-            logger.error("Can't read from channel", exception);
+        logger.info("Channel " + channel.getRemoteAddress() + " requested read operation");
 
-            Channels.closeSilently(from);
-            subscriber.unsubscribe(from);
-            Channels.closeSilently(to);
-            subscriber.unsubscribe(to);
+        if (connection == this) { // TODO: Remove!
+            try {
+                this.requestConnect(new InetSocketAddress(5222));
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+            return;
+        }
+
+        try {
+            bytesRead = channel.read(buffer);
+        } catch (IOException exception) {
+            logger.error("Can't read channel channel", exception);
+
+            // TODO: Cerrar la otra conexion (? && Cerrar key?
+            Channels.closeSilently(channel);
 
             return;
         }
@@ -104,31 +120,33 @@ public class ProxyConnectionHandler<T> implements ConnectionHandler, Connection 
             logger.info("Channel reached EOF"); // ASK: Que significa?
             // TODO: Cerrar ambas puntas?
 
-            Channels.closeSilently(from);
-            subscriber.unsubscribe(from);
+            Channels.closeSilently(channel);
+            // TODO: Cerrar key?
 
             return;
         }
 
         // Cannot read more bytes than are immediately available
         if (bytesRead > 0) {
-            bufferRead.flip();
-//            checkState(task.add(bufferRead)); // TODO: Sacar
-//            task.run(); // TODO: Sacar
-
+            buffer.flip();
 
             try {
-                subscriber.subscribe(from, SelectionKey.OP_READ, this);
-            } catch (ClosedChannelException exception) {
-                // TODO:
+                // TODO: Change
+                System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(),
+                        Charset.forName("UTF-8")));
+
+                subscriber.unsubscribe(channel, SelectionKey.OP_READ);
+                connection.requestWrite(buffer);
+            } catch (IOException exception) {
+                exception.printStackTrace();
             }
         }
     }
 
     @Override
-    public boolean requestWrite(final ByteBuffer buffer) throws IOException {
-        subscriber.subscribe(to, SelectionKey.OP_WRITE, this);
-        return messages.offer(buffer); // TODO:
+    public void requestWrite(final ByteBuffer buffer) throws IOException {
+        subscriber.subscribe(channel, SelectionKey.OP_WRITE, this);
+        messages.offer(buffer);
     }
 
     @Override
@@ -140,14 +158,12 @@ public class ProxyConnectionHandler<T> implements ConnectionHandler, Connection 
         ByteBuffer buffer = messages.peek();
 
         try {
-            to.write(buffer);
+            channel.write(buffer);
         } catch (IOException exception) {
             logger.error("Can't write to channel", exception);
 
-            Channels.closeSilently(to);
-            subscriber.unsubscribe(to);
-            Channels.closeSilently(from);
-            subscriber.unsubscribe(from);
+            Channels.closeSilently(channel);
+            // TODO: Cerrar la otra conexion (? && Cerrar key?
 
             return;
         }
@@ -156,27 +172,9 @@ public class ProxyConnectionHandler<T> implements ConnectionHandler, Connection 
             messages.remove();
 
             if (messages.isEmpty()) {
-                subscriber.unsubscribe(to, SelectionKey.OP_WRITE); // TODO:
-//                requestRead(); // TODO: Hacer ?
+                subscriber.unsubscribe(channel, SelectionKey.OP_WRITE);
+                connection.requestRead(); // TODO: Sacar (?
             }
         }
     }
-
-    private static ProxyConnectionHandler getSwappedHandler(ProxyConnectionHandler old) {
-        ProxyConnectionHandler handler = new ProxyConnectionHandler(old.subscriber, old.to);
-        handler.to = old.from;
-
-        return handler;
-    }
-
-//    @Override
-//    public void accept(ByteBuffer buffer) {
-//        messages.offer(buffer);
-//        try {
-//            subscriber.subscribe(to, SelectionKey.OP_WRITE, this);
-//        } catch (ClosedChannelException e) {
-//            e.printStackTrace();
-//            // TODO:
-//        }
-//    }
 }

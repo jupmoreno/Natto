@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 public interface Connection {
     void requestConnect(final InetSocketAddress serverAddress) throws IOException;
 
-    boolean requestWrite(ByteBuffer buffer) throws IOException; // TODO: Se puede sacar el boolean? Pq la IO Exception?
+    void requestWrite(ByteBuffer buffer) throws IOException;
 
     void requestRead() throws IOException;
 }

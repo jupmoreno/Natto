@@ -1,6 +1,6 @@
 package ar.edu.itba.pdc.natto;
 
-import ar.edu.itba.pdc.natto.proxy.ProxyServer;
+import ar.edu.itba.pdc.natto.server.ProxyServer;
 import org.kohsuke.args4j.CmdLineException;
 
 import java.io.IOException;
