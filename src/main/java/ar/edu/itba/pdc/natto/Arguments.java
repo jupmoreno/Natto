@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.tpe;
+package ar.edu.itba.pdc.natto;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
