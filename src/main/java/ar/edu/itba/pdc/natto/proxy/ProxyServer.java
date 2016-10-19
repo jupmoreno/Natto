@@ -53,7 +53,7 @@ public class ProxyServer {
 
         try (
                 Selector selector = Selector.open();
-                ServerSocketChannel xmppChannel = ServerSocketChannel.open();
+                ServerSocketChannel xmppChannel = ServerSocketChannel.open()
 //                ServerSocketChannel pspChannel = ServerSocketChannel.open();
         ) {
             final ServerSocket xmppSocket = xmppChannel.socket();
@@ -70,8 +70,8 @@ public class ProxyServer {
 
             // Register channel with the selector
             xmppChannel.register(selector, SelectionKey.OP_ACCEPT,
-                    new AcceptHandler(selector, xmppChannel, new DualConnectionHandlerFactory()));
-//            pspChannel.register(selector, SelectionKey.OP_ACCEPT,
+                    new ar.edu.itba.pdc.natto.server.handlers.AcceptHandler(selector, xmppChannel, new DualConnectionHandlerFactory()));
+//            pspChannel.subscribe(selector, SelectionKey.OP_ACCEPT,
 //                    new AcceptHandler(selector, pspChannel, new SingleConnectionHandlerFactory()));
 
             // Configures the socket to listen for connections

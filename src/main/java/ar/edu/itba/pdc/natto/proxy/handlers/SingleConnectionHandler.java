@@ -24,13 +24,13 @@ public class SingleConnectionHandler extends ConnectionHandler {
         if ((readyOps & SelectionKey.OP_READ) != 0) {
             validOps = true;
             buffer = buffers.acquire();
-            errorOccurred = read(buffer) == -1 ? true : false;
+            errorOccurred = read(buffer) == -1;
         }
 
         // TODO: En else?
         if ((readyOps & SelectionKey.OP_WRITE) != 0) {
             validOps = true;
-            errorOccurred = write(buffer) == -1 ? true : false;
+            errorOccurred = write(buffer) == -1;
         }
 
         if (errorOccurred) {

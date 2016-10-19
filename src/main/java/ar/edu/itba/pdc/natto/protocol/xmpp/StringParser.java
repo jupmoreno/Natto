@@ -17,10 +17,8 @@ public class StringParser implements Parser<String> {
     }
 
     @Override
-    public void add(final ByteBuffer buffer) {
-        if (!buffers.offer(buffer)) {
-            // TODO
-        }
+    public boolean add(final ByteBuffer buffer) {
+        return buffers.offer(buffer);
     }
 
     @Override

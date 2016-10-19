@@ -24,8 +24,12 @@ public class ProtocolTask<Message> implements Runnable { // TODO: Callable?
 
             if (response != null) { // TODO: Y q pasa si en NULL?
                 ByteBuffer buffer = parser.toByteBuffer(response);
-                // TODO: Add to write queue in ConnectionHandler
+                // TODO: Add to write queue in Connection
             }
         }
+    }
+
+    public boolean add(ByteBuffer buffer) {
+        return parser.add(buffer);
     }
 }
