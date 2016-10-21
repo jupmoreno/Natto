@@ -1,6 +1,6 @@
-package ar.edu.itba.pdc.natto.server;
+package ar.edu.itba.pdc.natto.dispatcher;
 
-import ar.edu.itba.pdc.natto.server.handlers.SelectorHandler;
+import ar.edu.itba.pdc.natto.proxy.handlers.SelectorHandler;
 
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
@@ -13,5 +13,5 @@ public interface DispatcherSubscriber {
 
     void unsubscribe(SelectableChannel channel, int op);
 
-    void unsubscribe(SelectableChannel channel);
+    void cancel(SelectableChannel channel);
 }

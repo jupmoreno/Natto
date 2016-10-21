@@ -1,0 +1,53 @@
+<!DOCTYPE tsung SYSTEM "/usr/local/Cellar/tsung/1.6.0/share/tsung/tsung-1.0.dtd">
+<tsung loglevel="notice" version="1.0">
+    <clients>
+        <client host="localhost" use_controller_vm="true"></client>
+    </clients>
+
+    <!-- Server side setup -->
+    <servers>
+        <server host="localhost" port="1080" type="tcp"></server>
+    </servers>
+
+    <load>
+        <arrivalphase phase="1" duration="1" unit="minute">
+            <!-- To be sure that exactly global_number users are started, add the maxnumber attribute to users -->
+            <users maxnumber="20" interarrival="2" unit="second"></users>
+        </arrivalphase>
+    </load>
+
+    <options>
+        <!-- You also have to specify the number of users to be connected: -->
+        <option type="ts_jabber" name="global_number" value="20"></option>
+        <option type="ts_jabber" name="userid_max" value="10000"></option>
+        <option type="ts_jabber" name="domain" value="localhost"></option>
+        <option type="ts_jabber" name="username" value="test"></option>
+        <option type="ts_jabber" name="passwd" value="test"></option>
+    </options>
+
+    <sessions>
+        <session probability="100" name="jabber-plain" type="ts_jabber">
+            <request>
+                <jabber type="connect" ack="local"></jabber>
+            </request>
+            <thinktime value="2"></thinktime>
+            <transaction name="auth_plain">
+                <request>
+                    <jabber type="auth_get" ack="local"></jabber>
+                </request>
+                <request>
+                    <jabber type="auth_set_plain" ack="local"></jabber>
+                </request>
+            </transaction>
+            <request>
+                <jabber type="presence:initial" ack="no_ack"/>
+            </request>
+            <thinktime value="60"></thinktime>
+            <transaction name="close">
+                <request>
+                    <jabber type="close" ack="local"></jabber>
+                </request>
+            </transaction>
+        </session>
+    </sessions>
+</tsung>

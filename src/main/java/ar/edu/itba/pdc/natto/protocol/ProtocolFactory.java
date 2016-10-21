@@ -1,5 +1,5 @@
 package ar.edu.itba.pdc.natto.protocol;
 
-public interface ProtocolFactory<Message> {
-    Protocol<Message> get();
+public interface ProtocolFactory<T> {
+    Protocol<T> get();
 }

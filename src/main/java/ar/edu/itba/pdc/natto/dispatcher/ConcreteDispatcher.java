@@ -1,13 +1,18 @@
-package ar.edu.itba.pdc.natto.server;
+package ar.edu.itba.pdc.natto.dispatcher;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import ar.edu.itba.pdc.natto.server.handlers.*;
+import ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler;
+import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
+import ar.edu.itba.pdc.natto.proxy.handlers.SelectorHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.channels.*;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Iterator;
 
 public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
@@ -91,7 +96,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
     }
 
     @Override
-    public void unsubscribe(SelectableChannel channel) {
+    public void cancel(SelectableChannel channel) {
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
         if (key != null) {

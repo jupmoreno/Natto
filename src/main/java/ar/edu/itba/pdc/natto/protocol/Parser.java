@@ -2,9 +2,8 @@ package ar.edu.itba.pdc.natto.protocol;
 
 import java.nio.ByteBuffer;
 
-public interface Parser<Message> {
-    boolean add(final ByteBuffer buffer);
-    boolean hasMessage();
-    Message nextMessage();
-    ByteBuffer toByteBuffer(final Message message);
+public interface Parser<T> {
+    T fromByteBuffer(final ByteBuffer buffer);
+
+    ByteBuffer toByteBuffer(final T message);
 }

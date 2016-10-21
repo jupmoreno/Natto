@@ -1,11 +1,14 @@
-package ar.edu.itba.pdc.natto.server.handlers;
+package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Channels;
-import ar.edu.itba.pdc.natto.server.DispatcherSubscriber;
+import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
+import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
+import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,14 +16,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class ProxyConnectionHandler implements ConnectionHandler, Connection {
+public class SocketConnectionHandler<T> implements ConnectionHandler, Connection {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
     private static final int BUFFER_SIZE = 1024;
 
@@ -29,10 +31,12 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     private final SocketChannel channel;
     private Connection connection;
 
+    ProtocolTask<T> task;
+
     private Queue<ByteBuffer> messages;
 
-    public ProxyConnectionHandler(final SocketChannel channel,
-                                  final DispatcherSubscriber subscriber) {
+    public SocketConnectionHandler(final SocketChannel channel,
+                                   final DispatcherSubscriber subscriber) {
         checkNotNull(channel, "Channel can't be null");
         checkArgument(channel.isOpen(), "Channel isn't open");
 
@@ -54,7 +58,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         server.configureBlocking(false);
         server.connect(serverAddress);
 
-        ProxyConnectionHandler serverHandler = new ProxyConnectionHandler(server, subscriber);
+        SocketConnectionHandler serverHandler = new SocketConnectionHandler(server, subscriber);
         serverHandler.connection = this;
         this.connection = serverHandler;
 
@@ -131,11 +135,12 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
             buffer.flip();
 
             try {
+                subscriber.unsubscribe(channel, SelectionKey.OP_READ);
+
                 // TODO: Change
                 System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(),
                         Charset.forName("UTF-8")));
 
-                subscriber.unsubscribe(channel, SelectionKey.OP_READ);
                 connection.requestWrite(buffer);
             } catch (IOException exception) {
                 exception.printStackTrace();
