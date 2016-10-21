@@ -51,6 +51,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         checkNotNull(serverAddress, "Address can't be null");
         checkArgument(!serverAddress.isUnresolved(), "Invalid address");
 
+        // TODO: Sacar channel.getRemoteAddress() pq tira exception
         logger.info("Channel " + channel.getRemoteAddress() + " requested connection to: "
                 + serverAddress);
 
@@ -70,6 +71,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     public void handle_connect() throws IOException {
         try {
             if (channel.finishConnect()) {
+                // TODO: Sacar channel.getRemoteAddress() pq tira exception
                 SocketAddress serverAddress = channel.socket().getRemoteSocketAddress();
 
                 logger.info("Established connection with server on " + serverAddress);
@@ -97,6 +99,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
         int bytesRead;
 
+        // TODO: Sacar channel.getRemoteAddress() pq tira exception
         logger.info("Channel " + channel.getRemoteAddress() + " requested read operation");
 
         if (connection == this) { // TODO: Remove!
@@ -121,7 +124,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
         // The channel has reached end-of-stream or error
         if (bytesRead == -1) {
-            logger.info("Channel reached EOF"); // ASK: Que significa?
+            logger.info("Channel reached EOF");
             // TODO: Cerrar ambas puntas?
 
             Closeables.closeSilently(channel);
@@ -133,11 +136,10 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         // Cannot read more bytes than are immediately available
         if (bytesRead > 0) {
             buffer.flip();
+            subscriber.unsubscribe(channel, SelectionKey.OP_READ);
 
+            // TODO: Change
             try {
-                subscriber.unsubscribe(channel, SelectionKey.OP_READ);
-
-                // TODO: Change
                 System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(),
                         Charset.forName("UTF-8")));
 

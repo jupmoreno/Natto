@@ -21,23 +21,22 @@ public class Main {
             return;
         }
 
-        Server proxyServer;
-        try {
-            Dispatcher dispatcher = new ConcreteDispatcher();
-            proxyServer = new MultiProtocolServer.Builder(dispatcher)
+
+        try (Dispatcher dispatcher = new ConcreteDispatcher()) {
+            Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
+                    // TODO: Add factories
                     .addProtocol(arguments.getProxyXMPPPort(), null, null)
                     .build();
-        } catch (IOException exception) {
-            // TODO:
-            System.err.println("Failed to create Proxy Server");
-            System.err.println(exception.getMessage());
-            return;
-        }
 
-        try {
-            proxyServer.start();
+            try {
+                proxyServer.start();
+            } catch (IOException exception) {
+                System.err.println("Failed to start Proxy Server");
+                System.err.println(exception.getMessage());
+                return;
+            }
         } catch (IOException exception) {
-            System.err.println("Failed to start Proxy Server");
+            System.err.println("Failed to create necessary parts for Proxy Server to operate");
             System.err.println(exception.getMessage());
             return;
         }
