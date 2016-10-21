@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.natto.server;
+package ar.edu.itba.pdc.natto.dispatcher;
 
 import java.io.Closeable;
 import java.io.IOException;

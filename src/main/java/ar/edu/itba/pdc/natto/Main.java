@@ -1,10 +1,12 @@
 package ar.edu.itba.pdc.natto;
 
-import ar.edu.itba.pdc.natto.server.ProxyServer;
+import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
+import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
+import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
+import ar.edu.itba.pdc.natto.proxy.Server;
 import org.kohsuke.args4j.CmdLineException;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class Main {
     public static void main(String[] args) {
@@ -19,10 +21,18 @@ public class Main {
             return;
         }
 
-        InetSocketAddress serverAddress = new InetSocketAddress(arguments.getServerAddress(),
-                arguments.getServerPort());
-        ProxyServer proxyServer = new ProxyServer(serverAddress, arguments.getProxyXMPPPort(),
-                arguments.getProxyPSPPort());
+        Server proxyServer;
+        try {
+            Dispatcher dispatcher = new ConcreteDispatcher();
+            proxyServer = new MultiProtocolServer.Builder(dispatcher)
+                    .addProtocol(arguments.getProxyXMPPPort(), null, null)
+                    .build();
+        } catch (IOException exception) {
+            // TODO:
+            System.err.println("Failed to create Proxy Server");
+            System.err.println(exception.getMessage());
+            return;
+        }
 
         try {
             proxyServer.start();

@@ -1,7 +1,12 @@
-package ar.edu.itba.pdc.natto.server.handlers;
+package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 
-import ar.edu.itba.pdc.natto.server.DispatcherSubscriber;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Channels;
+import ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler;
+import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,9 +15,6 @@ import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class Acceptor implements AcceptHandler {
     private static final Logger logger = LoggerFactory.getLogger(Acceptor.class);
