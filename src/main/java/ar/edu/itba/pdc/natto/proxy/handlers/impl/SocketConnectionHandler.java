@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
-import ar.edu.itba.pdc.natto.io.Channels;
+import ar.edu.itba.pdc.natto.io.Closeables;
 import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
@@ -83,7 +83,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             logger.info("Closing connection with client");
             // TODO: Cerrar la otra conexion (? && Cerrar key?
-            Channels.closeSilently(channel);
+            Closeables.closeSilently(channel);
         }
     }
 
@@ -114,7 +114,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             logger.error("Can't read channel channel", exception);
 
             // TODO: Cerrar la otra conexion (? && Cerrar key?
-            Channels.closeSilently(channel);
+            Closeables.closeSilently(channel);
 
             return;
         }
@@ -124,7 +124,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             logger.info("Channel reached EOF"); // ASK: Que significa?
             // TODO: Cerrar ambas puntas?
 
-            Channels.closeSilently(channel);
+            Closeables.closeSilently(channel);
             // TODO: Cerrar key?
 
             return;
@@ -167,7 +167,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         } catch (IOException exception) {
             logger.error("Can't write to channel", exception);
 
-            Channels.closeSilently(channel);
+            Closeables.closeSilently(channel);
             // TODO: Cerrar la otra conexion (? && Cerrar key?
 
             return;

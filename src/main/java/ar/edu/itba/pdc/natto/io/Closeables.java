@@ -6,8 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 
-public class Channels {
-    private static final Logger logger = LoggerFactory.getLogger(Channels.class);
+public class Closeables {
+    private static final Logger logger = LoggerFactory.getLogger(Closeables.class);
 
     public static void closeSilently(final Closeable channel) {
         try {

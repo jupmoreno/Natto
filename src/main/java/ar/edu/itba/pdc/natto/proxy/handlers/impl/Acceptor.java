@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
-import ar.edu.itba.pdc.natto.io.Channels;
+import ar.edu.itba.pdc.natto.io.Closeables;
 import ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory;
 import org.slf4j.Logger;
@@ -59,7 +59,7 @@ public class Acceptor implements AcceptHandler {
         } catch (IOException exception) {
             logger.error("Can't accept new client connection", exception);
 
-            Channels.closeSilently(client);
+            Closeables.closeSilently(client);
         }
     }
 }
