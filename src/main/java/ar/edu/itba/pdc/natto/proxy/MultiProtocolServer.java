@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,8 +73,8 @@ public class MultiProtocolServer implements Server {
             // Adjusts channel to non blocking mode
             channel.configureBlocking(false);
 
-            ConnectionHandlerFactory connectionHandlers = new SocketConnectionHandlerFactory(
-                    subscriber); // TODO: Add protocols y parsers
+            ConnectionHandlerFactory connectionHandlers = new SocketConnectionHandlerFactory<>(
+                    subscriber, parsers, protocols);
             AcceptHandler acceptHandler = new Acceptor(channel, subscriber, connectionHandlers);
 
             subscriber.subscribe(channel, ChannelOperation.ACCEPT, acceptHandler);

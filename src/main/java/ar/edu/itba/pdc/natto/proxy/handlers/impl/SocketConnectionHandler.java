@@ -7,6 +7,8 @@ import static com.google.common.base.Preconditions.checkState;
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
+import ar.edu.itba.pdc.natto.protocol.ParserFactory;
+import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
@@ -17,17 +19,19 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+// TODO: Se puede sacar <T>?
 public class SocketConnectionHandler<T> implements ConnectionHandler, Connection {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
     private static final int BUFFER_SIZE = 1024;
 
     private final DispatcherSubscriber subscriber;
+    private final ParserFactory<T> parserFactory;
+    private final ProtocolFactory<T> protocolFactory;
 
     private final SocketChannel channel;
     private Connection connection;
@@ -37,13 +41,20 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private Queue<ByteBuffer> messages;
 
     public SocketConnectionHandler(final SocketChannel channel,
-                                   final DispatcherSubscriber subscriber) {
+                                   final DispatcherSubscriber subscriber,
+                                   final ParserFactory<T> parserFactory,
+                                   final ProtocolFactory<T> protocolFactory) {
         checkNotNull(channel, "Channel can't be null");
         checkArgument(channel.isOpen(), "Channel isn't open");
+        checkArgument(!channel.isBlocking(), "Channel is in blocking mode");
 
         this.subscriber = checkNotNull(subscriber, "Register can't be null");
+        this.parserFactory = checkNotNull(parserFactory, "Parser factory can't be null");
+        this.protocolFactory = checkNotNull(protocolFactory, "Protocol factory can't be null");
+
         this.channel = channel;
         this.connection = this;
+
         this.messages = new ConcurrentLinkedQueue<>();
     }
 
@@ -60,7 +71,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         server.configureBlocking(false);
         server.connect(serverAddress);
 
-        SocketConnectionHandler serverHandler = new SocketConnectionHandler(server, subscriber);
+        SocketConnectionHandler<T> serverHandler = new SocketConnectionHandler<>(server, subscriber,
+                parserFactory, protocolFactory);
         serverHandler.connection = this;
         this.connection = serverHandler;
 

@@ -1,19 +1,30 @@
 package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
+import ar.edu.itba.pdc.natto.protocol.ParserFactory;
+import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory;
 
 import java.nio.channels.SocketChannel;
 
-public class SocketConnectionHandlerFactory implements ConnectionHandlerFactory {
+// TODO: Se puede sacar <T>?
+public class SocketConnectionHandlerFactory<T> implements ConnectionHandlerFactory {
     private final DispatcherSubscriber subscriber;
+    private final ParserFactory<T> parserFactory;
+    private final ProtocolFactory<T> protocolFactory;
 
-    public SocketConnectionHandlerFactory(DispatcherSubscriber subscriber) {
+    public SocketConnectionHandlerFactory(DispatcherSubscriber subscriber,
+                                          ParserFactory<T> parserFactory,
+                                          ProtocolFactory<T> protocolFactory) {
+        // TODO: Checks
+
         this.subscriber = subscriber;
+        this.parserFactory = parserFactory;
+        this.protocolFactory = protocolFactory;
     }
 
     @Override
-    public SocketConnectionHandler getHandler(final SocketChannel channel) {
-        return new SocketConnectionHandler(channel, subscriber);
+    public SocketConnectionHandler<T> getHandler(final SocketChannel channel) {
+        return new SocketConnectionHandler<>(channel, subscriber, parserFactory, protocolFactory);
     }
 }
