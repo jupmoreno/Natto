@@ -61,9 +61,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         checkNotNull(serverAddress, "Address can't be null");
         checkArgument(!serverAddress.isUnresolved(), "Invalid address");
 
-        // TODO: Sacar channel.getRemoteAddress() pq tira exception
-        logger.info("Channel " + channel.getRemoteAddress() + " requested connection to: "
-                + serverAddress);
+        logger.info("Channel " + channel.socket().getRemoteSocketAddress()
+                + " requested connection to: " + serverAddress);
 
         SocketChannel server = SocketChannel.open();
         server.configureBlocking(false);
@@ -82,7 +81,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     public void handle_connect() throws IOException {
         try {
             if (channel.finishConnect()) {
-                // TODO: Sacar channel.getRemoteAddress() pq tira exception
                 SocketAddress serverAddress = channel.socket().getRemoteSocketAddress();
 
                 logger.info("Established connection with server on " + serverAddress);
@@ -110,8 +108,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
         int bytesRead;
 
-        // TODO: Sacar channel.getRemoteAddress() pq tira exception
-        logger.info("Channel " + channel.getRemoteAddress() + " requested read operation");
+        logger.info("Channel " + channel.socket().getRemoteSocketAddress()
+                + " requested read operation");
 
         if (connection == this) { // TODO: Remove!
             try {

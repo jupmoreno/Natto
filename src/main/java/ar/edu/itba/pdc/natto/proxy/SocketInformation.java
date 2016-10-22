@@ -3,7 +3,7 @@ package ar.edu.itba.pdc.natto.proxy;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 
-// TODO: No hace falta, sacarla? (Solo se necesita el port en el Map del Sv.)
+// TODO: No hace falta, sacarla?
 public class SocketInformation<T> {
     private final int port;
     private final ProtocolFactory<T> protocols;

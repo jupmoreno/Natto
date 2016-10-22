@@ -25,9 +25,10 @@ public class Acceptor implements AcceptHandler {
     private final ServerSocketChannel channel;
 
     public Acceptor(final ServerSocketChannel channel, final DispatcherSubscriber subscriber,
-                        final ConnectionHandlerFactory handlers) {
+                    final ConnectionHandlerFactory handlers) {
         checkNotNull(channel, "Channel can't be null");
         checkArgument(channel.isOpen(), "Channel isn't open");
+        checkArgument(!channel.isBlocking(), "Channel is in blocking mode");
 
         this.channel = channel;
         this.subscriber = checkNotNull(subscriber, "Register can't be null");

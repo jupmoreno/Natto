@@ -30,7 +30,6 @@ public class Main {
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
-                    // TODO: Add factories
                     .addProtocol(arguments.getProxyXmppPort(), xmppParsers, xmppProtocols)
                     .build();
 
