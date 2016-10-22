@@ -16,11 +16,11 @@ public class Arguments {
 
     @Option(name = "--xmpp-port", metaVar = "<port>", usage = "Sets the proxy's XMPP listening"
             + " port number")
-    private int proxyXMPPPort = 1080;
+    private int proxyXmppPort = 1080;
 
     @Option(name = "--psp-port", metaVar = "<port>", usage = "Sets the proxy's PSP listening"
             + " port number")
-    private int proxyPSPPort = 1081;
+    private int proxyPspPort = 1081;
 
     private CmdLineParser parser;
 
@@ -47,11 +47,11 @@ public class Arguments {
         return serverPort;
     }
 
-    public int getProxyXMPPPort() {
-        return proxyXMPPPort;
+    public int getProxyXmppPort() {
+        return proxyXmppPort;
     }
 
-    public int getProxyPSPPort() {
-        return proxyPSPPort;
+    public int getProxyPspPort() {
+        return proxyPspPort;
     }
 }

@@ -36,8 +36,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private final SocketChannel channel;
     private Connection connection;
 
-    ProtocolTask<T> task;
-
     private Queue<ByteBuffer> messages;
 
     public SocketConnectionHandler(final SocketChannel channel,

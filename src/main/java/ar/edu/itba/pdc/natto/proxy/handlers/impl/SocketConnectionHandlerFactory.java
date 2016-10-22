@@ -7,6 +7,8 @@ import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory;
 
 import java.nio.channels.SocketChannel;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 // TODO: Se puede sacar <T>?
 public class SocketConnectionHandlerFactory<T> implements ConnectionHandlerFactory {
     private final DispatcherSubscriber subscriber;
@@ -16,11 +18,10 @@ public class SocketConnectionHandlerFactory<T> implements ConnectionHandlerFacto
     public SocketConnectionHandlerFactory(DispatcherSubscriber subscriber,
                                           ParserFactory<T> parserFactory,
                                           ProtocolFactory<T> protocolFactory) {
-        // TODO: Checks
-
-        this.subscriber = subscriber;
-        this.parserFactory = parserFactory;
-        this.protocolFactory = protocolFactory;
+        // TODO: Remove checks?
+        this.subscriber = checkNotNull(subscriber, "Register can't be null");
+        this.parserFactory = checkNotNull(parserFactory, "Parser factory can't be null");
+        this.protocolFactory = checkNotNull(protocolFactory, "Protocol factory can't be null");
     }
 
     @Override

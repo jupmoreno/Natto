@@ -2,6 +2,10 @@ package ar.edu.itba.pdc.natto;
 
 import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
+import ar.edu.itba.pdc.natto.protocol.ParserFactory;
+import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.string.StringParserFactory;
+import ar.edu.itba.pdc.natto.protocol.string.StringProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
 import org.kohsuke.args4j.CmdLineException;
@@ -21,10 +25,13 @@ public class Main {
             return;
         }
 
+        ParserFactory<String> xmppParsers = new StringParserFactory();
+        ProtocolFactory<String> xmppProtocols = new StringProtocolFactory();
+
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
                     // TODO: Add factories
-                    .addProtocol(arguments.getProxyXMPPPort(), null, null)
+                    .addProtocol(arguments.getProxyXmppPort(), xmppParsers, xmppProtocols)
                     .build();
 
             try {
