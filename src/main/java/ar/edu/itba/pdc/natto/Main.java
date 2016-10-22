@@ -21,7 +21,6 @@ public class Main {
             return;
         }
 
-
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
                     // TODO: Add factories

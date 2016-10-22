@@ -42,7 +42,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
         if (key.isValid() && key.isAcceptable()) {
             AcceptHandler handler = (AcceptHandler) key.attachment();
             handler.handle_accept();
-        } else { // TODO: Sacar else?
+        } else {
             if (key.isValid() && key.isConnectable()) {
                 ConnectionHandler handler = (ConnectionHandler) key.attachment();
                 handler.handle_connect();
@@ -73,25 +73,25 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
     }
 
     @Override
-    public void subscribe(SelectableChannel channel, int op, SelectorHandler handler)
-            throws ClosedChannelException {
+    public void subscribe(SelectableChannel channel, ChannelOperation op,
+                          SelectorHandler handler) throws ClosedChannelException {
         checkNotNull(handler, "Handler can't be null");
 
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
         if (key != null) {
-            channel.register(selector, key.interestOps() | op, handler);
+            channel.register(selector, key.interestOps() | op.getValue(), handler);
         } else {
-            channel.register(selector, op, handler);
+            channel.register(selector, op.getValue(), handler);
         }
     }
 
     @Override
-    public void unsubscribe(SelectableChannel channel, int op) {
+    public void unsubscribe(SelectableChannel channel, ChannelOperation op) {
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
         if (key != null) {
-            key.interestOps(key.interestOps() & ~op); // TODO: Check
+            key.interestOps(key.interestOps() & ~op.getValue()); // TODO: Check
         }
     }
 

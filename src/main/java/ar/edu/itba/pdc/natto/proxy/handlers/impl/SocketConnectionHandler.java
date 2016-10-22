@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
 import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
@@ -63,8 +64,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         serverHandler.connection = this;
         this.connection = serverHandler;
 
-        subscriber.unsubscribe(channel, SelectionKey.OP_READ | SelectionKey.OP_WRITE); // TODO:
-        subscriber.subscribe(server, SelectionKey.OP_CONNECT, serverHandler);
+        subscriber.unsubscribe(channel, ChannelOperation.READWRITE); // TODO:
+        subscriber.subscribe(server, ChannelOperation.CONNECT, serverHandler);
     }
 
     @Override
@@ -76,8 +77,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
                 logger.info("Established connection with server on " + serverAddress);
 
-                subscriber.unsubscribe(channel, SelectionKey.OP_CONNECT);
-                subscriber.subscribe(channel, SelectionKey.OP_READ, this);
+                subscriber.unsubscribe(channel, ChannelOperation.CONNECT);
+                subscriber.subscribe(channel, ChannelOperation.READ, this);
                 connection.requestRead();
             }
         } catch (IOException exception) {
@@ -91,7 +92,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void requestRead() throws IOException {
-        subscriber.subscribe(channel, SelectionKey.OP_READ, this);
+        subscriber.subscribe(channel, ChannelOperation.READ, this);
     }
 
     @Override
@@ -136,7 +137,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         // Cannot read more bytes than are immediately available
         if (bytesRead > 0) {
             buffer.flip();
-            subscriber.unsubscribe(channel, SelectionKey.OP_READ);
+            subscriber.unsubscribe(channel, ChannelOperation.READ);
 
             // TODO: Change
             try {
@@ -152,7 +153,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void requestWrite(final ByteBuffer buffer) throws IOException {
-        subscriber.subscribe(channel, SelectionKey.OP_WRITE, this);
+        subscriber.subscribe(channel, ChannelOperation.WRITE, this);
         messages.offer(buffer);
     }
 
@@ -179,7 +180,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             messages.remove();
 
             if (messages.isEmpty()) {
-                subscriber.unsubscribe(channel, SelectionKey.OP_WRITE);
+                subscriber.unsubscribe(channel, ChannelOperation.WRITE);
                 connection.requestRead(); // TODO: Sacar (?
             }
         }

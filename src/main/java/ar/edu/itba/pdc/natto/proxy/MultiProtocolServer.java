@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
@@ -77,7 +78,7 @@ public class MultiProtocolServer implements Server {
                     subscriber); // TODO: Add protocols y parsers
             AcceptHandler acceptHandler = new Acceptor(channel, subscriber, connectionHandlers);
 
-            subscriber.subscribe(channel, SelectionKey.OP_ACCEPT, acceptHandler);
+            subscriber.subscribe(channel, ChannelOperation.ACCEPT, acceptHandler);
 
             return channel;
         }

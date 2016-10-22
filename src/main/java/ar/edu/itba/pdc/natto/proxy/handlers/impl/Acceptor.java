@@ -3,6 +3,7 @@ package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
 import ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler;
@@ -53,7 +54,7 @@ public class Acceptor implements AcceptHandler {
 
                 logger.info("Accepted connection from " + clientAddress);
 
-                subscriber.subscribe(client, SelectionKey.OP_READ, handlers.getHandler(client));
+                subscriber.subscribe(client, ChannelOperation.READ, handlers.getHandler(client));
             }
 
         } catch (IOException exception) {
