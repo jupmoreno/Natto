@@ -7,7 +7,9 @@ import static com.google.common.base.Preconditions.checkState;
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
+import ar.edu.itba.pdc.natto.protocol.Parser;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
+import ar.edu.itba.pdc.natto.protocol.Protocol;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
@@ -33,6 +35,9 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private final ParserFactory<T> parserFactory;
     private final ProtocolFactory<T> protocolFactory;
 
+    private final Parser<T> parser;
+    private final Protocol<T> protocol;
+
     private final SocketChannel channel;
     private Connection connection;
 
@@ -49,6 +54,9 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         this.subscriber = checkNotNull(subscriber, "Register can't be null");
         this.parserFactory = checkNotNull(parserFactory, "Parser factory can't be null");
         this.protocolFactory = checkNotNull(protocolFactory, "Protocol factory can't be null");
+
+        this.parser = parserFactory.get();
+        this.protocol = protocolFactory.get();
 
         this.channel = channel;
         this.connection = this;
@@ -147,14 +155,15 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             buffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-            // TODO: Change
-            try {
-                System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(),
-                        Charset.forName("UTF-8")));
-
-                connection.requestWrite(buffer);
-            } catch (IOException exception) {
-                exception.printStackTrace();
+            // TODO: ProtocolTask
+            T request = parser.fromByteBuffer(buffer);
+            if (request != null) {
+                T response = protocol.process(request);
+                if (response != null) {
+                    connection.requestWrite(parser.toByteBuffer(response));
+                }
+            } else {
+                this.requestRead();
             }
         }
     }
@@ -189,7 +198,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             if (messages.isEmpty()) {
                 subscriber.unsubscribe(channel, ChannelOperation.WRITE);
-                connection.requestRead(); // TODO: Sacar (?
+                connection.requestRead();
             }
         }
     }

@@ -1,13 +1,13 @@
 package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory;
 
 import java.nio.channels.SocketChannel;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 // TODO: Se puede sacar <T>?
 public class SocketConnectionHandlerFactory<T> implements ConnectionHandlerFactory {
