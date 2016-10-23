@@ -15,20 +15,21 @@ import java.util.Queue;
 
 public class XmppParser implements Parser<String> {
 
-/*
+
     private enum XmppState {
-        STREAM("stream");
+        STREAM("stream"),
+        PRECENSE("presence");
 
         private final String value;
 
         XmppState(String value) {
             this.value = value;
         }
-    }*/
+    }
 
     private Queue<StringBuilder> parsed = new LinkedList<>();
     private StringBuilder current;
-   // private Deque<XmppState> stateStack = new LinkedList<>();
+    private Deque<XmppState> stateStack = new LinkedList<>();
     private Queue<String> tags = new LinkedList<>();
     private String currentTag = "";
     boolean insideTag = false;
@@ -36,24 +37,47 @@ public class XmppParser implements Parser<String> {
 
     @Override
     public String fromByteBuffer(ByteBuffer buffer) {
-        //appendBuffer(buffer);
-        String bufferString = bufferToString(buffer);
+        //String bufferString = bufferToString(buffer);
 
-        /*for (int i = 0; i < bufferString.length(); i++) {
-            if (bufferString.charAt(i) == '<') {
-                if (true) {
 
-                }
-
-            } else if (bufferString.charAt(i) == '>') {
-
-            }
-        }*/
+        String bufferString = "<presence>hola</presence>";
         tagsToQueue(bufferString);
 
-        if(tags.isEmpty())
-            return null;
-        return tags.remove();
+        String ret = "";
+
+
+        for(String tag : tags){
+            if(!tag.startsWith("<")){
+                ret += tag;
+            }
+            if(tag.startsWith("<stream")){
+                ret += tag;
+                stateStack.push(XmppState.STREAM);
+            }else if(tag.startsWith("</stream")){
+                if(stateStack.peek() != XmppState.STREAM){
+                    //TODO: es que esta mal formado el xml habria que devolver todo
+                }else{
+                    ret+= tag;
+                    stateStack.pop();
+                }
+            }else if(tag.startsWith("<presence")){
+                ret += tag;
+                stateStack.push(XmppState.PRECENSE);
+            }else if(tag.startsWith("</presence")){
+                if(stateStack.peek() != XmppState.PRECENSE){
+                    //TODO: error
+                }else{
+                    ret+= tag;
+                    stateStack.pop();
+                }
+            }
+
+        }
+
+
+
+        //TODO: verificar si esta terminado!! ahora para probar devuelvo lo que ya haya formado
+        return ret;
     }
 
     @Override
