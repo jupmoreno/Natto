@@ -37,7 +37,7 @@ public class ProtocolTask<T> implements Runnable { // TODO: Callable?
             if (request != null) {
                 T response = protocol.process(request);
 
-                if (response != null) { // TODO: Y q pasa si en NULL?
+                while (response != null) { // TODO: Y q pasa si en NULL?
                     ByteBuffer buffer = parser.toByteBuffer(response);
 
                     try {

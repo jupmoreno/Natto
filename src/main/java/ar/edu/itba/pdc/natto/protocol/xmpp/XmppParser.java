@@ -51,6 +51,8 @@ public class XmppParser implements Parser<String> {
         }*/
         tagsToQueue(bufferString);
 
+        if(tags.isEmpty())
+            return null;
         return tags.remove();
     }
 
@@ -94,6 +96,7 @@ public class XmppParser implements Parser<String> {
                     unfinishedTag = true;
                 }else{
                     currentTag += bufferString.charAt(i);
+                    unfinishedTag = true;
                 }
 
             }else{
