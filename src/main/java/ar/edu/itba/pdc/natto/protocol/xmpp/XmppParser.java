@@ -30,62 +30,62 @@ public class XmppParser implements Parser<String> {
     }
 
     private Queue<StringBuilder> parsed = new LinkedList<>();
-    private StringBuilder current;
+    private String current = "";
     private Deque<XmppState> stateStack = new LinkedList<>();
     private Queue<String> tags = new LinkedList<>();
     private String currentTag = "";
     boolean insideTag = false;
     boolean unfinishedTag = false;
 
+    /**
+     * Returns only complete stanzas, if with what it recieves in buffer it cannot finish it then it saves it in current and returns null
+     * @param buffer
+     * @return
+     */
     @Override
     public String fromByteBuffer(ByteBuffer buffer) {
         //String bufferString = bufferToString(buffer);
 
 
-        String bufferString = "<presence>hola</presence>";
+        String bufferString = "<stream><iq><holaaaaa>hola</holaaaa></iq>";
         tagsToQueue(bufferString);
 
-        String ret = "";
 
         for(String tag : tags){
             if(!tag.startsWith("<")){
-                ret += tag;
-            }
-            if(tag.startsWith("<stream")){
-                ret += tag;
-                stateStack.push(XmppState.STREAM);
-            }else if(tag.startsWith("</stream")){
-                if(stateStack.peek() != XmppState.STREAM){
-                    //TODO: es que esta mal formado el xml habria que devolver todo
-                }else{
-                    ret+= tag;
-                    stateStack.pop();
-                }
+                current += tag;
             }else if(tag.startsWith("<presence")){
-                ret += tag;
+                current += tag;
                 stateStack.push(XmppState.PRECENSE);
             }else if(tag.startsWith("</presence")){
                 if(stateStack.peek() != XmppState.PRECENSE){
                     //TODO: error
                 }else{
-                    ret+= tag;
+                    current+= tag;
                     stateStack.pop();
                 }
             }else if(tag.startsWith("<iq")){
-                ret += tag;
+                current += tag;
                 stateStack.push(XmppState.IQ);
             }else if(tag.startsWith("</iq")){
                 if(stateStack.peek() != XmppState.IQ){
                     //TODO: error
                 }else{
-                    ret+= tag;
+                    current+= tag;
                     stateStack.pop();
                 }
+            }else{
+                current+= tag;
             }
 
         }
 
-        return (ret != "" && stateStack.isEmpty()) ? ret : null;
+        if(current != "" && stateStack.isEmpty()){
+            String ret = current;
+            current = "";
+            return ret;
+        }
+        return null;
     }
 
     @Override
