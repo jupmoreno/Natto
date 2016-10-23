@@ -1,13 +1,8 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.Parser;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -17,9 +12,9 @@ public class XmppParser implements Parser<String> {
 
 
     private enum XmppState {
-        STREAM("stream"),
-        PRECENSE("presence"),
+        PRESENCE("presence"),
         IQ("iq"),
+        MESSAGE("message"),
         ;
 
         private final String value;
@@ -56,9 +51,9 @@ public class XmppParser implements Parser<String> {
                 current += tag;
             }else if(tag.startsWith("<presence")){
                 current += tag;
-                stateStack.push(XmppState.PRECENSE);
+                stateStack.push(XmppState.PRESENCE);
             }else if(tag.startsWith("</presence")){
-                if(stateStack.peek() != XmppState.PRECENSE){
+                if(stateStack.peek() != XmppState.PRESENCE){
                     //TODO: error
                 }else{
                     current+= tag;
@@ -70,6 +65,16 @@ public class XmppParser implements Parser<String> {
             }else if(tag.startsWith("</iq")){
                 if(stateStack.peek() != XmppState.IQ){
                     //TODO: error
+                }else{
+                    current+= tag;
+                    stateStack.pop();
+                }
+            }else if(tag.startsWith("<message")){
+                current+= tag;
+                stateStack.push(XmppState.MESSAGE);
+            }else if(tag.startsWith("</message")){
+                if(stateStack.peek() != XmppState.MESSAGE){
+                    //TODO error
                 }else{
                     current+= tag;
                     stateStack.pop();
