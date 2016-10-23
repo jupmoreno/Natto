@@ -26,14 +26,14 @@ public class XmppParser implements Parser<String> {
 
     private Queue<StringBuilder> parsed = new LinkedList<>();
     private String current = "";
-    private Deque<XmppState> stateStack = new LinkedList<>();
+    private Deque<String> stateStack = new LinkedList<>();
     private Queue<String> tags = new LinkedList<>();
     private String currentTag = "";
     boolean insideTag = false;
     boolean unfinishedTag = false;
 
     /**
-     * Returns only complete stanzas, if with what it recieves in buffer it cannot finish it then it saves it in current and returns null
+     * Returns only complete stanzas, if with what it receives in buffer it cannot finish it then it saves it in current and returns null
      * @param buffer
      * @return
      */
@@ -42,47 +42,23 @@ public class XmppParser implements Parser<String> {
         //String bufferString = bufferToString(buffer);
 
 
-        String bufferString = "<stream><iq><holaaaaa>hola</holaaaa></iq>";
+        String bufferString = "<stream><iq><holaaaa>hola</holaaaa></iq>";
         tagsToQueue(bufferString);
 
 
         for(String tag : tags){
-            if(!tag.startsWith("<")){
-                current += tag;
-            }else if(tag.startsWith("<presence")){
-                current += tag;
-                stateStack.push(XmppState.PRESENCE);
-            }else if(tag.startsWith("</presence")){
-                if(stateStack.peek() != XmppState.PRESENCE){
-                    //TODO: error
+            if(tag.startsWith("<") && !ignoreTag(tag)){
+                if(tag.startsWith("</")){
+                    if(!stateStack.peek().equals(tagType(tag))){
+                        //TODO esta mal formado
+                    }else{
+                        stateStack.pop();
+                    }
                 }else{
-                    current+= tag;
-                    stateStack.pop();
+                    stateStack.push(tagType(tag));
                 }
-            }else if(tag.startsWith("<iq")){
-                current += tag;
-                stateStack.push(XmppState.IQ);
-            }else if(tag.startsWith("</iq")){
-                if(stateStack.peek() != XmppState.IQ){
-                    //TODO: error
-                }else{
-                    current+= tag;
-                    stateStack.pop();
-                }
-            }else if(tag.startsWith("<message")){
-                current+= tag;
-                stateStack.push(XmppState.MESSAGE);
-            }else if(tag.startsWith("</message")){
-                if(stateStack.peek() != XmppState.MESSAGE){
-                    //TODO error
-                }else{
-                    current+= tag;
-                    stateStack.pop();
-                }
-            }else{
-                current+= tag;
             }
-
+            current += tag;
         }
 
         if(current != "" && stateStack.isEmpty()){
@@ -153,4 +129,21 @@ public class XmppParser implements Parser<String> {
         }
 
     }
+
+    private String tagType(String tag){
+        String ret = "";
+        for(int i=1; i<tag.length(); i++){
+            if(tag.charAt(i) == ' ' || tag.charAt(i) == '>'){
+                return ret;
+            }
+            if(tag.charAt(i) != '/')
+                ret+=tag.charAt(i);
+        }
+        return ret;
+    }
+
+    private boolean ignoreTag(String tag){
+        return (tagType(tag).equals("stream") || tagType(tag).startsWith("?xml")) ? true : false;
+    }
+
 }
