@@ -10,7 +10,7 @@ import java.util.Queue;
 
 public class XmppParser implements Parser<String> {
 
-
+/*
     private enum XmppState {
         PRESENCE("presence"),
         IQ("iq"),
@@ -23,14 +23,15 @@ public class XmppParser implements Parser<String> {
             this.value = value;
         }
     }
+*/
 
-    private Queue<StringBuilder> parsed = new LinkedList<>();
     private String current = "";
     private Deque<String> stateStack = new LinkedList<>();
     private Queue<String> tags = new LinkedList<>();
     private String currentTag = "";
     boolean insideTag = false;
     boolean unfinishedTag = false;
+    boolean isFile = false;
 
     /**
      * Returns only complete stanzas, if with what it receives in buffer it cannot finish it then it saves it in current and returns null
@@ -39,33 +40,53 @@ public class XmppParser implements Parser<String> {
      */
     @Override
     public String fromByteBuffer(ByteBuffer buffer) {
-        //String bufferString = bufferToString(buffer);
 
-
-        String bufferString = "<stream><iq><holaaaa>hola</holaaaa></iq>";
+        String bufferString = bufferToString(buffer);
         tagsToQueue(bufferString);
 
+        while(!tags.isEmpty()){
 
-        for(String tag : tags){
-            if(tag.startsWith("<") && !ignoreTag(tag)){
-                if(tag.startsWith("</")){
-                    if(!stateStack.peek().equals(tagType(tag))){
+            String tag = tags.remove();
+            if(tag.startsWith("<") && !ignoreTag(tag)) {
+                System.out.println("SOY EL TAG: " + tagType(tag));
+                if (tag.startsWith("</")) {
+                    if (!stateStack.peek().equals(tagType(tag))) {
                         //TODO esta mal formado
-                    }else{
+                    } else {
                         stateStack.pop();
                     }
                 }else{
-                    stateStack.push(tagType(tag));
+                    if(tagType(tag).equals("file")){
+                        isFile = true;
+                    }
+
+                    if(!tag.endsWith("/>")){
+                        stateStack.push(tagType(tag));
+                    }
                 }
             }
             current += tag;
         }
 
+
+        // Estoy enviando un archivo
+        if(isFile){
+            String ret = current;
+            current = "";
+            if((!unfinishedTag) && current != "" && stateStack.isEmpty()) {
+                isFile = false;
+            }
+            return ret;
+        }
+
+        // Estoy enviando un mensaje completo
         if(current != "" && stateStack.isEmpty()){
             String ret = current;
             current = "";
             return ret;
         }
+
+        // El mensaje todavía no está completo
         return null;
     }
 
@@ -73,7 +94,6 @@ public class XmppParser implements Parser<String> {
     public ByteBuffer toByteBuffer(String message) {
         return null;
     }
-
     /**
      * Converts a byte buffer to a string
      *
@@ -91,7 +111,8 @@ public class XmppParser implements Parser<String> {
      * @param bufferString
      */
     void tagsToQueue(String bufferString){
-
+        //bufferString = bufferString.substring(0,bufferString.length()-1);
+        //TODO: validar comillas
         for(int i = 0; i < bufferString.length(); i++){
 
             if(!insideTag){
@@ -132,6 +153,7 @@ public class XmppParser implements Parser<String> {
 
     /**
      * example: <iq to='bar'> will return iq
+     *
      * @param tag
      * @return
      */
@@ -142,18 +164,19 @@ public class XmppParser implements Parser<String> {
                 return ret;
             }
             if(tag.charAt(i) != '/')
-                ret+=tag.charAt(i);
+                ret += tag.charAt(i);
         }
         return ret;
     }
 
     /**
-     * indicates if a tag has to be ignored, if this is the case then the message will be considered complete even if a closing tag of these type isnt found.
+     * Indicates if a tag has to be ignored, if this is the case then the message will be considered complete even if a closing tag of these type isn't found.
+     *
      * @param tag
      * @return
      */
     private boolean ignoreTag(String tag){
-        return (tagType(tag).equals("stream") || tagType(tag).startsWith("?xml")) ? true : false;
+        return (tagType(tag).equals("stream:stream") || tagType(tag).startsWith("?xml")) ? true : false;
     }
 
 }
