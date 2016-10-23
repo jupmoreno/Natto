@@ -130,6 +130,11 @@ public class XmppParser implements Parser<String> {
 
     }
 
+    /**
+     * example: <iq to='bar'> will return iq
+     * @param tag
+     * @return
+     */
     private String tagType(String tag){
         String ret = "";
         for(int i=1; i<tag.length(); i++){
@@ -142,6 +147,11 @@ public class XmppParser implements Parser<String> {
         return ret;
     }
 
+    /**
+     * indicates if a tag has to be ignored, if this is the case then the message will be considered complete even if a closing tag of these type isnt found.
+     * @param tag
+     * @return
+     */
     private boolean ignoreTag(String tag){
         return (tagType(tag).equals("stream") || tagType(tag).startsWith("?xml")) ? true : false;
     }
