@@ -18,7 +18,9 @@ public class XmppParser implements Parser<String> {
 
     private enum XmppState {
         STREAM("stream"),
-        PRECENSE("presence");
+        PRECENSE("presence"),
+        IQ("iq"),
+        ;
 
         private final String value;
 
@@ -45,7 +47,6 @@ public class XmppParser implements Parser<String> {
 
         String ret = "";
 
-
         for(String tag : tags){
             if(!tag.startsWith("<")){
                 ret += tag;
@@ -70,14 +71,21 @@ public class XmppParser implements Parser<String> {
                     ret+= tag;
                     stateStack.pop();
                 }
+            }else if(tag.startsWith("<iq")){
+                ret += tag;
+                stateStack.push(XmppState.IQ);
+            }else if(tag.startsWith("</iq")){
+                if(stateStack.peek() != XmppState.IQ){
+                    //TODO: error
+                }else{
+                    ret+= tag;
+                    stateStack.pop();
+                }
             }
 
         }
 
-
-
-        //TODO: verificar si esta terminado!! ahora para probar devuelvo lo que ya haya formado
-        return ret;
+        return (ret != "" && stateStack.isEmpty()) ? ret : null;
     }
 
     @Override
