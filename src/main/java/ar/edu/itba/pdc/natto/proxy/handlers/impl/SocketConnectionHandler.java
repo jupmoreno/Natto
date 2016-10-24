@@ -11,7 +11,6 @@ import ar.edu.itba.pdc.natto.protocol.Parser;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.Protocol;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
-import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
 import org.slf4j.Logger;
@@ -201,5 +200,15 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                 connection.requestRead();
             }
         }
+    }
+
+    @Override
+    public void requestClose() throws IOException {
+        // TODO:
+    }
+
+    @Override
+    public void forceClose() throws IOException {
+        // TODO:
     }
 }

@@ -5,22 +5,26 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import java.io.File;
 import java.io.PrintStream;
 
 public class Arguments {
-    @Argument(metaVar = "<server_address>", usage = "Sets the XMPP server address", index = 0)
-    private String serverAddress = "localhost";
-
-    @Argument(metaVar = "<server_port>", usage = "Sets the XMPP server port number", index = 1)
-    private int serverPort = 5222;
+    @Argument(metaVar = "<host:port>", usage = "Sets the default XMPP server address")
+    private String serverAddress;
 
     @Option(name = "--xmpp-port", metaVar = "<port>", usage = "Sets the proxy's XMPP listening"
             + " port number")
-    private int proxyXmppPort = 1080;
+    private String proxyXmppPort;
 
     @Option(name = "--psp-port", metaVar = "<port>", usage = "Sets the proxy's PSP listening"
             + " port number")
-    private int proxyPspPort = 1081;
+    private String proxyPspPort;
+
+    @Option(name = "--config-file", metaVar = "<path>", usage = "Sets the proxy's config file")
+    private File configFile;
+
+    @Option(name = "--max-threads", metaVar = "<number>", usage = "Sets the proxy's max. threads")
+    private String maxThreads;
 
     private CmdLineParser parser;
 
@@ -43,15 +47,19 @@ public class Arguments {
         return serverAddress;
     }
 
-    public int getServerPort() {
-        return serverPort;
-    }
-
-    public int getProxyXmppPort() {
+    public String getProxyXmppPort() {
         return proxyXmppPort;
     }
 
-    public int getProxyPspPort() {
+    public String getProxyPspPort() {
         return proxyPspPort;
+    }
+
+    public File getConfigFile() {
+        return configFile;
+    }
+
+    public String getMaxThreads() {
+        return maxThreads;
     }
 }
