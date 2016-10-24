@@ -92,7 +92,7 @@ public class XmppParser implements Parser<String> {
 
     @Override
     public ByteBuffer toByteBuffer(String message) {
-        return null;
+        return ByteBuffer.wrap(message.getBytes());
     }
     /**
      * Converts a byte buffer to a string
@@ -111,7 +111,7 @@ public class XmppParser implements Parser<String> {
      * @param bufferString
      */
     void tagsToQueue(String bufferString){
-        //bufferString = bufferString.substring(0,bufferString.length()-1);
+       // bufferString = bufferString.substring(0,bufferString.length()-1);
         //TODO: validar comillas
         for(int i = 0; i < bufferString.length(); i++){
 
