@@ -30,6 +30,10 @@ public class Main {
             return;
         }
 
+        startServer(config);
+    }
+
+    private static void startServer(ServerConfig config) {
         ParserFactory<String> xmppParsers = new StringParserFactory();
         ProtocolFactory<String> xmppProtocols = new StringProtocolFactory();
 
@@ -100,6 +104,8 @@ public class Main {
         if (arguments.getMaxThreads() != null) {
             config.setMaxThreads(arguments.getMaxThreads());
         }
+
+        System.out.println(config);
 
         return config;
     }

@@ -8,6 +8,8 @@ import java.net.InetSocketAddress;
 @Config.LoadPolicy(Config.LoadType.FIRST)
 @Config.Sources({"classpath:natto.conf"})
 public interface ServerConfig extends Mutable {
+    // TODO: Crear clase q la contenga para limitar metodos
+
     String PSP_PORT = "configuration.proxy.port";
     String XMPP_PORT = "configuration.proxy.xmpp.port";
     String SERVERS_DEFAULT = "configuration.servers.default";
