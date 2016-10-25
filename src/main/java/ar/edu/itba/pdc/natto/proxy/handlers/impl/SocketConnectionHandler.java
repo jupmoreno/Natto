@@ -40,7 +40,9 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private Connection connection;
 
     private Queue<ByteBuffer> messages;
-    
+
+    private boolean closeRequested = false;
+
     public SocketConnectionHandler(final SocketChannel channel,
                                    final DispatcherSubscriber subscriber,
                                    final ParserFactory<T> parserFactory,
@@ -133,6 +135,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             // TODO: Cerrar la otra conexion && Cerrar key?
             Closeables.closeSilently(channel);
+            connection.requestClose();
 
             return;
         }
@@ -142,6 +145,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             logger.info("Channel reached EOF");
 
             Closeables.closeSilently(channel);
+            connection.requestClose();
             // TODO: Cerrar la otra conexion && Cerrar key?
 
             return;
@@ -152,7 +156,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             buffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-            // TODO: ProtocolTask
+            // TODO: ProtocolTask (?
             T request = parser.fromByteBuffer(buffer);
             if (request != null) {
                 T response = protocol.process(request);
@@ -173,9 +177,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void handle_write() {
-        if (messages.isEmpty()) {
-            return;
-        }
+        checkState(!messages.isEmpty());
 
         ByteBuffer buffer = messages.peek();
 
@@ -185,6 +187,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             logger.error("Can't write to channel", exception);
 
             Closeables.closeSilently(channel);
+            connection.requestClose();
             // TODO: Cerrar la otra conexion && Cerrar key?
 
             return;
@@ -195,7 +198,12 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             if (messages.isEmpty()) {
                 subscriber.unsubscribe(channel, ChannelOperation.WRITE);
-                connection.requestRead();
+
+                if (closeRequested) {
+                    Closeables.closeSilently(channel);
+                } else {
+                    connection.requestRead();
+                }
             }
         }
     }
@@ -203,5 +211,15 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     @Override
     public void requestClose() {
         // TODO:
+        if (closeRequested) {
+            return;
+        }
+
+        closeRequested = true;
+        subscriber.unsubscribe(channel, ChannelOperation.READ);
+
+        if (messages.isEmpty()) {
+            Closeables.closeSilently(channel);
+        }
     }
 }
