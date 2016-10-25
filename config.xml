@@ -5,10 +5,10 @@
     </psp>
     <xmpp>
         <port>1080</port>
+        <transformation enabled="true"/>
         <silenced enabled="true">
             <user name="root"/>
         </silenced>
-        <transformation enabled="true"/>
         <servers>
             <default>
                 <address>localhost</address>
@@ -16,11 +16,7 @@
             </default>
             <user name="root">
                 <address>localhost</address>
-                <port>6222</port>
-            </user>
-            <user name="admin">
-                <address>localhost</address>
-                <port>1029</port>
+                <port>5222</port>
             </user>
         </servers>
     </xmpp>

@@ -114,11 +114,11 @@ public class Config {
     }
 
     public void save() throws ConfigurationException {
-        config.clearTree("xmpp.silence");
+        config.clearTree("xmpp.silenced");
         config.addProperty("xmpp.silenced[@enabled]", xmppSilenceEnabled);
 
         for (String user : xmppSilencedUsers) {
-            config.addProperty("xmpp.silenced.user[@name]", user);
+            config.addProperty("xmpp.silenced.user(-1)[@name]", user);
         }
 
         config.clearTree("xmpp.servers");
