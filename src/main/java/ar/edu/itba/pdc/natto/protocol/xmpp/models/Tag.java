@@ -51,26 +51,29 @@ public class Tag {
     }
 
     public String toString(){
-        String ret = "<" + name;
+        StringBuilder ret = new StringBuilder();
+
+        ret.append("<").append(name);
         for(Map.Entry<String, String> entry : attributes.entrySet()){
-            ret = ret + " " + entry.getKey() + "=\"" + entry.getValue() +"\"";
+            ret.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
         }
 
         if(isEmptyTag){
-            ret += "/>";
-            return ret;
+            ret.append("/>");
+            return ret.toString();
         }
 
-        ret += ">";
+        ret.append(">");
 
-        ret += value;
+        if(value != null)
+            ret.append(value);
 
         for(Tag t : tags){
-            ret += t;
+            ret.append(t);
         }
 
-        ret = ret + "</" + name + ">";
+        ret.append("</").append(name).append(">");
 
-        return ret;
+        return ret.toString();
     }
 }
