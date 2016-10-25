@@ -37,8 +37,11 @@ public class Config {
 
         xmppPort = config.getInt("xmpp.port", Defaults.XMPP_PORT);
         xmppSilenceEnabled = config.getBoolean("xmpp.silenced[@enabled]", Defaults.SILENCE_ENABLED);
-        xmppSilencedUsers = new HashSet<>(
-                config.getList(String.class, "xmpp.silenced.user[@name]", new LinkedList<>()));
+        List<String> silencedUsers = config.getList(String.class, "xmpp.silenced.user[@name]");
+        xmppSilencedUsers = new HashSet<>();
+        if (silencedUsers != null) {
+            xmppSilencedUsers.addAll(silencedUsers);
+        }
         xmppTransformationEnabled = config.getBoolean("xmpp.transformation[@enabled]",
                 Defaults.TRANSFORMATION_ENABLED);
         xmppDefaultServer = new InetSocketAddress(
