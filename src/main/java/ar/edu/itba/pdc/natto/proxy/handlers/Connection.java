@@ -4,16 +4,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-// TODO: Se pueden sacar los throws IOException?
 public interface Connection {
     void requestConnect(final InetSocketAddress serverAddress) throws IOException;
 
-    void requestWrite(ByteBuffer buffer) throws IOException;
+    void requestWrite(ByteBuffer buffer);
 
-    void requestRead() throws IOException;
+    void requestRead();
 
-    void requestClose() throws IOException;
+    void requestClose();
 
     // TODO: Hace falta?
-    void forceClose() throws IOException;
+//    void forceClose();
 }

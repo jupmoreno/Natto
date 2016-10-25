@@ -40,7 +40,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private Connection connection;
 
     private Queue<ByteBuffer> messages;
-
+    
     public SocketConnectionHandler(final SocketChannel channel,
                                    final DispatcherSubscriber subscriber,
                                    final ParserFactory<T> parserFactory,
@@ -84,7 +84,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     @Override
-    public void handle_connect() throws IOException {
+    public void handle_connect() {
         try {
             if (channel.finishConnect()) {
                 SocketAddress serverAddress = channel.socket().getRemoteSocketAddress();
@@ -105,12 +105,12 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     @Override
-    public void requestRead() throws IOException {
+    public void requestRead() {
         subscriber.subscribe(channel, ChannelOperation.READ, this);
     }
 
     @Override
-    public void handle_read() throws IOException {
+    public void handle_read() {
         ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
         int bytesRead;
 
@@ -131,7 +131,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         } catch (IOException exception) {
             logger.error("Can't read channel channel", exception);
 
-            // TODO: Cerrar la otra conexion (? && Cerrar key?
+            // TODO: Cerrar la otra conexion && Cerrar key?
             Closeables.closeSilently(channel);
 
             return;
@@ -140,10 +140,9 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         // The channel has reached end-of-stream or error
         if (bytesRead == -1) {
             logger.info("Channel reached EOF");
-            // TODO: Cerrar ambas puntas?
 
             Closeables.closeSilently(channel);
-            // TODO: Cerrar key?
+            // TODO: Cerrar la otra conexion && Cerrar key?
 
             return;
         }
@@ -167,13 +166,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     @Override
-    public void requestWrite(final ByteBuffer buffer) throws IOException {
+    public void requestWrite(final ByteBuffer buffer) {
         subscriber.subscribe(channel, ChannelOperation.WRITE, this);
         messages.offer(buffer);
     }
 
     @Override
-    public void handle_write() throws IOException {
+    public void handle_write() {
         if (messages.isEmpty()) {
             return;
         }
@@ -186,7 +185,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             logger.error("Can't write to channel", exception);
 
             Closeables.closeSilently(channel);
-            // TODO: Cerrar la otra conexion (? && Cerrar key?
+            // TODO: Cerrar la otra conexion && Cerrar key?
 
             return;
         }
@@ -202,12 +201,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     @Override
-    public void requestClose() throws IOException {
-        // TODO:
-    }
-
-    @Override
-    public void forceClose() throws IOException {
+    public void requestClose() {
         // TODO:
     }
 }
