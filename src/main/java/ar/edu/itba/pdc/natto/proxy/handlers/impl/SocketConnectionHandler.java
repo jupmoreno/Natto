@@ -81,7 +81,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         serverHandler.connection = this;
         this.connection = serverHandler;
 
-        subscriber.unsubscribe(channel, ChannelOperation.READWRITE); // TODO:
+        subscriber.unsubscribe(channel, ChannelOperation.READWRITE);
         subscriber.subscribe(server, ChannelOperation.CONNECT, serverHandler);
     }
 

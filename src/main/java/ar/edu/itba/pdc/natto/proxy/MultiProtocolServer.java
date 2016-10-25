@@ -1,6 +1,7 @@
 package ar.edu.itba.pdc.natto.proxy;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
@@ -51,11 +52,8 @@ public class MultiProtocolServer implements Server {
         public <T> Builder addProtocol(int port, ParserFactory<T> parsers,
                                        ProtocolFactory<T> protocols) throws IOException {
             checkArgument(port > 0 && port <= 65535, "Invalid port number");
-//            checkNotNull(parsers, "Parser factory can't be null"); // TODO: Remove comments
-//            checkNotNull(protocols, "Protocol factory can't be null"); // TODO: Remove comments
-
-            // TODO: Remove
-//            SocketInformation<T> information = new SocketInformation(port, parsers, protocols);
+            checkNotNull(parsers, "Parser factory can't be null");
+            checkNotNull(protocols, "Protocol factory can't be null");
 
             sockets.put(channel(parsers, protocols), port);
 

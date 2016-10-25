@@ -94,7 +94,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
         if (key != null) {
-            key.interestOps(key.interestOps() & ~op.getValue()); // TODO: Check
+            key.interestOps(key.interestOps() & ~op.getValue());
         }
     }
 
