@@ -49,11 +49,7 @@ public class XmppData {
     }
 
     public boolean isUserSilenced(String name) {
-        if (!silence) {
-            return false;
-        }
-
-        return usersSilenced.contains(name);
+        return silence && usersSilenced.contains(name);
     }
 
     public void silenceUser(String name) {
