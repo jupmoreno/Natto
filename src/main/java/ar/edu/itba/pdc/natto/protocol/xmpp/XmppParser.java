@@ -77,7 +77,7 @@ public class XmppParser implements Parser<String> {
 //        assertEquals("root", parser.getLocalName());
 //// since we have parts of CHARACTERS, we'll still get that first:
 //        assertTokenType(XMLStreamConstants.CHARACTERS, parser.next());
-//        assertEquals("val", parser.getText();
+//        assertEquals("val", parser.getValue();
 //// but that's all data we had so:
 //        assertTokenType(AsyncXMLStreamReader.EVENT_INCOMPLETE, parser.next());
 //
@@ -87,7 +87,7 @@ public class XmppParser implements Parser<String> {
 //
 //// and can parse that
 //        assertTokenType(XMLStreamConstants.CHARACTERS, parser.next());
-//        assertEquals("ue", parser.getText();
+//        assertEquals("ue", parser.getValue();
 //        assertTokenType(XMLStreamConstants.END_ELEMENT, parser.next());
 //        assertEquals("root", parser.getLocalName());
 //        assertTokenType(AsyncXMLStreamReader.EVENT_INCOMPLETE, parser.next());
