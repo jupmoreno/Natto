@@ -69,8 +69,6 @@ public class XmppParser implements Parser<String> {
 
         }while(type != XMLEvent.END_DOCUMENT);
 
-
-
         return null;
     }
 
