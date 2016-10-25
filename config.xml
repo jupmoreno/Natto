@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<configuration>
+    <psp>
+        <port>1081</port>
+    </psp>
+    <xmpp>
+        <port>1080</port>
+        <silenced enabled="true">
+            <user name="root"/>
+        </silenced>
+        <transformation enabled="true"/>
+        <servers>
+            <default>
+                <address>localhost</address>
+                <ip>5222</ip>
+            </default>
+            <user name="root">
+                <address>localhost</address>
+                <port>6222</port>
+            </user>
+            <user name="admin">
+                <address>localhost</address>
+                <port>1029</port>
+            </user>
+        </servers>
+    </xmpp>
+</configuration>

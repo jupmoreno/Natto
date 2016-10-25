@@ -1,30 +1,34 @@
-package ar.edu.itba.pdc.natto;
+package ar.edu.itba.pdc.natto.config;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import java.io.File;
 import java.io.PrintStream;
 
 public class Arguments {
-    @Argument(metaVar = "<host:port>", usage = "Sets the default XMPP server address")
+    @Argument(metaVar = "<address>", usage = "Sets the default XMPP server hostname", index = 0)
     private String serverAddress;
+
+    @Argument(metaVar = "<port>", usage = "Sets the default XMPP server port", index = 1)
+    private Integer serverPort;
 
     @Option(name = "--xmpp-port", metaVar = "<port>", usage = "Sets the proxy's XMPP listening"
             + " port number")
-    private String proxyXmppPort;
+    private Integer proxyXmppPort;
 
     @Option(name = "--psp-port", metaVar = "<port>", usage = "Sets the proxy's PSP listening"
             + " port number")
-    private String proxyPspPort;
+    private Integer proxyPspPort;
 
-    @Option(name = "--config-file", metaVar = "<path>", usage = "Sets the proxy's config file")
-    private File configFile;
+    @Option(name = "--config-file", aliases = {"-c"}, metaVar = "<path>",
+            usage = "Sets the proxy's config file")
+    private String configPath = Defaults.CONFIG_PATH;
 
-    @Option(name = "--max-threads", metaVar = "<number>", usage = "Sets the proxy's max. threads")
-    private String maxThreads;
+    // TODO: MaxThreads (?
+//    @Option(name = "--max-threads", metaVar = "<number>", usage = "Sets the proxy's max. threads")
+//    private Integer maxThreads;
 
     private CmdLineParser parser;
 
@@ -47,19 +51,23 @@ public class Arguments {
         return serverAddress;
     }
 
-    public String getProxyXmppPort() {
+    public Integer getServerPort() {
+        return serverPort;
+    }
+
+    public Integer getProxyXmppPort() {
         return proxyXmppPort;
     }
 
-    public String getProxyPspPort() {
+    public Integer getProxyPspPort() {
         return proxyPspPort;
     }
 
-    public File getConfigFile() {
-        return configFile;
+    public String getConfigPath() {
+        return configPath;
     }
 
-    public String getMaxThreads() {
-        return maxThreads;
-    }
+//    public Integer getMaxThreads() {
+//        return maxThreads;
+//    }
 }

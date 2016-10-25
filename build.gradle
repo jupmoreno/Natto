@@ -15,6 +15,6 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.6.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.6.2'
     compile group: 'com.google.guava', name: 'guava', version: '19.0'
-    compile group: 'org.aeonbits.owner', name: 'owner-java8', version: '1.0.9'
-    // testCompile 'junit:junit:4.12'
+    compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.1'
+    compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
 }
