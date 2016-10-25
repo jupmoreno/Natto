@@ -1,7 +1,15 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.Parser;
+import com.fasterxml.aalto.AsyncByteArrayFeeder;
+import com.fasterxml.aalto.AsyncByteBufferFeeder;
+import com.fasterxml.aalto.AsyncXMLInputFactory;
+import com.fasterxml.aalto.AsyncXMLStreamReader;
+import com.fasterxml.aalto.stax.InputFactoryImpl;
 
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.events.XMLEvent;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Deque;
@@ -10,83 +18,86 @@ import java.util.Queue;
 
 public class XmppParser implements Parser<String> {
 
-/*
-    private enum XmppState {
-        PRESENCE("presence"),
-        IQ("iq"),
-        MESSAGE("message"),
-        ;
+    AsyncXMLInputFactory inputF = new InputFactoryImpl();
+    String message = "<hola><mierda>chau</mierda></hola>";
+    ByteBuffer buffer2 = ByteBuffer.wrap(message.getBytes());
+    AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
 
-        private final String value;
 
-        XmppState(String value) {
-            this.value = value;
-        }
-    }
-*/
 
-    private String current = "";
-    private Deque<String> stateStack = new LinkedList<>();
-    private Queue<String> tags = new LinkedList<>();
-    private String currentTag = "";
-    boolean insideTag = false;
-    boolean unfinishedTag = false;
-    boolean isFile = false;
-
-    /**
-     * Returns only complete stanzas, if with what it receives in buffer it cannot finish it then it saves it in current and returns null
-     * @param buffer
-     * @return
-     */
     @Override
     public String fromByteBuffer(ByteBuffer buffer) {
 
-        String bufferString = bufferToString(buffer);
-        tagsToQueue(bufferString);
+        int type = 0;
 
-        while(!tags.isEmpty()){
+        try {
+            parser = inputF.createAsyncFor(buffer2);
+        } catch (XMLStreamException e) {
+            e.printStackTrace();
+        }
 
-            String tag = tags.remove();
-            if(tag.startsWith("<") && !ignoreTag(tag)) {
-                System.out.println("SOY EL TAG: " + tagType(tag));
-                if (tag.startsWith("</")) {
-                    if (!stateStack.peek().equals(tagType(tag))) {
-                        //TODO esta mal formado
-                    } else {
-                        stateStack.pop();
-                    }
-                }else{
-                    if(tagType(tag).equals("file")){
-                        isFile = true;
-                    }
+        do{
 
-                    if(!tag.endsWith("/>")){
-                        stateStack.push(tagType(tag));
-                    }
-                }
+
+
+
+            switch (type) {
+                case XMLEvent.START_DOCUMENT:
+                    System.out.println("start document");
+                    break;
+                case XMLEvent.START_ELEMENT:
+                    System.out.println("start element: " + parser.getName());
+                    break;
+                case XMLEvent.CHARACTERS:
+                    System.out.println("characters: " + parser.getText());
+                    break;
+                case XMLEvent.END_ELEMENT:
+                    System.out.println("end element: " + parser.getName());
+                    break;
+                case XMLEvent.END_DOCUMENT:
+                    System.out.println("end document");
+                    break;
+                default:
+                    break;
             }
-            current += tag;
-        }
 
 
-        // Estoy enviando un archivo
-        if(isFile){
-            String ret = current;
-            current = "";
-            if((!unfinishedTag) && current != "" && stateStack.isEmpty()) {
-                isFile = false;
+            try {
+                type = parser.next();
+            } catch (XMLStreamException e) {
+                e.printStackTrace();
             }
-            return ret;
-        }
 
-        // Estoy enviando un mensaje completo
-        if(current != "" && stateStack.isEmpty()){
-            String ret = current;
-            current = "";
-            return ret;
-        }
+        }while(type != XMLEvent.END_DOCUMENT);
 
-        // El mensaje todavía no está completo
+
+//// now can access couple of events
+//        assertTokenType(XMLStreamConstants.START_DOCUMENT, parser.next());
+//        assertTokenType(XMLStreamConstants.START_ELEMENT, parser.next());
+//        assertEquals("root", parser.getLocalName());
+//// since we have parts of CHARACTERS, we'll still get that first:
+//        assertTokenType(XMLStreamConstants.CHARACTERS, parser.next());
+//        assertEquals("val", parser.getText();
+//// but that's all data we had so:
+//        assertTokenType(AsyncXMLStreamReader.EVENT_INCOMPLETE, parser.next());
+//
+//// at this point, must feed more data:
+//        byte[] input_part2 = "ue</root>".getBytes("UTF-8");
+//        parser.getInputFeeder().feedInput(input_part2);
+//
+//// and can parse that
+//        assertTokenType(XMLStreamConstants.CHARACTERS, parser.next());
+//        assertEquals("ue", parser.getText();
+//        assertTokenType(XMLStreamConstants.END_ELEMENT, parser.next());
+//        assertEquals("root", parser.getLocalName());
+//        assertTokenType(AsyncXMLStreamReader.EVENT_INCOMPLETE, parser.next());
+//
+//// and if we now ran out of data need to indicate that too
+//        parser.getInputFeeder().endOfInput();
+//// which lets us conclude parsing
+//        assertTokenType(XMLStreamConstants.END_DOCUMENT, parser.next());
+//        parser.close();
+//
         return null;
     }
 
@@ -94,89 +105,6 @@ public class XmppParser implements Parser<String> {
     public ByteBuffer toByteBuffer(String message) {
         return null;
     }
-    /**
-     * Converts a byte buffer to a string
-     *
-     * @param buffer
-     * @return buffer to string
-     */
-    private String bufferToString(ByteBuffer buffer) {
-        return new String(buffer.array(), buffer.position(), buffer.limit(),
-                Charset.forName("UTF-8"));
-    }
 
-    /**
-     * Recognizes tags within the string and inserts them into the tags queue.
-     *
-     * @param bufferString
-     */
-    void tagsToQueue(String bufferString){
-        //bufferString = bufferString.substring(0,bufferString.length()-1);
-        //TODO: validar comillas
-        for(int i = 0; i < bufferString.length(); i++){
-
-            if(!insideTag){
-
-                if(bufferString.charAt(i) == '<'){
-
-                    //info que no pertenece a un tag. Ej: <etiqueta>Soy una etiqueta</etiqueta>
-                    if(!currentTag.equals("")){
-                        tags.add(currentTag);
-                        currentTag = "";
-                    }
-
-                    currentTag += bufferString.charAt(i);
-                    insideTag = true;
-                    unfinishedTag = true;
-                }else{
-                    currentTag += bufferString.charAt(i);
-                    unfinishedTag = true;
-                }
-
-            }else{
-
-                if(bufferString.charAt(i) == '>'){
-                    currentTag += bufferString.charAt(i);
-                    insideTag = false;
-                    unfinishedTag = false;
-                    tags.add(currentTag);
-                    currentTag = "";
-                }else{
-                    currentTag += bufferString.charAt(i);
-                }
-
-            }
-
-        }
-
-    }
-
-    /**
-     * example: <iq to='bar'> will return iq
-     *
-     * @param tag
-     * @return
-     */
-    private String tagType(String tag){
-        String ret = "";
-        for(int i=1; i<tag.length(); i++){
-            if(tag.charAt(i) == ' ' || tag.charAt(i) == '>'){
-                return ret;
-            }
-            if(tag.charAt(i) != '/')
-                ret += tag.charAt(i);
-        }
-        return ret;
-    }
-
-    /**
-     * Indicates if a tag has to be ignored, if this is the case then the message will be considered complete even if a closing tag of these type isn't found.
-     *
-     * @param tag
-     * @return
-     */
-    private boolean ignoreTag(String tag){
-        return (tagType(tag).equals("stream:stream") || tagType(tag).startsWith("?xml")) ? true : false;
-    }
 
 }
