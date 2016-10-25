@@ -1,8 +1,8 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
-import ar.edu.itba.pdc.natto.config.Defaults;
-
 import static com.google.common.base.Preconditions.checkNotNull;
+
+import ar.edu.itba.pdc.natto.config.Defaults;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
