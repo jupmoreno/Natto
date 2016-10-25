@@ -16,6 +16,16 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) {
+
+
+
+        XmppParser parser = new XmppParser();
+        parser.fromByteBuffer(null);
+
+
+        if (true) {
+            return;
+        }
         Arguments arguments = new Arguments();
 
         try {

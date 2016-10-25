@@ -19,10 +19,12 @@ import java.util.Queue;
 public class XmppParser implements Parser<String> {
 
     AsyncXMLInputFactory inputF = new InputFactoryImpl();
-    String message = "<hola><mierda>chau</mierda></hola>";
+    String message = "<hola><mierda>chau</mie";
     ByteBuffer buffer2 = ByteBuffer.wrap(message.getBytes());
     AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
 
+    enum stanzaType {IQ, MESSAGE, PRESENCE, };
+    stanzaType currentType;
 
 
     @Override
@@ -37,9 +39,6 @@ public class XmppParser implements Parser<String> {
         }
 
         do{
-
-
-
 
             switch (type) {
                 case XMLEvent.START_DOCUMENT:
@@ -71,33 +70,7 @@ public class XmppParser implements Parser<String> {
         }while(type != XMLEvent.END_DOCUMENT);
 
 
-//// now can access couple of events
-//        assertTokenType(XMLStreamConstants.START_DOCUMENT, parser.next());
-//        assertTokenType(XMLStreamConstants.START_ELEMENT, parser.next());
-//        assertEquals("root", parser.getLocalName());
-//// since we have parts of CHARACTERS, we'll still get that first:
-//        assertTokenType(XMLStreamConstants.CHARACTERS, parser.next());
-//        assertEquals("val", parser.getText();
-//// but that's all data we had so:
-//        assertTokenType(AsyncXMLStreamReader.EVENT_INCOMPLETE, parser.next());
-//
-//// at this point, must feed more data:
-//        byte[] input_part2 = "ue</root>".getBytes("UTF-8");
-//        parser.getInputFeeder().feedInput(input_part2);
-//
-//// and can parse that
-//        assertTokenType(XMLStreamConstants.CHARACTERS, parser.next());
-//        assertEquals("ue", parser.getText();
-//        assertTokenType(XMLStreamConstants.END_ELEMENT, parser.next());
-//        assertEquals("root", parser.getLocalName());
-//        assertTokenType(AsyncXMLStreamReader.EVENT_INCOMPLETE, parser.next());
-//
-//// and if we now ran out of data need to indicate that too
-//        parser.getInputFeeder().endOfInput();
-//// which lets us conclude parsing
-//        assertTokenType(XMLStreamConstants.END_DOCUMENT, parser.next());
-//        parser.close();
-//
+
         return null;
     }
 
