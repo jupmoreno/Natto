@@ -103,7 +103,7 @@ public class XmppParser implements Parser<String> {
 
     @Override
     public ByteBuffer toByteBuffer(String message) {
-        return null;
+        return ByteBuffer.wrap(message.getBytes());
     }
 
 

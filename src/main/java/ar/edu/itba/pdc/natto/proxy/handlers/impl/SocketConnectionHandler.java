@@ -157,8 +157,10 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             // TODO: ProtocolTask
             T request = parser.fromByteBuffer(buffer);
+            System.out.println("REQUEST: " + request);
             if (request != null) {
                 T response = protocol.process(request);
+                System.out.println("RESPONSE: " + response);
                 if (response != null) {
                     connection.requestWrite(parser.toByteBuffer(response));
                 }
