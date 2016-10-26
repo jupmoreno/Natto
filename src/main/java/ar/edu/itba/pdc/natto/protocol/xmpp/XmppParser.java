@@ -1,10 +1,7 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.Parser;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Iq;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Message;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Presence;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
+import ar.edu.itba.pdc.natto.protocol.xmpp.models.*;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -45,7 +42,7 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
-        
+
         if(buffer == null){
             return null;
         }
@@ -102,6 +99,13 @@ public class XmppParser implements Parser<Tag> {
                             tag = new Presence();
                         } else if (parser.getName().getLocalPart().toString().equals("message")) {
                             tag = new Message();
+                        } else if(parser.getName().getLocalPart().toString().equals("stream")){
+                            tag = new Stream();
+                            addAttributes(tag);
+                            tag.setPrefix(parser.getPrefix());
+                            tag.addNamespace(parser.getName().getNamespaceURI());
+                            return tag;
+
                         } else {
                             System.out.println("TEINE OTRO NOMBRE");
                         }
@@ -132,6 +136,7 @@ public class XmppParser implements Parser<Tag> {
                 case AsyncXMLStreamReader.END_ELEMENT:
                     if (tagQueue.size() == 1) {
                         stanza = tagQueue.poll();
+
                         //TODO: Sacar end of input aca (?)
                         parser.getInputFeeder().endOfInput();
                     }
@@ -153,6 +158,7 @@ public class XmppParser implements Parser<Tag> {
             }
 
         } while (type != AsyncXMLStreamReader.END_DOCUMENT);
+
 
 
         System.out.println(stanza);
