@@ -7,14 +7,17 @@ import java.util.*;
  */
 public class Tag {
 
-    String name;
-    boolean isEmptyTag;
-    Map<String,String> attributes = new HashMap<>();
-    List<Tag> tags = new ArrayList<>();
-    String value;
+    private StringBuilder name = new StringBuilder();
+    private StringBuilder prefix = new StringBuilder();
+    private StringBuilder namespace = new StringBuilder();
+    private boolean isEmptyTag;
+    private Map<StringBuilder, StringBuilder> attributes = new HashMap<>();
+    private List<Tag> tags = new ArrayList<>();
+    private StringBuilder value = new StringBuilder();
+    boolean wasModified = false;
 
     public Tag(String name, boolean isEmptyTag){
-        this.name = name;
+        this.name.append(name);
         this.isEmptyTag = isEmptyTag;
     }
 
@@ -31,14 +34,18 @@ public class Tag {
     }
 
     public void addAttribute(String name, String value){
-        attributes.put(name, value);
+        attributes.put(new StringBuilder(name), new StringBuilder(value));
     }
 
     public void addTag(Tag tag){
         tags.add(tag);
     }
 
-    public Map<String, String> getAttributes() {
+    public void addNamespace(String namespace){
+        this.namespace.append(namespace);
+    }
+
+    public Map<StringBuilder, StringBuilder> getAttributes() {
         return attributes;
     }
 
@@ -46,7 +53,7 @@ public class Tag {
         return tags;
     }
 
-    public String getName() {
+    public StringBuilder getName() {
         return name;
     }
 
@@ -54,20 +61,28 @@ public class Tag {
         return isEmptyTag;
     }
 
-    public String getValue() {
+    public StringBuilder getValue() {
         return value;
     }
 
     public void setValue(String value) {
-        this.value = value;
+        this.value.append(value);
     }
 
     public String toString(){
         StringBuilder ret = new StringBuilder();
 
+        if(prefix.length() != 0){
+            ret.append(prefix).append(":");
+        }
+
         ret.append("<").append(name);
-        for(Map.Entry<String, String> entry : attributes.entrySet()){
+        for(Map.Entry<StringBuilder, StringBuilder> entry : attributes.entrySet()){
             ret.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
+        }
+
+        if(namespace.length() != 0){
+            ret.append(" xmlns:").append(prefix).append("=\"").append(namespace).append("\"");
         }
 
         if(isEmptyTag){
@@ -89,5 +104,23 @@ public class Tag {
         return ret.toString();
     }
 
+    public void setPrefix(String prefix) {
+        this.prefix.append(prefix);
+    }
 
+    public StringBuilder getPrefix() {
+        return prefix;
+    }
+
+    public StringBuilder getNamespace() {
+        return namespace;
+    }
+
+    public void setWasModified(boolean wasModified) {
+        this.wasModified = wasModified;
+    }
+
+    public boolean isWasModified() {
+        return wasModified;
+    }
 }
