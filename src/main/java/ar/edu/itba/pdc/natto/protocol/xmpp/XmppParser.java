@@ -13,6 +13,9 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+
 // TODO: Fijarse de siempre cerrar bien el parser anterior!
 public class XmppParser implements Parser<Tag> {
 
@@ -58,8 +61,6 @@ public class XmppParser implements Parser<Tag> {
             return handleTooBig();
         }
 
-        buffer.limit(buffer.limit()-1);
-
         // Agrego el buffer para devolverlo en el caso de que no lo modifique
         buffers.add(buffer);
 
@@ -70,128 +71,124 @@ public class XmppParser implements Parser<Tag> {
             e.printStackTrace();
             newTag = true;
             // TODO: Falta cerrar bien el parser
-            return null; // TODO: ?
+            return null; // TODO: ? Wrongformat tag
         }
 
         // Aca empieza la etapa de parseo
-        Tag stanza = null;
-
+        Tag message = null;
 
         try {
-            while(parser.hasNext()){
-                Tag tag = null;
+            message = parse();
+        } catch (XMLStreamException e) {
+            System.out.println("Mensaje mal formado"); // TODO: Loguear
+            message = handleWrongFormat();
+        }
 
-                try {
-                    type = parser.next();
-                } catch (com.fasterxml.aalto.WFCException e) {
-                    // TODO: Que hacer?
-                    return handleWrongFormat(tag);
-                } catch (XMLStreamException e) {
-                    // TODO: Que hacer?
-                    e.printStackTrace();
-                    return null; // TODO: Que retornar?
-                }
+        if (message != null) {
+            System.out.println(message);
 
-                switch (type) {
+            newTag = true;
 
-                    case AsyncXMLStreamReader.START_DOCUMENT:
-                        System.out.println("start document");
-                        break;
-
-                    case AsyncXMLStreamReader.START_ELEMENT:
-                        System.out.println("start element " + parser.getName());
-                        if (tagDequeue.size() == 0) {
-                            if (parser.getName().getLocalPart().toString().equals("iq")) {
-                                tag = new Iq();
-                            } else if (parser.getName().getLocalPart().toString().equals("presence")) {
-                                tag = new Presence();
-                            } else if (parser.getName().getLocalPart().toString().equals("message")) {
-                                tag = new Message();
-                            } else if (parser.getName().getLocalPart().toString().equals("stream")) {
-                                tag = new Stream();
-                                addAttributes(tag);
-                                tag.setPrefix(parser.getPrefix());
-                                tag.addNamespace(parser.getName().getNamespaceURI());
-
-                                newTag = true;
-
-                                try {
-                                    parser.close();
-                                } catch (XMLStreamException e) {
-                                    e.printStackTrace();
-                                }
-                                // TODO: Falta cerrar bien el parser
-                                return tag;
-
-                            } else {
-                                System.out.println("entro aca como deberia");
-                                tag = new Tag(parser.getName().getLocalPart(), false);
-                            }
-
-                        } else {
-                            boolean empty = true;
-
-                            try {
-                                empty = parser.isEmptyElement();
-                            } catch (XMLStreamException e) {
-                                // TODO: Que hacer?
-                                e.printStackTrace();
-                            }
-
-                            tag = new Tag(parser.getName().getLocalPart(), empty);
-                            tagDequeue.peek().addTag(tag);
-
-                        }
-
-                        addAttributes(tag);
-                        tag.setPrefix(parser.getPrefix());
-                        tag.addNamespace(parser.getName().getNamespaceURI());
-                        System.out.println(" tag " + tag);
-                        tagDequeue.push(tag);
-                        break;
-
-                    case AsyncXMLStreamReader.CHARACTERS:
-                        tagDequeue.peek().setValue(parser.getText());
-                        System.out.println("estos son mis chars " + parser.getText());
-                        break;
-
-                    case AsyncXMLStreamReader.END_ELEMENT:
-                        if (tagDequeue.size() == 1) {
-                            stanza = tagDequeue.poll();
-                        }else{
-                            tagDequeue.poll();
-                        }
-                        System.out.println("end element " + parser.getName());
-                        break;
-
-                    case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                       //System.out.println("incomplete name " + parser.getName());
-                        if(!tagDequeue.isEmpty()){
-                            System.out.println("taaaag " + tagDequeue.peek());
-                        }
-                        System.out.println("incomplete");
-                        return null;
-
-                    default:
-                        break;
-                }
+            try {
+                parser.close();
+            } catch (XMLStreamException e) {
+                e.printStackTrace(); // TODO: Loguear
             }
-        } catch (XMLStreamException e) {
-            e.printStackTrace();
+
+            checkState(tagDequeue.isEmpty());
         }
 
-        System.out.println(stanza);
+        return message;
+    }
 
-        newTag = true;
+    private Tag parse() throws XMLStreamException {
+        Tag ret = null;
 
-        parser.getInputFeeder().endOfInput();
-        try {
-            parser.close();
-        } catch (XMLStreamException e) {
-            e.printStackTrace();
+        while (parser.hasNext()) {
+            Tag tag;
+
+            switch (parser.next()) {
+                case AsyncXMLStreamReader.START_DOCUMENT:
+                    System.out.println("start document");
+                    break;
+
+                case AsyncXMLStreamReader.START_ELEMENT:
+                    System.out.println("start element " + parser.getName());
+
+                    if (tagDequeue.isEmpty()) {
+                        String name = parser.getName().getLocalPart().toString();
+
+                        if (name.equals("iq")) {
+                            tag = new Iq();
+                        } else if (name.equals("presence")) {
+                            tag = new Presence();
+                        } else if (name.equals("message")) {
+                            tag = new Message();
+                        } else if (name.equals("stream")) {
+                            tag = new Stream();
+                        } else {
+                            tag = new Tag(name, false);
+                        }
+                    } else {
+                        boolean empty = true;
+
+                        try {
+                            empty = parser.isEmptyElement();
+                        } catch (XMLStreamException e) {
+                            // TODO: Que hacer?
+                            e.printStackTrace();
+                            // TODO: Return?
+                        }
+
+                        tag = new Tag(parser.getName().getLocalPart(), empty);
+                        tagDequeue.peek().addTag(tag);
+                    }
+
+                    addAttributes(tag);
+                    tag.setPrefix(parser.getPrefix());
+                    tag.addNamespace(parser.getName().getNamespaceURI());
+
+                    if (tag.getName().equals("stream")) {
+                        return tag;
+                    } else {
+                        tagDequeue.push(tag);
+                    }
+
+                    break;
+
+                case AsyncXMLStreamReader.CHARACTERS:
+                    System.out.println("Character: " + parser.getText());
+
+                    tagDequeue.peek().setValue(parser.getText());
+
+                    break;
+
+                case AsyncXMLStreamReader.END_ELEMENT:
+                    System.out.println("End element: " + parser.getName());
+
+                    if (tagDequeue.size() == 1) {
+                        parser.getInputFeeder().endOfInput();
+                        ret = tagDequeue.poll();
+                    } else {
+                        tagDequeue.poll();
+                    }
+
+                    break;
+
+                case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                    System.out.println("Incomplete!");
+
+                    return null;
+
+                default:
+                    // Ignore
+                    break;
+            }
         }
 
-        return stanza;
+        checkNotNull(ret);
+
+        return ret;
     }
 
     @Override
@@ -215,21 +212,22 @@ public class XmppParser implements Parser<Tag> {
         }
     }
 
-    private Tag handleWrongFormat(Tag tag) {
+    private Tag handleWrongFormat() {
+        Tag tag;
+
         while (tagDequeue.size() > 1) {
             tagDequeue.poll();
         }
 
         if (tagDequeue.size() == 1) {
             tag = tagDequeue.poll();
-            tag.setWrongFormat(true);
-            return tag;
+        } else {
+            tag = new Tag("", true);
         }
 
-        Tag retTag = new Tag("", true);
-        retTag.setWrongFormat(true);
+        tag.setWrongFormat(true);
 
-        return retTag;
+        return tag;
     }
 
     private Tag handleTooBig() {
