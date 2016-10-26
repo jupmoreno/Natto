@@ -23,7 +23,7 @@ public class XmppParser implements Parser<Tag> {
     AsyncXMLInputFactory inputF = new InputFactoryImpl();
     AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
     Queue<ByteBuffer> buffers = new LinkedList<>();
-    Deque<Tag> tagQueue = new LinkedList<>();
+    Deque<Tag> tagDequeue = new LinkedList<>();
 
 
     public XmppParser() {
@@ -49,23 +49,7 @@ public class XmppParser implements Parser<Tag> {
 
         //Verifico que todos los buffers no superen el maximo tama;o de mensaje
         if(sizeBuffers() + buffer.remaining() > BUFFER_MAX_SIZE){
-
-            while(tagQueue.size() > 1){
-                tagQueue.poll();
-            }
-            if(tagQueue.size() == 1){
-                Tag tag = tagQueue.poll();
-                tag.setTooBig(true);
-                return tag;
-            }
-            Tag retTag = new Tag("", true);
-            retTag.setTooBig(true);
-
-
-            //TODO revisar
-            parser.getInputFeeder().endOfInput();
-
-            return retTag;
+            return handleTooBig();
         }
 
         //Agrego el buffer para devolverlo en el caso de que no lo modifique
@@ -85,7 +69,7 @@ public class XmppParser implements Parser<Tag> {
 
         do {
             Tag tag = null;
-            System.out.println("El tamaño de la pila de tags es: " + tagQueue.size());
+            System.out.println("El tamaño de la pila de tags es: " + tagDequeue.size());
             switch (type) {
 
                 case AsyncXMLStreamReader.START_DOCUMENT:
@@ -93,7 +77,7 @@ public class XmppParser implements Parser<Tag> {
                     break;
 
                 case AsyncXMLStreamReader.START_ELEMENT:
-                    if (tagQueue.size() == 0) {
+                    if (tagDequeue.size() == 0) {
                         if (parser.getName().getLocalPart().toString().equals("iq")) {
                             tag = new Iq();
                         } else if (parser.getName().getLocalPart().toString().equals("presence")) {
@@ -119,29 +103,29 @@ public class XmppParser implements Parser<Tag> {
                             e.printStackTrace();
                         }
                         tag = new Tag(parser.getName().getLocalPart(), empty);
-                        tagQueue.peek().addTag(tag);
+                        tagDequeue.peek().addTag(tag);
 
                     }
                     addAttributes(tag);
                     tag.setPrefix(parser.getPrefix());
                     tag.addNamespace(parser.getName().getNamespaceURI());
-                    tagQueue.push(tag);
+                    tagDequeue.push(tag);
                     break;
 
                 case AsyncXMLStreamReader.CHARACTERS:
-                    tag = tagQueue.poll();
+                    tag = tagDequeue.poll();
                     tag.setValue(parser.getText());
-                    tagQueue.push(tag);
+                    tagDequeue.push(tag);
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
-                    if (tagQueue.size() == 1) {
-                        stanza = tagQueue.poll();
+                    if (tagDequeue.size() == 1) {
+                        stanza = tagDequeue.poll();
 
                         //TODO: Sacar end of input aca (?)
                         //<parser.getInputFeeder().endOfInput();
                     }
-                    tagQueue.poll();
+                    tagDequeue.poll();
                     break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
@@ -154,7 +138,9 @@ public class XmppParser implements Parser<Tag> {
 
             try {
                 type = parser.next();
-            } catch (XMLStreamException e) {
+            } catch (com.fasterxml.aalto.WFCException e) {
+                return handleWrongFormat(tag);
+            }catch (XMLStreamException e) {
                 e.printStackTrace();
             }
 
@@ -191,6 +177,44 @@ public class XmppParser implements Parser<Tag> {
             tag.addAttribute(parser.getAttributeName(i).toString(), parser.getAttributeValue(i));
 
         }
+    }
+
+    private Tag handleWrongFormat(Tag tag){
+        while(tagDequeue.size() > 1){
+            tagDequeue.poll();
+        }
+        if(tagDequeue.size() == 1){
+            tag = tagDequeue.poll();
+            tag.setWrongFormat(true);
+            return tag;
+        }
+        Tag retTag = new Tag("", true);
+        retTag.setWrongFormat(true);
+
+
+        //TODO revisar
+        parser.getInputFeeder().endOfInput();
+
+        return retTag;
+    }
+
+    private Tag handleTooBig(){
+        while(tagDequeue.size() > 1){
+            tagDequeue.poll();
+        }
+        if(tagDequeue.size() == 1){
+            Tag tag = tagDequeue.poll();
+            tag.setTooBig(true);
+            return tag;
+        }
+        Tag retTag = new Tag("", true);
+        retTag.setTooBig(true);
+
+
+        //TODO revisar
+        parser.getInputFeeder().endOfInput();
+
+        return retTag;
     }
 
 }
