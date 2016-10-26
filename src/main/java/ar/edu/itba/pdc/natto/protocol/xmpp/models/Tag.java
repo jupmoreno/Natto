@@ -72,11 +72,13 @@ public class Tag {
     public String toString(){
         StringBuilder ret = new StringBuilder();
 
+        ret.append("<");
+
         if(prefix.length() != 0){
             ret.append(prefix).append(":");
         }
 
-        ret.append("<").append(name);
+        ret.append(name);
         for(Map.Entry<StringBuilder, StringBuilder> entry : attributes.entrySet()){
             ret.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
         }
@@ -99,7 +101,11 @@ public class Tag {
             ret.append(t);
         }
 
-        ret.append("</").append(name).append(">");
+        if(prefix.length() != 0){
+            ret.append("</").append(prefix).append(":").append(name).append(">");
+        }else{
+            ret.append("</").append(name).append(">");
+        }
 
         return ret.toString();
     }
