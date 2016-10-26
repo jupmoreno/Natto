@@ -103,7 +103,7 @@ public class XmppParser implements Parser<Tag> {
                         } else if (parser.getName().getLocalPart().toString().equals("message")) {
                             tag = new Message();
                         } else {
-                            System.out.println("TEINE OTRO NOMBRE");
+                            tag = new Tag(parser.getName().getLocalPart(), false);
                         }
 
                     } else {
