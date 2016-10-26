@@ -19,4 +19,12 @@ public class Iq extends Tag {
     public StringBuilder getId(){
         return this.getAttribute("id");
     }
+
+    public StringBuilder getFrom(){
+        return this.getAttribute("from");
+    }
+
+    public StringBuilder getType(){
+        return this.getAttribute("type");
+    }
 }
