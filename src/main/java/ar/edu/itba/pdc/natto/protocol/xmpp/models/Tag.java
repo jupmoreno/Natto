@@ -14,8 +14,10 @@ public class Tag {
     private Map<StringBuilder, StringBuilder> attributes = new HashMap<>();
     private List<Tag> tags = new ArrayList<>();
     private StringBuilder value = new StringBuilder();
+
     private boolean modified = false;
     private boolean tooBig = false;
+    private boolean wrongFormat = false;
 
     public Tag(String name, boolean isEmptyTag){
         this.name.append(name);
@@ -156,6 +158,11 @@ public class Tag {
         return null;
     }
 
-    
+    public boolean isWrongFormat() {
+        return wrongFormat;
+    }
 
+    public void setWrongFormat(boolean wrongFormat) {
+        this.wrongFormat = wrongFormat;
+    }
 }

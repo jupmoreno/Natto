@@ -173,7 +173,7 @@ public class XmppParser implements Parser<Tag> {
         //parser.getInputFeeder().endOfInput();
 
 
-        if(!message.isModified()){
+        if((!message.isModified()) || message.isWrongFormat()){
             ByteBuffer ret = ByteBuffer.allocate(sizeBuffers());
             while(!buffers.isEmpty()){
                 ret.put(buffers.poll());
