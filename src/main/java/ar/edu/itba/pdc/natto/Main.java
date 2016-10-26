@@ -8,6 +8,8 @@ import ar.edu.itba.pdc.natto.protocol.string.StringParserFactory;
 import ar.edu.itba.pdc.natto.protocol.string.StringProtocolFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParser;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
+import ar.edu.itba.pdc.natto.protocol.xmpp.XmppProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
 import org.kohsuke.args4j.CmdLineException;
@@ -23,9 +25,9 @@ public class Main {
         parser.fromByteBuffer(null);
 
 
-        if (true) {
+      /*  if (true) {
             return;
-        }
+        }*/
         Arguments arguments = new Arguments();
 
         try {
@@ -37,8 +39,11 @@ public class Main {
             return;
         }
 
-        ParserFactory<String> xmppParsers = new StringParserFactory();
-        ProtocolFactory<String> xmppProtocols = new StringProtocolFactory();
+       /* ParserFactory<String> stringParsers = new StringParserFactory();
+        ProtocolFactory<String> stringProtocols = new StringProtocolFactory();*/
+
+        ParserFactory<Tag> xmppParsers = new XmppParserFactory();
+        ProtocolFactory<Tag> xmppProtocols = new XmppProtocolFactory();
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
