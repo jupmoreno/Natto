@@ -150,8 +150,9 @@ public class Tag {
 
     public StringBuilder getTagContent(String tagName){
         for(Tag t : this.getTags()){
-            if(t.getName().equals(tagName))
+            if(t.getName().toString().equals(tagName)){
                 return t.getValue();
+            }
         }
         return null;
     }
