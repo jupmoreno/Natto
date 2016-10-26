@@ -18,7 +18,7 @@ import java.util.LinkedList;
 public class XmppParser implements Parser<Tag> {
 
     AsyncXMLInputFactory inputF = new InputFactoryImpl();
-    String message = "<iq><hola></hola></iq>";
+    String message = "<iqqq:iq xmlns:iqqq=\"holaaaaaa\"><hola></hola></iqqq:iq>";
     ByteBuffer buffer2 = ByteBuffer.wrap(message.getBytes());
     AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
 
@@ -51,18 +51,16 @@ public class XmppParser implements Parser<Tag> {
 
                 case AsyncXMLStreamReader.START_ELEMENT:
                     if (tagQueue.size() == 0) {
-                        System.out.println("name " + parser.getName());
-                        System.out.println("prefix " + parser.getPrefix());
-                        if (parser.getName().toString().equals("iq")) {
+                        if (parser.getName().getLocalPart().toString().equals("iq")) {
                             tag = new Iq();
-                        } else if (parser.getName().toString().equals("presence")) {
+                        } else if (parser.getName().getLocalPart().toString().equals("presence")) {
                             tag = new Presence();
-                        } else if (parser.getName().toString().equals("message")) {
+                        } else if (parser.getName().getLocalPart().toString().equals("message")) {
                             tag = new Message();
                         } else {
                             System.out.println("TEINE OTRO NOMBRE");
                         }
-                        addAttributes(tag);
+
                     } else {
                         boolean empty = true;
                         try {
@@ -71,12 +69,16 @@ public class XmppParser implements Parser<Tag> {
                             e.printStackTrace();
                         }
 
-                        tag = new Tag(parser.getName().toString(), empty);
-
+                        tag = new Tag(parser.getName().getLocalPart(), empty);
+                        System.out.println("name " + parser.getName().getLocalPart());
                         tagQueue.peek().addTag(tag);
-                        addAttributes(tag);
 
                     }
+                    addAttributes(tag);
+                    System.out.println("prefix que le asigno al tag " + parser.getPrefix());
+                    System.out.println("namespace uri que le asigno al tag " + parser.getName().getNamespaceURI());
+                    tag.setPrefix(parser.getPrefix());
+                    tag.addNamespace(parser.getName().getNamespaceURI());
                     tagQueue.push(tag);
                     break;
 
