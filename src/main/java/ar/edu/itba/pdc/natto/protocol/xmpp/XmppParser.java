@@ -85,6 +85,7 @@ public class XmppParser implements Parser<Tag> {
 
         do {
             Tag tag = null;
+            System.out.println("El tamaño de la pila de tags es: " + tagQueue.size());
             switch (type) {
 
                 case AsyncXMLStreamReader.START_DOCUMENT:
@@ -138,7 +139,7 @@ public class XmppParser implements Parser<Tag> {
                         stanza = tagQueue.poll();
 
                         //TODO: Sacar end of input aca (?)
-                        parser.getInputFeeder().endOfInput();
+                        //<parser.getInputFeeder().endOfInput();
                     }
                     tagQueue.poll();
                     break;
@@ -163,13 +164,13 @@ public class XmppParser implements Parser<Tag> {
 
         System.out.println(stanza);
 
-        return null;
+        return stanza;
     }
 
     @Override
     public ByteBuffer toByteBuffer(Tag message) {
 
-        parser.getInputFeeder().endOfInput();
+        //parser.getInputFeeder().endOfInput();
 
 
         if(!message.isModified()){
@@ -177,6 +178,8 @@ public class XmppParser implements Parser<Tag> {
             while(!buffers.isEmpty()){
                 ret.put(buffers.poll());
             }
+            ret.flip();
+            System.out.println("LLegue aca, y el byteBuffer que devuelvo es de " + ret.remaining());
             return ret;
         }
 
