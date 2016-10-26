@@ -138,4 +138,22 @@ public class Tag {
     public void setTooBig(boolean tooBig) {
         this.tooBig = tooBig;
     }
+
+    public StringBuilder getAttribute(String attributeName){
+        for(Map.Entry<StringBuilder, StringBuilder> e: getAttributes().entrySet()){
+            if(e.getKey().toString().equals(attributeName)){
+                return e.getValue();
+            }
+        }
+        return null;
+    }
+
+    public StringBuilder getTagContent(String tagName){
+        for(Tag t : this.getTags()){
+            if(t.getName().equals(tagName))
+                return t.getValue();
+        }
+        return null;
+    }
+
 }

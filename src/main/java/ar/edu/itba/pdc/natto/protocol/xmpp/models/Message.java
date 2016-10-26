@@ -15,5 +15,13 @@ public class Message extends Tag {
     }
 
 
+    public StringBuilder getBody(){
+        return this.getTagContent("body");
+    }
+
+    public StringBuilder getTo(){
+        return this.getAttribute("to");
+    }
+
 
 }
