@@ -1,9 +1,11 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp.models;
 
 /**
- * Created by natinavas on 10/26/16.
+ * An XML stream is a container for the
+ exchange of XML elements between any two entities over a network.
  */
 public class Stream extends Tag {
+
 
     public Stream(){
         super("stream", false);

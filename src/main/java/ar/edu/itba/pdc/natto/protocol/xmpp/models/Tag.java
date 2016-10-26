@@ -2,9 +2,7 @@ package ar.edu.itba.pdc.natto.protocol.xmpp.models;
 
 import java.util.*;
 
-/**
- * Created by user on 25/10/16.
- */
+
 public class Tag {
 
     private StringBuilder name = new StringBuilder();
