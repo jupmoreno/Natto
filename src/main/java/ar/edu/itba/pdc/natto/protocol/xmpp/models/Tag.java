@@ -14,7 +14,8 @@ public class Tag {
     private Map<StringBuilder, StringBuilder> attributes = new HashMap<>();
     private List<Tag> tags = new ArrayList<>();
     private StringBuilder value = new StringBuilder();
-    boolean wasModified = false;
+    private boolean modified = false;
+    private boolean tooBig = false;
 
     public Tag(String name, boolean isEmptyTag){
         this.name.append(name);
@@ -122,11 +123,19 @@ public class Tag {
         return namespace;
     }
 
-    public void setWasModified(boolean wasModified) {
-        this.wasModified = wasModified;
+    public boolean isModified() {
+        return modified;
     }
 
-    public boolean isWasModified() {
-        return wasModified;
+    public void setModified(boolean modified) {
+        this.modified = modified;
+    }
+
+    public boolean isTooBig() {
+        return tooBig;
+    }
+
+    public void setTooBig(boolean tooBig) {
+        this.tooBig = tooBig;
     }
 }

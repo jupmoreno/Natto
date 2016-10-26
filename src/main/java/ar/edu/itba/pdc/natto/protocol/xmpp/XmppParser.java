@@ -14,29 +14,74 @@ import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.Queue;
 
 public class XmppParser implements Parser<Tag> {
 
-    AsyncXMLInputFactory inputF = new InputFactoryImpl();
     String message = "<iqqq:iq xmlns:iqqq=\"holaaaaaa\"><hola></hola></iqqq:iq>";
     ByteBuffer buffer2 = ByteBuffer.wrap(message.getBytes());
-    AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
 
+    final static int BUFFER_MAX_SIZE = 10000;
+
+    AsyncXMLInputFactory inputF = new InputFactoryImpl();
+    AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
+    Queue<ByteBuffer> buffers = new LinkedList<>();
     Deque<Tag> tagQueue = new LinkedList<>();
 
 
     public XmppParser() {
-        try {
-            parser = inputF.createAsyncFor(buffer2);
-        } catch (XMLStreamException e) {
-            e.printStackTrace();
-        }
+        parser = inputF.createAsyncForByteBuffer();
+
     }
 
 
+    private int sizeBuffers(){
+        int i =0;
+        for(ByteBuffer b: buffers){
+            i+= b.remaining();
+        }
+        return i;
+    }
+
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
+        
+        if(buffer == null){
+            return null;
+        }
 
+        //Verifico que todos los buffers no superen el maximo tama;o de mensaje
+        if(sizeBuffers() + buffer.remaining() > BUFFER_MAX_SIZE){
+
+            while(tagQueue.size() > 1){
+                tagQueue.poll();
+            }
+            if(tagQueue.size() == 1){
+                Tag tag = tagQueue.poll();
+                tag.setTooBig(true);
+                return tag;
+            }
+            Tag retTag = new Tag("", true);
+            retTag.setTooBig(true);
+
+
+            //TODO revisar
+            parser.getInputFeeder().endOfInput();
+
+            return retTag;
+        }
+
+        //Agrego el buffer para devolverlo en el caso de que no lo modifique
+        buffers.add(buffer);
+
+
+        try {
+            parser.getInputFeeder().feedInput(buffer);
+        } catch (XMLStreamException e) {
+            e.printStackTrace();
+        }
+
+        //Aca empieza la etapa de parseo
         int type = 0;
 
         Tag stanza = null;
@@ -68,15 +113,11 @@ public class XmppParser implements Parser<Tag> {
                         } catch (XMLStreamException e) {
                             e.printStackTrace();
                         }
-
                         tag = new Tag(parser.getName().getLocalPart(), empty);
-                        System.out.println("name " + parser.getName().getLocalPart());
                         tagQueue.peek().addTag(tag);
 
                     }
                     addAttributes(tag);
-                    System.out.println("prefix que le asigno al tag " + parser.getPrefix());
-                    System.out.println("namespace uri que le asigno al tag " + parser.getName().getNamespaceURI());
                     tag.setPrefix(parser.getPrefix());
                     tag.addNamespace(parser.getName().getNamespaceURI());
                     tagQueue.push(tag);
@@ -91,6 +132,7 @@ public class XmppParser implements Parser<Tag> {
                 case AsyncXMLStreamReader.END_ELEMENT:
                     if (tagQueue.size() == 1) {
                         stanza = tagQueue.poll();
+                        //TODO: Sacar end of input aca (?)
                         parser.getInputFeeder().endOfInput();
                     }
                     tagQueue.poll();
@@ -120,6 +162,17 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public ByteBuffer toByteBuffer(Tag message) {
+
+        parser.getInputFeeder().endOfInput();
+
+
+        if(!message.isModified()){
+            ByteBuffer ret = ByteBuffer.allocate(sizeBuffers());
+            while(!buffers.isEmpty()){
+                ret.put(buffers.poll());
+            }
+            return ret;
+        }
 
         return ByteBuffer.wrap(message.toString().getBytes());
     }
