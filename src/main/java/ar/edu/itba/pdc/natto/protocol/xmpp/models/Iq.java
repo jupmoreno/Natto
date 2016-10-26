@@ -20,11 +20,23 @@ public class Iq extends Tag {
         return this.getAttribute("id");
     }
 
-    public StringBuilder getFrom(){
-        return this.getAttribute("from");
+    public StringBuilder getTo(){
+        return getAttribute("to");
     }
 
+    public StringBuilder getFrom(){
+        return getAttribute("from");
+    }
+
+    /**
+     * The 'type' attribute specifies the purpose or context of the message,
+     presence, or IQ stanza.
+     */
     public StringBuilder getType(){
         return this.getAttribute("type");
+    }
+
+    public StringBuilder getLang(){
+        return getAttribute("xml:lang");
     }
 }
