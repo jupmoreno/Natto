@@ -8,4 +8,9 @@ public class Iq extends Tag {
     public Iq(){
         super("iq", false);
     }
+
+    @Override
+    public boolean isIq(){
+        return true;
+    }
 }

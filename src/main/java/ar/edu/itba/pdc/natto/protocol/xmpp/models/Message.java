@@ -9,6 +9,10 @@ public class Message extends Tag {
         super("message", false);
     }
 
+    @Override
+    public boolean isMessage(){
+        return true;
+    }
 
 
 

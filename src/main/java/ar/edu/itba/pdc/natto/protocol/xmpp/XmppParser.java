@@ -5,103 +5,102 @@ import ar.edu.itba.pdc.natto.protocol.xmpp.models.Iq;
 import ar.edu.itba.pdc.natto.protocol.xmpp.models.Message;
 import ar.edu.itba.pdc.natto.protocol.xmpp.models.Presence;
 import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
-import com.fasterxml.aalto.AsyncByteArrayFeeder;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
-import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.events.XMLEvent;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedList;
-import java.util.Queue;
 
-public class XmppParser implements Parser<String> {
+public class XmppParser implements Parser<Tag> {
 
     AsyncXMLInputFactory inputF = new InputFactoryImpl();
-    String message = "<iq><mierda>chau</mierda></iq>";
+    String message = "<iq><hola></hola></iq>";
     ByteBuffer buffer2 = ByteBuffer.wrap(message.getBytes());
     AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
 
     Deque<Tag> tagQueue = new LinkedList<>();
 
 
-
-
-    @Override
-    public String fromByteBuffer(ByteBuffer buffer) {
-
-        int type = 0;
-
+    public XmppParser() {
         try {
             parser = inputF.createAsyncFor(buffer2);
         } catch (XMLStreamException e) {
             e.printStackTrace();
         }
+    }
+
+
+    @Override
+    public Tag fromByteBuffer(ByteBuffer buffer) {
+
+        int type = 0;
 
         Tag stanza = null;
-        int i = 0;
-        do{
-           // System.out.println(++i);
+
+        do {
             Tag tag = null;
             switch (type) {
-                case XMLEvent.START_DOCUMENT:
+
+                case AsyncXMLStreamReader.START_DOCUMENT:
                     System.out.println("start document");
                     break;
-                case XMLEvent.START_ELEMENT:
-                    if(tagQueue.size() == 0){
-                        if(parser.getName().toString().equals("iq")){
+
+                case AsyncXMLStreamReader.START_ELEMENT:
+                    if (tagQueue.size() == 0) {
+                        System.out.println("name " + parser.getName());
+                        System.out.println("prefix " + parser.getPrefix());
+                        if (parser.getName().toString().equals("iq")) {
                             tag = new Iq();
-                        }else if(parser.getName().toString().equals("presence")){
+                        } else if (parser.getName().toString().equals("presence")) {
                             tag = new Presence();
-                        }else if(parser.getName().toString().equals("message")){
+                        } else if (parser.getName().toString().equals("message")) {
                             tag = new Message();
+                        } else {
+                            System.out.println("TEINE OTRO NOMBRE");
                         }
-                        tagQueue.push(tag);
-                    }else{
+                        addAttributes(tag);
+                    } else {
                         boolean empty = true;
                         try {
                             empty = parser.isEmptyElement();
                         } catch (XMLStreamException e) {
                             e.printStackTrace();
                         }
+
                         tag = new Tag(parser.getName().toString(), empty);
+
                         tagQueue.peek().addTag(tag);
-                        tagQueue.push(tag);
+                        addAttributes(tag);
 
                     }
-                  //  System.out.println("start element: " + parser.getName());
+                    tagQueue.push(tag);
                     break;
-                case XMLEvent.CHARACTERS:
+
+                case AsyncXMLStreamReader.CHARACTERS:
                     tag = tagQueue.poll();
                     tag.setValue(parser.getText());
                     tagQueue.push(tag);
-
-                  //  System.out.println("characters: " + parser.getText());
                     break;
 
-                case XMLEvent.END_ELEMENT:
-                    if(tagQueue.size()== 1){
+                case AsyncXMLStreamReader.END_ELEMENT:
+                    if (tagQueue.size() == 1) {
                         stanza = tagQueue.poll();
                         parser.getInputFeeder().endOfInput();
                     }
                     tagQueue.poll();
-                  //  System.out.println("end element: " + parser.getName());
                     break;
 
-                case XMLEvent.END_DOCUMENT:
-                   // System.out.println("end document");
-                    break;
+                case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                    System.out.println("incomplete");
+                    return stanza;
 
                 default:
                     break;
             }
-
 
             try {
                 type = parser.next();
@@ -109,7 +108,7 @@ public class XmppParser implements Parser<String> {
                 e.printStackTrace();
             }
 
-        }while(type != XMLEvent.END_DOCUMENT);
+        } while (type != AsyncXMLStreamReader.END_DOCUMENT);
 
 
         System.out.println(stanza);
@@ -118,9 +117,16 @@ public class XmppParser implements Parser<String> {
     }
 
     @Override
-    public ByteBuffer toByteBuffer(String message) {
-        return ByteBuffer.wrap(message.getBytes());
+    public ByteBuffer toByteBuffer(Tag message) {
+
+        return ByteBuffer.wrap(message.toString().getBytes());
     }
 
+    private void addAttributes(Tag tag) {
+        for (int i = 0; i < parser.getAttributeCount(); i++) {
+            tag.addAttribute(parser.getAttributeName(i).toString(), parser.getAttributeValue(i));
+
+        }
+    }
 
 }

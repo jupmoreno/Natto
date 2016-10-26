@@ -8,5 +8,10 @@ public class Presence extends Tag {
     public Presence(){
         super("presence", false);
     }
+
+    @Override
+    public boolean isPresence(){
+        return true;
+    }
 }
 

@@ -18,6 +18,18 @@ public class Tag {
         this.isEmptyTag = isEmptyTag;
     }
 
+    public boolean isMessage(){
+        return false;
+    }
+
+    public boolean isIq(){
+        return false;
+    }
+
+    public boolean isPresence(){
+        return false;
+    }
+
     public void addAttribute(String name, String value){
         attributes.put(name, value);
     }
@@ -76,4 +88,6 @@ public class Tag {
 
         return ret.toString();
     }
+
+
 }
