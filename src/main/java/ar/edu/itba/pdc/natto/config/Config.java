@@ -41,7 +41,6 @@ public class Config {
 
         xmppSilenceEnabled = config.getBoolean("xmpp.silenced[@enabled]", Defaults.SILENCE_ENABLED);
 
-        // TODO: Probar si no existe "xmpp.silenced.user[@name]" en el archivo de conf
         List<String> silencedUsers = config.getList(String.class, "xmpp.silenced.user[@name]",
                 null);
         xmppSilencedUsers = new HashSet<>();
