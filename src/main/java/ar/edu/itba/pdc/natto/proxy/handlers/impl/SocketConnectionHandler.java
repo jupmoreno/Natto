@@ -39,7 +39,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private final SocketChannel channel;
     private Connection connection;
 
-    private Queue<ByteBuffer> messages;
+    private final ByteBuffer readBuffer;
+    private final Queue<ByteBuffer> messages;
 
     private boolean closeRequested = false;
 
@@ -62,6 +63,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         this.connection = this;
 
         this.messages = new ConcurrentLinkedQueue<>();
+        this.readBuffer = ByteBuffer.allocate(BUFFER_SIZE);
     }
 
     public void requestConnect(final InetSocketAddress serverAddress) throws IOException {
@@ -113,7 +115,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void handle_read() {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
         int bytesRead;
 
         logger.info("Channel " + channel.socket().getRemoteSocketAddress()
@@ -129,7 +130,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         }
 
         try {
-            bytesRead = channel.read(buffer);
+            bytesRead = channel.read(readBuffer);
         } catch (IOException exception) {
             logger.error("Can't read channel channel", exception);
 
@@ -153,11 +154,11 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
         // Cannot read more bytes than are immediately available
         if (bytesRead > 0) {
-            buffer.flip();
+            readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
             // TODO: ProtocolTask (?
-            T request = parser.fromByteBuffer(buffer);
+            T request = parser.fromByteBuffer(readBuffer);
             if (request != null) {
                 T response = protocol.process(request);
                 if (response != null) {
