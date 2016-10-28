@@ -3,21 +3,21 @@ package ar.edu.itba.pdc.natto.protocol.xmpp;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import ar.edu.itba.pdc.natto.config.Defaults;
+import ar.edu.itba.pdc.natto.net.NetAddress;
 
-import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Set;
 
 public class XmppData {
     private int port = Defaults.XMPP_PORT;
-    private InetSocketAddress defaultAddress = new InetSocketAddress(Defaults.SERVER_ADDRESS,
+    private NetAddress defaultAddress = new NetAddress(Defaults.SERVER_ADDRESS,
             Defaults.SERVER_PORT);
-    private final Map<String, InetSocketAddress> usersAddress;
+    private final Map<String, NetAddress> usersAddress;
     private boolean silence = Defaults.SILENCE_ENABLED;
     private final Set<String> usersSilenced;
     private boolean transform = Defaults.TRANSFORMATION_ENABLED;
 
-    public XmppData(Map<String, InetSocketAddress> usersAddress, Set<String> usersSilenced) {
+    public XmppData(Map<String, NetAddress> usersAddress, Set<String> usersSilenced) {
         this.usersAddress = usersAddress;
         this.usersSilenced = usersSilenced;
     }
@@ -30,16 +30,16 @@ public class XmppData {
         this.port = port;
     }
 
-    public void setDefaultAddress(InetSocketAddress defaultAddress) {
+    public void setDefaultAddress(NetAddress defaultAddress) {
         this.defaultAddress = checkNotNull(defaultAddress);
     }
 
-    public InetSocketAddress setUserAddress(String user, InetSocketAddress address) {
+    public NetAddress setUserAddress(String user, NetAddress address) {
         return usersAddress.put(checkNotNull(user), checkNotNull(address));
     }
 
-    public InetSocketAddress getUserAddress(String user) {
-        InetSocketAddress address = usersAddress.get(user);
+    public NetAddress getUserAddress(String user) {
+        NetAddress address = usersAddress.get(user);
 
         if (address == null) {
             address = defaultAddress;

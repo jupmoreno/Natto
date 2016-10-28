@@ -86,9 +86,11 @@ public class Main {
                 port = arguments.getServerPort();
             }
 
-            configuration.setXmppDefaultServer(arguments.getServerAddress(), port);
+            try {
+                configuration.setXmppDefaultServer(arguments.getServerAddress(), port);
+            } catch (Exception exception) {
+                // Intentionally
+            }
         }
-
-        // TODO: MaxThreads (?
     }
 }

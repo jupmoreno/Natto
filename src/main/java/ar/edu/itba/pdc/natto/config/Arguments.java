@@ -26,10 +26,6 @@ public class Arguments {
             usage = "Sets the proxy's config file")
     private String configPath = Defaults.CONFIG_PATH;
 
-    // TODO: MaxThreads (?
-//    @Option(name = "--max-threads", metaVar = "<number>", usage = "Sets the proxy's max. threads")
-//    private Integer maxThreads;
-
     private CmdLineParser parser;
 
     public Arguments() {
@@ -66,8 +62,4 @@ public class Arguments {
     public String getConfigPath() {
         return configPath;
     }
-
-//    public Integer getMaxThreads() {
-//        return maxThreads;
-//    }
 }

@@ -1,7 +1,6 @@
 package ar.edu.itba.pdc.natto.config;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
+import ar.edu.itba.pdc.natto.net.NetAddress;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.XMLConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
@@ -9,14 +8,11 @@ import org.apache.commons.configuration2.builder.fluent.Configurations;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.configuration2.tree.ImmutableNode;
 
-import java.net.InetSocketAddress;
 import java.util.*;
 
 public class Config {
     private final FileBasedConfigurationBuilder<XMLConfiguration> builder;
     private final XMLConfiguration config;
-
-    // TODO: MaxThreads (?
 
     private int pspPort;
 
@@ -24,8 +20,8 @@ public class Config {
     private boolean xmppSilenceEnabled;
     private Set<String> xmppSilencedUsers;
     private boolean xmppTransformationEnabled;
-    private InetSocketAddress xmppDefaultServer;
-    private Map<String, InetSocketAddress> xmppUserServers;
+    private NetAddress xmppDefaultServer;
+    private Map<String, NetAddress> xmppUserServers;
 
     public Config(String path) throws ConfigurationException {
         Configurations configs = new Configurations();
@@ -34,39 +30,61 @@ public class Config {
         config = builder.getConfiguration();
 
         pspPort = config.getInt("psp.port", Defaults.PSP_PORT);
+        if (!NetAddress.isValidPort(pspPort)) {
+            pspPort = Defaults.PSP_PORT;
+        }
 
         xmppPort = config.getInt("xmpp.port", Defaults.XMPP_PORT);
+        if (!NetAddress.isValidPort(xmppPort)) {
+            xmppPort = Defaults.XMPP_PORT;
+        }
+
         xmppSilenceEnabled = config.getBoolean("xmpp.silenced[@enabled]", Defaults.SILENCE_ENABLED);
-        List<String> silencedUsers = config.getList(String.class, "xmpp.silenced.user[@name]");
+
+        // TODO: Probar si no existe "xmpp.silenced.user[@name]" en el archivo de conf
+        List<String> silencedUsers = config.getList(String.class, "xmpp.silenced.user[@name]",
+                null);
         xmppSilencedUsers = new HashSet<>();
         if (silencedUsers != null) {
             xmppSilencedUsers.addAll(silencedUsers);
         }
+
         xmppTransformationEnabled = config.getBoolean("xmpp.transformation[@enabled]",
                 Defaults.TRANSFORMATION_ENABLED);
-        xmppDefaultServer = new InetSocketAddress(
-                config.getString("xmpp.servers.default.address", Defaults.SERVER_ADDRESS),
-                config.getInt("xmpp.servers.default.port", Defaults.SERVER_PORT));
-        xmppUserServers = new HashMap<>();
 
+        String defaultAddress = config.getString("xmpp.servers.default.address",
+                Defaults.SERVER_ADDRESS);
+        int defaultPort = config.getInt("xmpp.servers.default.port", Defaults.SERVER_PORT);
+        try {
+            xmppDefaultServer = new NetAddress(defaultAddress, defaultPort);
+        } catch (Exception exception) {
+            xmppDefaultServer = new NetAddress(Defaults.SERVER_ADDRESS, Defaults.SERVER_PORT);
+        }
+
+        xmppUserServers = new HashMap<>();
         List<HierarchicalConfiguration<ImmutableNode>> serversUsers =
                 config.configurationsAt("xmpp.servers.user");
         for (HierarchicalConfiguration server : serversUsers) {
             String name = server.getString("[@name]", null);
 
             if (name != null) {
-                String address = server.getString("address", xmppDefaultServer.getHostName());
+                String address = server.getString("address", xmppDefaultServer.getAddress());
                 int port = server.getInt("port", xmppDefaultServer.getPort());
 
-
-                xmppUserServers.put(name, new InetSocketAddress(address, port));
+                try {
+                    NetAddress netAddress = new NetAddress(address, port);
+                    xmppUserServers.put(name, netAddress);
+                } catch (Exception exception) {
+                    // Intentionally
+                }
             }
         }
     }
 
     public void setPspPort(int pspPort) {
-//        this.config.setProperty("psp.port", pspPort);
-        this.pspPort = pspPort;
+        if (NetAddress.isValidPort(pspPort)) {
+            this.pspPort = pspPort;
+        }
     }
 
     public int getPspPort() {
@@ -74,8 +92,9 @@ public class Config {
     }
 
     public void setXmppPort(int xmppPort) {
-//        this.config.setProperty("xmpp.port", pspPort);
-        this.xmppPort = xmppPort;
+        if (NetAddress.isValidPort(xmppPort)) {
+            this.xmppPort = xmppPort;
+        }
     }
 
     public int getXmppPort() {
@@ -105,14 +124,14 @@ public class Config {
     }
 
     public void setXmppDefaultServer(String hostname, int port) {
-        this.xmppDefaultServer = new InetSocketAddress(checkNotNull(hostname), port);
+        this.xmppDefaultServer = new NetAddress(hostname, port);
     }
 
-    public InetSocketAddress getXmppDefaultServer() {
+    public NetAddress getXmppDefaultServer() {
         return xmppDefaultServer;
     }
 
-    public Map<String, InetSocketAddress> getXmppUserServers() {
+    public Map<String, NetAddress> getXmppUserServers() {
         return xmppUserServers;
     }
 
@@ -125,15 +144,15 @@ public class Config {
         }
 
         config.clearTree("xmpp.servers");
-        config.addProperty("xmpp.servers.default.address", xmppDefaultServer.getHostName());
+        config.addProperty("xmpp.servers.default.address", xmppDefaultServer.getAddress());
         config.addProperty("xmpp.servers.default.ip", xmppDefaultServer.getPort());
 
         for (String key : xmppUserServers.keySet()) {
-            InetSocketAddress inet = xmppUserServers.get(key);
+            NetAddress netAddress = xmppUserServers.get(key);
 
             config.addProperty("xmpp.servers.user(-1)[@name]", key);
-            config.addProperty("xmpp.servers.user.address", inet.getHostName());
-            config.addProperty("xmpp.servers.user.port", inet.getPort());
+            config.addProperty("xmpp.servers.user.address", netAddress.getAddress());
+            config.addProperty("xmpp.servers.user.port", netAddress.getPort());
         }
 
         builder.save();
