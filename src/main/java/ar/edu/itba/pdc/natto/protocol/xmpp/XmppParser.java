@@ -101,13 +101,6 @@ public class XmppParser implements Parser<Tag> {
     private Tag parse() throws XMLStreamException {
         Tag ret = null;
 
-        try{
-            parser.hasNext();
-        }catch(XMLStreamException e){
-            System.out.println("el parser no esta!!!!!!!!!!!!!!!");
-        }
-
-
 
         while (parser.hasNext()) {
             Tag tag;
@@ -195,7 +188,7 @@ public class XmppParser implements Parser<Tag> {
                     break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    System.out.println("Incomplete!");
+                    System.out.println("Incomplete! En el stack tengo: " + tagDequeue.peek());
 
                     return null;
 
@@ -217,10 +210,12 @@ public class XmppParser implements Parser<Tag> {
             while (!buffers.isEmpty()) {
                 ret.put(buffers.poll());
             }
+
             ret.flip();
             return ret;
         }
 
+        System.out.println("Tengo algo modificado!!!! y es " + message);
         while (!buffers.isEmpty()) {
             //TODO: hasta donde borrar?
             buffers.poll();
