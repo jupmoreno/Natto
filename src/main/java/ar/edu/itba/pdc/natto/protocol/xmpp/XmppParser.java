@@ -199,10 +199,13 @@ public class XmppParser implements Parser<Tag> {
                 ret.put(buffers.poll());
             }
             ret.flip();
-            System.out.println("LLegue aca, y el byteBuffer que devuelvo es de " + ret.remaining());
             return ret;
         }
 
+        while (!buffers.isEmpty()) {
+            //TODO: hasta donde borrar?
+            buffers.poll();
+        }
         return ByteBuffer.wrap(message.toString().getBytes());
     }
 

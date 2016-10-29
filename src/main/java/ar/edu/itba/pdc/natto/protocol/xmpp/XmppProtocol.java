@@ -32,6 +32,8 @@ public class XmppProtocol implements Protocol<Tag>{
 
     private void l33tBody(Message m){
         StringBuilder body = m.getBody();
+        if(body == null)
+            return;
 
         replaceAll(body,"a","4");
         replaceAll(body,"e","3");
