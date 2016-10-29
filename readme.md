@@ -4,12 +4,13 @@
 
 # Usage
 
-    $> natto [<server_address> [<server_port>]] [--psp-port <port>] [--xmpp-port <port>]
+    $> natto [<address>] [<port>] [--config-file (-c) <path>] [--psp-port <port>] [--xmpp-port <port>]
     Where:
-     <server_address>   : Sets the XMPP server address
-     <server_port>      : Sets the XMPP server port number (default: 5222)
-     --psp-port <port>  : Sets the proxy's PSP listening port number (default: 1081)
-     --xmpp-port <port> : Sets the proxy's XMPP listening port number (default: 1080)
+     <address>                 : Sets the default XMPP server hostname
+     <port>                    : Sets the default XMPP server port
+     --config-file (-c) <path> : Sets the proxy's config file (default: config.xml)
+     --psp-port <port>         : Sets the proxy's PSP listening port number
+     --xmpp-port <port>        : Sets the proxy's XMPP listening port number
 
 # Development
 

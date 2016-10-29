@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.natto;
+package ar.edu.itba.pdc.natto.config;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
@@ -8,19 +8,23 @@ import org.kohsuke.args4j.Option;
 import java.io.PrintStream;
 
 public class Arguments {
-    @Argument(metaVar = "<server_address>", usage = "Sets the XMPP server address", index = 0)
-    private String serverAddress = "localhost";
+    @Argument(metaVar = "<address>", usage = "Sets the default XMPP server hostname", index = 0)
+    private String serverAddress;
 
-    @Argument(metaVar = "<server_port>", usage = "Sets the XMPP server port number", index = 1)
-    private int serverPort = 5222;
+    @Argument(metaVar = "<port>", usage = "Sets the default XMPP server port", index = 1)
+    private Integer serverPort;
 
     @Option(name = "--xmpp-port", metaVar = "<port>", usage = "Sets the proxy's XMPP listening"
             + " port number")
-    private int proxyXmppPort = 1080;
+    private Integer proxyXmppPort;
 
     @Option(name = "--psp-port", metaVar = "<port>", usage = "Sets the proxy's PSP listening"
             + " port number")
-    private int proxyPspPort = 1081;
+    private Integer proxyPspPort;
+
+    @Option(name = "--config-file", aliases = {"-c"}, metaVar = "<path>",
+            usage = "Sets the proxy's config file")
+    private String configPath = Defaults.CONFIG_PATH;
 
     private CmdLineParser parser;
 
@@ -43,15 +47,19 @@ public class Arguments {
         return serverAddress;
     }
 
-    public int getServerPort() {
+    public Integer getServerPort() {
         return serverPort;
     }
 
-    public int getProxyXmppPort() {
+    public Integer getProxyXmppPort() {
         return proxyXmppPort;
     }
 
-    public int getProxyPspPort() {
+    public Integer getProxyPspPort() {
         return proxyPspPort;
+    }
+
+    public String getConfigPath() {
+        return configPath;
     }
 }

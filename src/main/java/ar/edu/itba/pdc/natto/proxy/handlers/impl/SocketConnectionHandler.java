@@ -11,7 +11,6 @@ import ar.edu.itba.pdc.natto.protocol.Parser;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.Protocol;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
-import ar.edu.itba.pdc.natto.proxy.ProtocolTask;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
 import org.slf4j.Logger;
@@ -22,7 +21,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -41,7 +39,10 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private final SocketChannel channel;
     private Connection connection;
 
-    private Queue<ByteBuffer> messages;
+    private final ByteBuffer readBuffer;
+    private final Queue<ByteBuffer> messages;
+
+    private boolean closeRequested = false;
 
     public SocketConnectionHandler(final SocketChannel channel,
                                    final DispatcherSubscriber subscriber,
@@ -62,6 +63,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         this.connection = this;
 
         this.messages = new ConcurrentLinkedQueue<>();
+        this.readBuffer = ByteBuffer.allocate(BUFFER_SIZE);
     }
 
     public void requestConnect(final InetSocketAddress serverAddress) throws IOException {
@@ -81,12 +83,12 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         serverHandler.connection = this;
         this.connection = serverHandler;
 
-        subscriber.unsubscribe(channel, ChannelOperation.READWRITE); // TODO:
+        subscriber.unsubscribe(channel, ChannelOperation.READWRITE);
         subscriber.subscribe(server, ChannelOperation.CONNECT, serverHandler);
     }
 
     @Override
-    public void handle_connect() throws IOException {
+    public void handle_connect() {
         try {
             if (channel.finishConnect()) {
                 SocketAddress serverAddress = channel.socket().getRemoteSocketAddress();
@@ -107,13 +109,12 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     @Override
-    public void requestRead() throws IOException {
+    public void requestRead() {
         subscriber.subscribe(channel, ChannelOperation.READ, this);
     }
 
     @Override
-    public void handle_read() throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Pool
+    public void handle_read() {
         int bytesRead;
 
         logger.info("Channel " + channel.socket().getRemoteSocketAddress()
@@ -129,12 +130,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         }
 
         try {
-            bytesRead = channel.read(buffer);
+            bytesRead = channel.read(readBuffer);
         } catch (IOException exception) {
             logger.error("Can't read channel channel", exception);
 
-            // TODO: Cerrar la otra conexion (? && Cerrar key?
+            // TODO: Cerrar la otra conexion && Cerrar key?
             Closeables.closeSilently(channel);
+            connection.requestClose();
 
             return;
         }
@@ -142,25 +144,25 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         // The channel has reached end-of-stream or error
         if (bytesRead == -1) {
             logger.info("Channel reached EOF");
-            // TODO: Cerrar ambas puntas?
 
             Closeables.closeSilently(channel);
-            // TODO: Cerrar key?
+            connection.requestClose();
+            // TODO: Cerrar la otra conexion && Cerrar key?
 
             return;
         }
 
         // Cannot read more bytes than are immediately available
         if (bytesRead > 0) {
-            buffer.flip();
+            readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-            // TODO: ProtocolTask
-            T request = parser.fromByteBuffer(buffer);
-            System.out.println("REQUEST: " + request);
+            // TODO: ProtocolTask (?
+            T request = parser.fromByteBuffer(readBuffer);
+            System.out.println("REQUEST: " + request); // TODO: Remove
             if (request != null) {
                 T response = protocol.process(request);
-                System.out.println("RESPONSE: " + response);
+                System.out.println("RESPONSE: " + response); // TODO: Remove
                 if (response != null) {
                     connection.requestWrite(parser.toByteBuffer(response));
                 }
@@ -171,16 +173,14 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     @Override
-    public void requestWrite(final ByteBuffer buffer) throws IOException {
+    public void requestWrite(final ByteBuffer buffer) {
         subscriber.subscribe(channel, ChannelOperation.WRITE, this);
         messages.offer(buffer);
     }
 
     @Override
-    public void handle_write() throws IOException {
-        if (messages.isEmpty()) {
-            return;
-        }
+    public void handle_write() {
+        checkState(!messages.isEmpty());
 
         ByteBuffer buffer = messages.peek();
 
@@ -190,7 +190,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             logger.error("Can't write to channel", exception);
 
             Closeables.closeSilently(channel);
-            // TODO: Cerrar la otra conexion (? && Cerrar key?
+            connection.requestClose();
+            // TODO: Cerrar la otra conexion && Cerrar key?
 
             return;
         }
@@ -200,8 +201,28 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             if (messages.isEmpty()) {
                 subscriber.unsubscribe(channel, ChannelOperation.WRITE);
-                connection.requestRead();
+
+                if (closeRequested) {
+                    Closeables.closeSilently(channel);
+                } else {
+                    connection.requestRead();
+                }
             }
+        }
+    }
+
+    @Override
+    public void requestClose() {
+        // TODO:
+        if (closeRequested) {
+            return;
+        }
+
+        closeRequested = true;
+        subscriber.unsubscribe(channel, ChannelOperation.READ);
+
+        if (messages.isEmpty()) {
+            Closeables.closeSilently(channel);
         }
     }
 }

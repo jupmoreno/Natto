@@ -48,13 +48,11 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
                 handler.handle_connect();
             }
 
-            // TODO: Else?
             if (key.isValid() && key.isReadable()) {
                 ConnectionHandler handler = (ConnectionHandler) key.attachment();
                 handler.handle_read();
             }
 
-            // TODO: Else?
             if (key.isValid() && key.isWritable()) {
                 ConnectionHandler handler = (ConnectionHandler) key.attachment();
                 handler.handle_write();
@@ -73,17 +71,22 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
     }
 
     @Override
-    public void subscribe(SelectableChannel channel, ChannelOperation op,
-                          SelectorHandler handler) throws ClosedChannelException {
+    public void subscribe(SelectableChannel channel, ChannelOperation op, SelectorHandler handler) {
         checkNotNull(handler, "Handler can't be null");
 
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
-        if (key != null) {
-            channel.register(selector, key.interestOps() | op.getValue(), handler);
-        } else {
-            channel.register(selector, op.getValue(), handler);
+        try {
+            if (key != null) {
+                channel.register(selector, key.interestOps() | op.getValue(), handler);
+            } else {
+                channel.register(selector, op.getValue(), handler);
+            }
+        } catch (ClosedChannelException exception) {
+            logger.error("Requested subscription of closed channel", exception);
+            throw new IllegalArgumentException("Channel closed");
         }
+
     }
 
     @Override
@@ -91,7 +94,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
         if (key != null) {
-            key.interestOps(key.interestOps() & ~op.getValue()); // TODO: Check
+            key.interestOps(key.interestOps() & ~op.getValue());
         }
     }
 

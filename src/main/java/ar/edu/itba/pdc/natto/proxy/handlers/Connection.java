@@ -7,7 +7,12 @@ import java.nio.ByteBuffer;
 public interface Connection {
     void requestConnect(final InetSocketAddress serverAddress) throws IOException;
 
-    void requestWrite(ByteBuffer buffer) throws IOException;
+    void requestWrite(ByteBuffer buffer);
 
-    void requestRead() throws IOException;
+    void requestRead();
+
+    void requestClose();
+
+    // TODO: Hace falta?
+//    void forceClose();
 }

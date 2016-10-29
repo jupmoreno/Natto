@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -37,7 +36,7 @@ public class Acceptor implements AcceptHandler {
 
     @Override
     public void handle_accept() throws IOException {
-        SocketChannel client = null;
+        SocketChannel client;
 
         try {
             // Will immediately return null if there are no pending connections
