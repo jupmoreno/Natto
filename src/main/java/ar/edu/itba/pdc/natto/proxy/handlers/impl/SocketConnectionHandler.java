@@ -115,6 +115,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void handle_read() {
+        ByteBuffer readBuffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Sacar!!!
         int bytesRead;
 
         logger.info("Channel " + channel.socket().getRemoteSocketAddress()
