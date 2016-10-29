@@ -18,18 +18,13 @@ import static com.google.common.base.Preconditions.checkState;
 
 // TODO: Fijarse de siempre cerrar bien el parser anterior!
 public class XmppParser implements Parser<Tag> {
-
-    private String message = "<iqqq:iq xmlns:iqqq=\"holaaaaaa\"><hola></hola></iqqq:iq>";
-    private ByteBuffer buffer2 = ByteBuffer.wrap(message.getBytes());
-
     private final static int BUFFER_MAX_SIZE = 10000;
-
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = null;
     private Queue<ByteBuffer> buffers = new LinkedList<>();
     private Deque<Tag> tagDequeue = new LinkedList<>();
     private int type; // TODO: El primer caso pq es 0?
-
+    private boolean completeTag = false;
 
     private boolean newTag = true;
 
@@ -77,6 +72,7 @@ public class XmppParser implements Parser<Tag> {
         // Aca empieza la etapa de parseo
         Tag message = null;
 
+
         try {
             message = parse();
         } catch (XMLStreamException e) {
@@ -98,11 +94,20 @@ public class XmppParser implements Parser<Tag> {
             checkState(tagDequeue.isEmpty());
         }
 
+        completeTag = false;
         return message;
     }
 
     private Tag parse() throws XMLStreamException {
         Tag ret = null;
+
+        try{
+            parser.hasNext();
+        }catch(XMLStreamException e){
+            System.out.println("el parser no esta!!!!!!!!!!!!!!!");
+        }
+
+
 
         while (parser.hasNext()) {
             Tag tag;
@@ -123,43 +128,56 @@ public class XmppParser implements Parser<Tag> {
                         } else if (name.equals("presence")) {
                             tag = new Presence();
                         } else if (name.equals("message")) {
+                            completeTag = true;
                             tag = new Message();
                         } else if (name.equals("stream")) {
                             tag = new Stream();
+                            if(parser.getPrefix().equals("stream")){
+                                addAttributes(tag);
+                                tag.setPrefix(parser.getPrefix());
+                                tag.addNamespace(parser.getName().getNamespaceURI());
+                                return tag;
+                            }
+                        } else if (name.equals("auth")){
+                            completeTag = true;
+                            tag = new Tag("auth", false); //TODO: crear un objeto auth
                         } else {
                             tag = new Tag(name, false);
                         }
+                        addAttributes(tag);
+                        tag.setPrefix(parser.getPrefix());
+                        tag.addNamespace(parser.getName().getNamespaceURI());
+                        tagDequeue.push(tag);
                     } else {
-                        boolean empty = true;
+                        if(completeTag){
+                            boolean empty = true;
 
-                        try {
-                            empty = parser.isEmptyElement();
-                        } catch (XMLStreamException e) {
-                            // TODO: Que hacer?
-                            e.printStackTrace();
-                            // TODO: Return?
+                            try {
+                                empty = parser.isEmptyElement();
+                            } catch (XMLStreamException e) {
+                                // TODO: Que hacer?
+                                e.printStackTrace();
+                                // TODO: Return?
+                            }
+
+                            tag = new Tag(parser.getName().getLocalPart(), empty);
+                            addAttributes(tag);
+                            tag.setPrefix(parser.getPrefix());
+                            tag.addNamespace(parser.getName().getNamespaceURI());
+                            tagDequeue.peek().addTag(tag);
+                            tagDequeue.push(tag);
                         }
 
-                        tag = new Tag(parser.getName().getLocalPart(), empty);
-                        tagDequeue.peek().addTag(tag);
                     }
-
-                    addAttributes(tag);
-                    tag.setPrefix(parser.getPrefix());
-                    tag.addNamespace(parser.getName().getNamespaceURI());
-
-                    if (tag.getName().equals("stream")) {
-                        return tag;
-                    } else {
-                        tagDequeue.push(tag);
-                    }
-
                     break;
 
                 case AsyncXMLStreamReader.CHARACTERS:
                     System.out.println("Character: " + parser.getText());
 
-                    tagDequeue.peek().setValue(parser.getText());
+                    if(completeTag){
+                        tagDequeue.peek().setValue(parser.getText());
+                    }
+
 
                     break;
 
@@ -168,6 +186,7 @@ public class XmppParser implements Parser<Tag> {
 
                     if (tagDequeue.size() == 1) {
                         parser.getInputFeeder().endOfInput();
+                        System.out.println("CIERRO EL PARSER ACA EN EL END_ELEMENT");
                         ret = tagDequeue.poll();
                     } else {
                         tagDequeue.poll();
