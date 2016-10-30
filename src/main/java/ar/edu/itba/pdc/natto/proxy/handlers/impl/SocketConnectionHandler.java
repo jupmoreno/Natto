@@ -115,7 +115,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void handle_read() {
-        ByteBuffer readBuffer = ByteBuffer.allocate(BUFFER_SIZE); // TODO: Sacar!!!
         int bytesRead;
 
         logger.info("Channel " + channel.socket().getRemoteSocketAddress()
@@ -158,18 +157,23 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-            // TODO: ProtocolTask (?
-            T request = parser.fromByteBuffer(readBuffer);
-            System.out.println("REQUEST: " + request); // TODO: Remove
-            if (request != null) {
-                T response = protocol.process(request);
-                System.out.println("RESPONSE: " + response); // TODO: Remove
-                if (response != null) {
-                    connection.requestWrite(parser.toByteBuffer(response));
+            while (readBuffer.hasRemaining()){
+                // TODO: ProtocolTask (?
+                T request = parser.fromByteBuffer(readBuffer);
+                System.out.println("REQUEST: " + request); // TODO: Remove
+                if (request != null) {
+                    T response = protocol.process(request);
+                    System.out.println("RESPONSE: " + response); // TODO: Remove
+                    if (response != null) {
+                        connection.requestWrite(parser.toByteBuffer(response));
+                    }
+                } else {
+                    if(messages.isEmpty()){
+                        this.requestRead();
+                    }
                 }
-            } else {
-                this.requestRead();
             }
+
         }
     }
 
@@ -196,6 +200,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             return;
         }
+
 
         if (!buffer.hasRemaining()) {
             messages.remove();

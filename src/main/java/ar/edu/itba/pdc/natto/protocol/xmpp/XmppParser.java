@@ -9,6 +9,7 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -42,10 +43,13 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
+        System.out.println("\nMe llega: " + new String(buffer.array(), buffer.position(), buffer.limit()));
+
+        System.out.println("\n\n\n\n");
         if (buffer == null) {
             return null;
         }
-        buffer.limit(buffer.limit() - 1);
+        //buffer.limit(buffer.limit() - 1);
 
         if (newTag) {
             parser = inputF.createAsyncForByteBuffer();
@@ -57,8 +61,6 @@ public class XmppParser implements Parser<Tag> {
             return handleTooBig();
         }
 
-        // Agrego el buffer para devolverlo en el caso de que no lo modifique
-        buffers.add(buffer);
 
 
         if(parser.getInputFeeder().needMoreInput()){
@@ -80,14 +82,30 @@ public class XmppParser implements Parser<Tag> {
         // Aca empieza la etapa de parseo
         Tag message = null;
 
-
+        int position = 0;
         try {
             message = parse();
+            System.out.println("Llegue 1");
+            position = (int) parser.getLocationInfo().getEndingByteOffset() + 1;
+            System.out.println("Llegue 2");
+
         } catch (XMLStreamException e) {
             System.out.println(e.getMessage());
             System.out.println("Mensaje mal formado"); // TODO: Loguear
             message = handleWrongFormat();
         }
+
+        ByteBuffer auxBuffer = buffer.slice();
+        buffer.position(position + buffer.position());
+        System.out.println("Llegue 3");
+        auxBuffer.limit(position);
+        System.out.println(auxBuffer);
+        System.out.println(buffer);
+        System.out.println("Llegue 4");
+
+        // Agrego el buffer para devolverlo en el caso de que no lo modifique
+        buffers.add(auxBuffer);
+        System.out.println("Llegue 5");
 
         if (message != null) {
             System.out.println(message);
@@ -104,6 +122,7 @@ public class XmppParser implements Parser<Tag> {
         }
 
         completeTag = false;
+
         return message;
     }
 
@@ -130,12 +149,7 @@ public class XmppParser implements Parser<Tag> {
                             tag = new Message();
                         } else if (name.equals("stream")) {
                             tag = new Stream();
-                            if(parser.getPrefix().equals("stream")){
-                                addAttributes(tag);
-                                tag.setPrefix(parser.getPrefix());
-                                tag.addNamespace(parser.getName().getNamespaceURI());
-                                return tag;
-                            }
+
                         } else if (name.equals("auth")){
                             completeTag = true;
                             tag = new Tag("auth", false); //TODO: crear un objeto auth
@@ -145,7 +159,18 @@ public class XmppParser implements Parser<Tag> {
                         addAttributes(tag);
                         tag.setPrefix(parser.getPrefix());
                         tag.addNamespace(parser.getName().getNamespaceURI());
-                        tagDequeue.push(tag);
+
+                        if(parser.getPrefix().equals("stream")){
+                            // addAttributes(tag);
+                            // tag.setPrefix(parser.getPrefix());
+                            // tag.addNamespace(parser.getName().getNamespaceURI());
+                            System.out.println("tamaño -> " + parser.getLocationInfo().getEndingByteOffset());
+                            parser.getInputFeeder().endOfInput();
+                            return tag;
+                        }else{
+                            tagDequeue.push(tag);
+                        }
+
                     } else {
                         if(completeTag){
                             boolean empty = true;
@@ -185,7 +210,7 @@ public class XmppParser implements Parser<Tag> {
                     System.out.println("tama;o de la pila " + tagDequeue.size());
 
                         if (tagDequeue.size() == 1) {
-                          // parser.getInputFeeder().endOfInput();
+                           parser.getInputFeeder().endOfInput();
                            // System.out.println("CIERRO EL INPUT ACA EN EL END_ELEMENT");
                            // newTag = true;
                             ret = tagDequeue.poll();
@@ -197,8 +222,10 @@ public class XmppParser implements Parser<Tag> {
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("Incomplete! En el stack tengo: " + tagDequeue.peek());
-                    if (tagDequeue.isEmpty())
+                    if (tagDequeue.isEmpty()){
+                        parser.getInputFeeder().endOfInput();
                         return ret;
+                    }
                     return null;
 
                 default:
@@ -206,7 +233,7 @@ public class XmppParser implements Parser<Tag> {
                     break;
             }
         }
-
+        System.out.println("Tamaño" + parser.getLocationInfo().getEndingByteOffset());
         checkNotNull(ret);
 
         return ret;
@@ -221,6 +248,8 @@ public class XmppParser implements Parser<Tag> {
             }
 
             ret.flip();
+            System.out.println("Devuelvo: " + new String(ret.array(), ret.position(), ret.limit(),
+                    StandardCharsets.UTF_8));
             return ret;
         }
         while (!buffers.isEmpty()) {
@@ -228,6 +257,7 @@ public class XmppParser implements Parser<Tag> {
             buffers.poll();
         }
         System.out.println("aca estoy justo antes de devolver algo modificado");
+        System.out.println("Devulelvo: " + message);
         return ByteBuffer.wrap(message.toString().getBytes());
     }
 
