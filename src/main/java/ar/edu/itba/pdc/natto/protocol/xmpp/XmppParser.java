@@ -92,7 +92,7 @@ public class XmppParser implements Parser<Tag> {
             message = handleWrongFormat();
         }
 
-        while (Character.isWhitespace(buffer.get(position))) {
+        while (position<buffer.limit() && Character.isWhitespace(buffer.get(position))) {
             position++;
         }
 
