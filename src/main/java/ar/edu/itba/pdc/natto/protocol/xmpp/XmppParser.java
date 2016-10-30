@@ -43,13 +43,12 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
-        System.out.println("\nMe llega: " + new String(buffer.array(), buffer.position(), buffer.limit()));
+        System.out.println("\nMe llega: " + new String(buffer.array()));
 
         System.out.println("\n\n\n\n");
         if (buffer == null) {
             return null;
         }
-        //buffer.limit(buffer.limit() - 1);
 
         if (newTag) {
             parser = inputF.createAsyncForByteBuffer();
@@ -61,9 +60,7 @@ public class XmppParser implements Parser<Tag> {
             return handleTooBig();
         }
 
-
-
-        if(parser.getInputFeeder().needMoreInput()){
+        if (parser.getInputFeeder().needMoreInput()) {
             System.out.println("Necesito mas cosas para el parser");
             try {
                 parser.getInputFeeder().feedInput(buffer);
@@ -74,7 +71,7 @@ public class XmppParser implements Parser<Tag> {
                 newTag = true;
                 return null; // TODO: ? Wrongformat tag // Falta cerrar bien el parser //Forwardear o que hacer? ???
             }
-        }else{
+        } else {
             System.out.println("el parser tiene cosas, ver que hacer con buffer que entra"); //TODO
         }
 
@@ -86,7 +83,7 @@ public class XmppParser implements Parser<Tag> {
         try {
             message = parse();
             System.out.println("Llegue 1");
-            position = (int) parser.getLocationInfo().getEndingByteOffset() + 1;
+            position = (int) parser.getLocationInfo().getEndingByteOffset();
             System.out.println("Llegue 2");
 
         } catch (XMLStreamException e) {
@@ -95,20 +92,22 @@ public class XmppParser implements Parser<Tag> {
             message = handleWrongFormat();
         }
 
+        while (Character.isWhitespace(buffer.get(position))) {
+            position++;
+        }
+
         ByteBuffer auxBuffer = buffer.slice();
         buffer.position(position + buffer.position());
-        System.out.println("Llegue 3");
         auxBuffer.limit(position);
+        System.out.println("\nAUX: " + new String(auxBuffer.array(), auxBuffer.position(), auxBuffer.limit()));
         System.out.println(auxBuffer);
+        System.out.println("\nNOAUX: " + new String(buffer.array(), buffer.position(), buffer.limit()));
         System.out.println(buffer);
-        System.out.println("Llegue 4");
 
         // Agrego el buffer para devolverlo en el caso de que no lo modifique
         buffers.add(auxBuffer);
-        System.out.println("Llegue 5");
 
         if (message != null) {
-            System.out.println(message);
 
             newTag = true;
 
@@ -150,7 +149,7 @@ public class XmppParser implements Parser<Tag> {
                         } else if (name.equals("stream")) {
                             tag = new Stream();
 
-                        } else if (name.equals("auth")){
+                        } else if (name.equals("auth")) {
                             completeTag = true;
                             tag = new Tag("auth", false); //TODO: crear un objeto auth
                         } else {
@@ -160,19 +159,19 @@ public class XmppParser implements Parser<Tag> {
                         tag.setPrefix(parser.getPrefix());
                         tag.addNamespace(parser.getName().getNamespaceURI());
 
-                        if(parser.getPrefix().equals("stream")){
+                        if (parser.getPrefix().equals("stream")) {
                             // addAttributes(tag);
                             // tag.setPrefix(parser.getPrefix());
                             // tag.addNamespace(parser.getName().getNamespaceURI());
                             System.out.println("tamaño -> " + parser.getLocationInfo().getEndingByteOffset());
                             parser.getInputFeeder().endOfInput();
                             return tag;
-                        }else{
+                        } else {
                             tagDequeue.push(tag);
                         }
 
                     } else {
-                        if(completeTag){
+                        if (completeTag) {
                             boolean empty = true;
 
                             try {
@@ -189,7 +188,7 @@ public class XmppParser implements Parser<Tag> {
                             tag.addNamespace(parser.getName().getNamespaceURI());
                             tagDequeue.peek().addTag(tag);
                             tagDequeue.push(tag);
-                        }else{
+                        } else {
                             tagDequeue.push(new Tag(parser.getName().getLocalPart(), false));
                         }
 
@@ -199,7 +198,7 @@ public class XmppParser implements Parser<Tag> {
                 case AsyncXMLStreamReader.CHARACTERS:
                     System.out.println("Character: " + parser.getText());
 
-                    if(completeTag){
+                    if (completeTag) {
                         tagDequeue.peek().setValue(parser.getText());
                     }
 
@@ -209,23 +208,19 @@ public class XmppParser implements Parser<Tag> {
                     System.out.println("End element: " + parser.getName());
                     System.out.println("tama;o de la pila " + tagDequeue.size());
 
-                        if (tagDequeue.size() == 1) {
-                           parser.getInputFeeder().endOfInput();
-                           // System.out.println("CIERRO EL INPUT ACA EN EL END_ELEMENT");
-                           // newTag = true;
-                            ret = tagDequeue.poll();
-                        } else {
-                            tagDequeue.poll();
-                        }
+                    if (tagDequeue.size() == 1) {
+                        parser.getInputFeeder().endOfInput();
+                        // System.out.println("CIERRO EL INPUT ACA EN EL END_ELEMENT");
+                        // newTag = true;
+                        ret = tagDequeue.poll();
+                    } else {
+                        tagDequeue.poll();
+                    }
 
                     break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("Incomplete! En el stack tengo: " + tagDequeue.peek());
-                    if (tagDequeue.isEmpty()){
-                        parser.getInputFeeder().endOfInput();
-                        return ret;
-                    }
                     return null;
 
                 default:
