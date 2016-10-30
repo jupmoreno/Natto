@@ -45,6 +45,7 @@ public class XmppParser implements Parser<Tag> {
         if (buffer == null) {
             return null;
         }
+        buffer.limit(buffer.limit() - 1);
 
         if (newTag) {
             parser = inputF.createAsyncForByteBuffer();
@@ -59,15 +60,22 @@ public class XmppParser implements Parser<Tag> {
         // Agrego el buffer para devolverlo en el caso de que no lo modifique
         buffers.add(buffer);
 
-        try {
-            parser.getInputFeeder().feedInput(buffer);
-        } catch (XMLStreamException e) {
-            // TODO: Forwardear o que hacer? ???
-            e.printStackTrace();
-            newTag = true;
-            // TODO: Falta cerrar bien el parser
-            return null; // TODO: ? Wrongformat tag
+
+        if(parser.getInputFeeder().needMoreInput()){
+            System.out.println("Necesito mas cosas para el parser");
+            try {
+                parser.getInputFeeder().feedInput(buffer);
+
+            } catch (XMLStreamException e) {
+                System.out.println(e.getMessage());
+                e.printStackTrace();
+                newTag = true;
+                return null; // TODO: ? Wrongformat tag // Falta cerrar bien el parser //Forwardear o que hacer? ???
+            }
+        }else{
+            System.out.println("el parser tiene cosas, ver que hacer con buffer que entra"); //TODO
         }
+
 
         // Aca empieza la etapa de parseo
         Tag message = null;
@@ -76,6 +84,7 @@ public class XmppParser implements Parser<Tag> {
         try {
             message = parse();
         } catch (XMLStreamException e) {
+            System.out.println(e.getMessage());
             System.out.println("Mensaje mal formado"); // TODO: Loguear
             message = handleWrongFormat();
         }
@@ -106,10 +115,6 @@ public class XmppParser implements Parser<Tag> {
             Tag tag;
 
             switch (parser.next()) {
-                case AsyncXMLStreamReader.START_DOCUMENT:
-                    System.out.println("start document");
-                    break;
-
                 case AsyncXMLStreamReader.START_ELEMENT:
                     System.out.println("start element " + parser.getName());
 
@@ -159,6 +164,8 @@ public class XmppParser implements Parser<Tag> {
                             tag.addNamespace(parser.getName().getNamespaceURI());
                             tagDequeue.peek().addTag(tag);
                             tagDequeue.push(tag);
+                        }else{
+                            tagDequeue.push(new Tag(parser.getName().getLocalPart(), false));
                         }
 
                     }
@@ -171,25 +178,27 @@ public class XmppParser implements Parser<Tag> {
                         tagDequeue.peek().setValue(parser.getText());
                     }
 
-
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
                     System.out.println("End element: " + parser.getName());
+                    System.out.println("tama;o de la pila " + tagDequeue.size());
 
-                    if (tagDequeue.size() == 1) {
-                        parser.getInputFeeder().endOfInput();
-                        System.out.println("CIERRO EL PARSER ACA EN EL END_ELEMENT");
-                        ret = tagDequeue.poll();
-                    } else {
-                        tagDequeue.poll();
-                    }
+                        if (tagDequeue.size() == 1) {
+                          // parser.getInputFeeder().endOfInput();
+                           // System.out.println("CIERRO EL INPUT ACA EN EL END_ELEMENT");
+                           // newTag = true;
+                            ret = tagDequeue.poll();
+                        } else {
+                            tagDequeue.poll();
+                        }
 
                     break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("Incomplete! En el stack tengo: " + tagDequeue.peek());
-
+                    if (tagDequeue.isEmpty())
+                        return ret;
                     return null;
 
                 default:
@@ -214,12 +223,11 @@ public class XmppParser implements Parser<Tag> {
             ret.flip();
             return ret;
         }
-
-        System.out.println("Tengo algo modificado!!!! y es " + message);
         while (!buffers.isEmpty()) {
             //TODO: hasta donde borrar?
             buffers.poll();
         }
+        System.out.println("aca estoy justo antes de devolver algo modificado");
         return ByteBuffer.wrap(message.toString().getBytes());
     }
 
