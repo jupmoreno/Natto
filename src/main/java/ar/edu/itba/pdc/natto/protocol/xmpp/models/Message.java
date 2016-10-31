@@ -12,7 +12,7 @@ package ar.edu.itba.pdc.natto.protocol.xmpp.models;
 public class Message extends Tag {
 
     public Message(){
-        super("message", false);
+        super("message");
     }
 
     @Override

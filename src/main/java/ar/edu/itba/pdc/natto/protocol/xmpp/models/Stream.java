@@ -8,7 +8,7 @@ public class Stream extends Tag {
 
 
     public Stream(){
-        super("stream", false);
+        super("stream");
     }
 
 

@@ -4,10 +4,11 @@ package ar.edu.itba.pdc.natto.protocol.xmpp.models;
  * "request-
  response" mechanism for more structured exchanges of data
  */
+@Deprecated
 public class Iq extends Tag {
 
     public Iq(){
-        super("iq", false);
+        super("iq");
     }
 
     @Override

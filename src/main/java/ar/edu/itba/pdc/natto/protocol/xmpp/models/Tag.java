@@ -8,7 +8,6 @@ public class Tag {
     private StringBuilder name = new StringBuilder();
     private StringBuilder prefix = new StringBuilder();
     private StringBuilder namespace = new StringBuilder();
-    private boolean isEmptyTag;
     private Map<StringBuilder, StringBuilder> attributes = new HashMap<>();
     private List<Tag> tags = new ArrayList<>();
     private StringBuilder value = new StringBuilder();
@@ -17,9 +16,8 @@ public class Tag {
     private boolean tooBig = false;
     private boolean wrongFormat = false;
 
-    public Tag(String name, boolean isEmptyTag){
+    public Tag(String name){
         this.name.append(name);
-        this.isEmptyTag = isEmptyTag;
     }
 
     public boolean isMessage(){
@@ -58,9 +56,6 @@ public class Tag {
         return name;
     }
 
-    public boolean isEmptyTag() {
-        return isEmptyTag;
-    }
 
     public StringBuilder getValue() {
         return value;
@@ -86,11 +81,6 @@ public class Tag {
 
         if(namespace.length() != 0){
             ret.append(" xmlns:").append(prefix).append("=\"").append(namespace).append("\"");
-        }
-
-        if(isEmptyTag){
-            ret.append("/>");
-            return ret.toString();
         }
 
         ret.append(">");

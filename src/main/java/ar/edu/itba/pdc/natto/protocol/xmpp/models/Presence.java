@@ -8,10 +8,11 @@ package ar.edu.itba.pdc.natto.protocol.xmpp.models;
  (in this case, network availability information) about an entity to
  which they have subscribed.
  */
+@Deprecated
 public class Presence extends Tag {
 
     public Presence(){
-        super("presence", false);
+        super("presence");
     }
 
     @Override
