@@ -1,23 +1,20 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.Parser;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.*;
+import ar.edu.itba.pdc.natto.protocol.xmpp.models.Auth;
+import ar.edu.itba.pdc.natto.protocol.xmpp.models.Message;
+import ar.edu.itba.pdc.natto.protocol.xmpp.models.Stream;
+import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
-import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 // TODO: Fijarse de siempre cerrar bien el parser anterior!
 public class XmppParser implements Parser<Tag> {
@@ -70,8 +67,7 @@ public class XmppParser implements Parser<Tag> {
                             tagDeque.push(stream);
 
                         }else if(name.equals("auth")){
-                            //TODO: hacer clase Auth
-                            Tag auth = new Tag("auth");
+                            Auth auth = new Auth();
                             fillTag(auth);
                             completeTag = true;
                             tagDeque.push(auth);
@@ -94,7 +90,6 @@ public class XmppParser implements Parser<Tag> {
                             tagDeque.peek().addTag(t);
                             tagDeque.push(t);
                         }
-
                     }
 
                     break;
@@ -138,8 +133,6 @@ public class XmppParser implements Parser<Tag> {
 
 
             }
-
-
 
         }
 
