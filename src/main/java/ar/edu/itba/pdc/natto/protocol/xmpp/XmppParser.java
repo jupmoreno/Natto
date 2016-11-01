@@ -12,7 +12,6 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -38,27 +37,23 @@ public class XmppParser implements Parser<Tag> {
     public Tag fromByteBuffer(ByteBuffer buffer) {
         Tag tag = null;
 
-        buffer.limit(buffer.limit() -1);
+    //    buffer.limit(buffer.limit() -1); // TODO SACARLO DEL SOCKET CONNECTION HANDLER
 
-        buffers.add(buffer);
-
-        if(parser.getInputFeeder().needMoreInput()){
+        if(parser.getInputFeeder().needMoreInput() && !buffers.contains(buffer)){
+            buffers.add(buffer);
+            System.out.println(buffers);
             try {
                 parser.getInputFeeder().feedInput(buffer);
             } catch (XMLStreamException e) {
                 e.printStackTrace();
             }
         }
-        System.out.println("por entrar despues de feedear al parser");
         System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
-        System.out.println("no imprimio el buffer?");
         try {
             tag = parse();
         } catch (XMLStreamException e) {
             System.out.println("Mal formado");
         }
-
-
         return tag;
     }
 
@@ -153,6 +148,7 @@ public class XmppParser implements Parser<Tag> {
                     break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                    System.out.println("EVENT INCOMPLETE");
                     return null;
 
                 default:

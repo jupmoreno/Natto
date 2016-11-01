@@ -117,8 +117,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     public void handle_read() {
         int bytesRead;
 
-        logger.info("Channel " + channel.socket().getRemoteSocketAddress()
-                + " requested read operation");
+      //  logger.info("Channel " + channel.socket().getRemoteSocketAddress()
+        //        + " requested read operation");
 
         if (connection == this) { // TODO: Remove!
             try {
@@ -156,6 +156,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         if (bytesRead > 0) {
             readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
+
+            readBuffer.limit(readBuffer.limit());       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
 
             while (readBuffer.hasRemaining()){
                 // TODO: ProtocolTask (?
