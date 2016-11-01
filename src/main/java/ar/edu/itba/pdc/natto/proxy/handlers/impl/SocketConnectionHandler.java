@@ -160,7 +160,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             while (readBuffer.hasRemaining()){
                 // TODO: ProtocolTask (?
                 T request = parser.fromByteBuffer(readBuffer);
-                System.out.println("REQUEST: " + request); // TODO: Remove
+               // System.out.println("REQUEST: " + request); // TODO: Remove
                 if (request != null) {
                     T response = protocol.process(request);
                     System.out.println("RESPONSE: " + response); // TODO: Remove

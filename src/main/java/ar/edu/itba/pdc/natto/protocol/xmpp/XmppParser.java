@@ -12,6 +12,8 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -34,7 +36,30 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
-        return null;
+        Tag tag = null;
+
+        buffer.limit(buffer.limit() -1);
+
+        buffers.add(buffer);
+
+        if(parser.getInputFeeder().needMoreInput()){
+            try {
+                parser.getInputFeeder().feedInput(buffer);
+            } catch (XMLStreamException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("por entrar despues de feedear al parser");
+        System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
+        System.out.println("no imprimio el buffer?");
+        try {
+            tag = parse();
+        } catch (XMLStreamException e) {
+            System.out.println("Mal formado");
+        }
+
+
+        return tag;
     }
 
     private Tag parse() throws XMLStreamException {
@@ -79,6 +104,7 @@ public class XmppParser implements Parser<Tag> {
                         }else{
                             //TODO: ver el xml version
                             Tag t = new Tag(name);
+                            System.out.println("EL PREFIJO ES " +  t.getPrefix());
                             tagDeque.push(t);
                         }
 
@@ -116,10 +142,16 @@ public class XmppParser implements Parser<Tag> {
 
                     }else{
                         String nameOfEndElement = parser.getName().getLocalPart().toString();
-                        System.out.println("Name: " + nameOfEndElement);
+                        System.out.println("Name: " + nameOfEndElement + " longitud de name " + nameOfEndElement.length());
+                        System.out.println("EL NOMBRE DE LO QUE TEGNO EN EL TOPE DE LA PILA " + tagDeque.peek().getName() + " long " + tagDeque.peek().getName().length() );
+                        System.out.println("EL NOMBRE DE LO QUE TEGNO EN EL TOPE DE LA PILA " + tagDeque.peek().getName() + " long " + tagDeque.peek().getName().length() );
+                        if(tagDeque.peek().getName().equals(nameOfEndElement)){
+                            System.out.println("lsos nombres son iguales");
+                            if(tagDeque.peek().getPrefix() == null || tagDeque.peek().getPrefix().equals(parser.getPrefix())){
+                                System.out.println("DEVUELVO EN EL END ELEMENT? " + tagDeque.peek());
+                                return tagDeque.poll();
+                            }
 
-                        if(tagDeque.peek().getName().equals(nameOfEndElement) && tagDeque.peek().getPrefix().equals(parser.getPrefix())){
-                            return tagDeque.poll();
                         }
 
                     }
@@ -141,7 +173,33 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public ByteBuffer toByteBuffer(Tag message) {
-        return null;
+        if ((!message.isModified()) || message.isWrongFormat()) {
+            ByteBuffer ret = ByteBuffer.allocate(sizeBuffers());
+            while (!buffers.isEmpty()) {
+                ret.put(buffers.poll());
+            }
+
+            ret.flip();
+            System.out.println("Devuelvo: " + new String(ret.array(), ret.position(), ret.limit(),
+                    StandardCharsets.UTF_8));
+            return ret;
+        }
+        System.out.println("modifique y cambio");
+        while (!buffers.isEmpty()) {
+            //TODO: hasta donde borrar?
+            buffers.poll();
+        }
+        System.out.println("aca estoy justo antes de devolver algo modificado");
+        System.out.println("Devulelvo: " + message);
+        return ByteBuffer.wrap(message.toString().getBytes());
+    }
+
+    private int sizeBuffers() {
+        int i = 0;
+        for (ByteBuffer b : buffers) {
+            i += b.remaining();
+        }
+        return i;
     }
 
     private void fillTag(Tag tag){
