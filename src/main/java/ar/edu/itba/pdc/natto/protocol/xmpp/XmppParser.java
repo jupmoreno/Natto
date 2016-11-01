@@ -142,13 +142,8 @@ public class XmppParser implements Parser<Tag> {
 
                     }else{
                         String nameOfEndElement = parser.getName().getLocalPart().toString();
-                        System.out.println("Name: " + nameOfEndElement + " longitud de name " + nameOfEndElement.length());
-                        System.out.println("EL NOMBRE DE LO QUE TEGNO EN EL TOPE DE LA PILA " + tagDeque.peek().getName() + " long " + tagDeque.peek().getName().length() );
-                        System.out.println("EL NOMBRE DE LO QUE TEGNO EN EL TOPE DE LA PILA " + tagDeque.peek().getName() + " long " + tagDeque.peek().getName().length() );
-                        if(tagDeque.peek().getName().equals(nameOfEndElement)){
-                            System.out.println("lsos nombres son iguales");
-                            if(tagDeque.peek().getPrefix() == null || tagDeque.peek().getPrefix().equals(parser.getPrefix())){
-                                System.out.println("DEVUELVO EN EL END ELEMENT? " + tagDeque.peek());
+                        if(tagDeque.peek().getName().toString().equals(nameOfEndElement)){
+                            if(tagDeque.peek().getPrefix().toString().equals("") || tagDeque.peek().getPrefix().equals(parser.getPrefix())){
                                 return tagDeque.poll();
                             }
 
