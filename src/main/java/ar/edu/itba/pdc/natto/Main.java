@@ -18,15 +18,19 @@ import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.kohsuke.args4j.CmdLineException;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class Main {
     public static void main(String[] args) {
-       // XmppParser parser = new XmppParser();
-       // parser.fromByteBuffer(null);
-
-      /*  if (true) {
-            return;
-        }*/
+//        XmppParser parser = new XmppParser();
+//        ByteBuffer buffer = ByteBuffer.wrap("<stream:stream xmlns:stream=\"asd.org\"><b>asd</b>".getBytes());
+//        while (buffer.hasRemaining()) {
+//            System.out.println(parser.fromByteBuffer(buffer));
+//        }
+//
+//        if (true) {
+//            return;
+//        }
 
         Arguments arguments = new Arguments();
 

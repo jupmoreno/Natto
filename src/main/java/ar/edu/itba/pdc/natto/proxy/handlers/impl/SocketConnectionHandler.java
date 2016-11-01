@@ -157,23 +157,24 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-            readBuffer.limit(readBuffer.limit());       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
+            readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
 
             while (readBuffer.hasRemaining()){
                 // TODO: ProtocolTask (?
                 T request = parser.fromByteBuffer(readBuffer);
-               // System.out.println("REQUEST: " + request); // TODO: Remove
+                System.out.println("REQUEST: " + request); // TODO: Remove
                 if (request != null) {
                     T response = protocol.process(request);
                     System.out.println("RESPONSE: " + response); // TODO: Remove
                     if (response != null) {
                         connection.requestWrite(parser.toByteBuffer(response));
                     }
-                } else {
-                    if(messages.isEmpty()){
-                        this.requestRead();
-                    }
                 }
+            }
+
+            if(messages.isEmpty()){
+                readBuffer.clear();
+                this.requestRead();
             }
 
         }
