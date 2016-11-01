@@ -32,6 +32,10 @@ public class Tag {
         return false;
     }
 
+    public boolean isAuth(){
+        return false;
+    }
+
     public void addAttribute(String name, String value){
         attributes.put(new StringBuilder(name), new StringBuilder(value));
     }

@@ -8,4 +8,9 @@ public class Auth extends Tag {
     public Auth(){
         super("auth");
     }
+
+    @Override
+    public boolean isAuth(){
+        return true;
+    }
 }
