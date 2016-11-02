@@ -20,9 +20,12 @@ import java.util.Queue;
 // TODO: Fijarse de siempre cerrar bien el parser anterior!
 public class XmppParser implements Parser<Tag> {
 
+    private final static int BUFFER_MAX_SIZE = 10000;
+
     private Deque<Tag> tagDeque = new LinkedList<>();
     private Queue<ByteBuffer> buffers = new LinkedList<>();
-    private Queue<ByteBuffer> currentMessage = new LinkedList<>();
+
+    private ByteBuffer currentMessage = ByteBuffer.allocate(BUFFER_MAX_SIZE);
 
     private boolean completeTag = false;
 
@@ -38,6 +41,8 @@ public class XmppParser implements Parser<Tag> {
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
         Tag tag = null;
+        System.out.println("\n\n\n");
+ //       System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
 
 //        buffer.limit(buffer.limit() -1); // TODO SACARLO DEL SOCKET CONNECTION HANDLER
 
@@ -50,6 +55,8 @@ public class XmppParser implements Parser<Tag> {
         } else {
             // TODO:
         }
+
+
 //        System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
         try {
             tag = parse();
@@ -63,13 +70,22 @@ public class XmppParser implements Parser<Tag> {
             System.out.println(aux);
             System.out.println(buffer);
 
+            System.out.println("LLEGUE 1");
             aux.position(buffer.position());
+            System.out.println("LLEGUE 2");
             aux.limit((int) position + aux.position());
 
+            System.out.println("LLEGUE 3");
             buffer.position((int) position + buffer.position());
 
+            System.out.println("LLEGUE 4");
             // TODO: APPEND
+         /*   System.out.println("soy currentMessage " + currentMessage);
+            currentMessage = concatBuffers(currentMessage,aux);
+            System.out.println("soy currentMessage otra vez" + currentMessage);*/
+            currentMessage.put(aux);
 
+            System.out.println("LLEGUE 5");
             System.out.println(aux);
             System.out.println(buffer);
 
@@ -208,8 +224,13 @@ public class XmppParser implements Parser<Tag> {
     @Override
     public ByteBuffer toByteBuffer(Tag message) {
         // TODO: !!!
+        System.out.println("Estoy en toBufer");
 
-        return null;
+        ByteBuffer ret = currentMessage.duplicate();
+        currentMessage.flip();
+        currentMessage.clear();
+        ret.flip();
+        return ret;
     }
 
     private int sizeBuffers(Queue<ByteBuffer> bufferList) {
@@ -230,5 +251,24 @@ public class XmppParser implements Parser<Tag> {
         for (int i = 0; i < parser.getAttributeCount(); i++) {
             tag.addAttribute(parser.getAttributeName(i).toString(), parser.getAttributeValue(i));
         }
+    }
+
+    private ByteBuffer concatBuffers(ByteBuffer bb1, ByteBuffer bb2){
+        if(bb1 == null)
+            return bb2;
+        if(bb2 == null)
+            return bb1;
+
+       // bb1.flip();
+//        bb2.flip();
+
+        ByteBuffer ret = ByteBuffer.allocate(bb1.capacity() + bb2.capacity()).put(bb1).put(bb2);
+        ret.flip();
+        System.out.println("Concatenando");
+        System.out.println("bb1 = " + new String(bb1.array(), bb1.position(), bb1.limit(), StandardCharsets.UTF_8));
+        System.out.println("bb2 = " + new String(bb2.array(), bb2.position(), bb2.limit(), StandardCharsets.UTF_8));
+        System.out.println("ret: " + new String(ret.array(), ret.position(), ret.limit(), StandardCharsets.UTF_8));
+        return ret;
+
     }
 }
