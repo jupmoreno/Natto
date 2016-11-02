@@ -70,39 +70,42 @@ public class Tag {
     }
 
     public String toString(){
-        StringBuilder ret = new StringBuilder();
 
-        ret.append("<");
+        return name.toString();
 
-        if(prefix.length() != 0){
-            ret.append(prefix).append(":");
-        }
-
-        ret.append(name);
-        for(Map.Entry<StringBuilder, StringBuilder> entry : attributes.entrySet()){
-            ret.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
-        }
-
-        if(namespace.length() != 0){
-            ret.append(" xmlns:").append(prefix).append("=\"").append(namespace).append("\"");
-        }
-
-        ret.append(">");
-
-        if(value != null)
-            ret.append(value);
-
-        for(Tag t : tags){
-            ret.append(t);
-        }
-
-        if(prefix.length() != 0){
-            ret.append("</").append(prefix).append(":").append(name).append(">");
-        }else{
-            ret.append("</").append(name).append(">");
-        }
-
-        return ret.toString();
+//        StringBuilder ret = new StringBuilder();
+//
+//        ret.append("<");
+//
+//        if(prefix.length() != 0){
+//            ret.append(prefix).append(":");
+//        }
+//
+//        ret.append(name);
+//        for(Map.Entry<StringBuilder, StringBuilder> entry : attributes.entrySet()){
+//            ret.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
+//        }
+//
+//        if(namespace.length() != 0){
+//            ret.append(" xmlns:").append(prefix).append("=\"").append(namespace).append("\"");
+//        }
+//
+//        ret.append(">");
+//
+//        if(value != null)
+//            ret.append(value);
+//
+//        for(Tag t : tags){
+//            ret.append(t);
+//        }
+//
+//        if(prefix.length() != 0){
+//            ret.append("</").append(prefix).append(":").append(name).append(">");
+//        }else{
+//            ret.append("</").append(name).append(">");
+//        }
+//
+//        return ret.toString();
     }
 
     public void setPrefix(String prefix) {
