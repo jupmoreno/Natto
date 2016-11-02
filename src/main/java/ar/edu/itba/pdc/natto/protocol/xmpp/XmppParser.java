@@ -29,14 +29,14 @@ public class XmppParser implements Parser<Tag> {
 
     private boolean completeTag = false;
 
-    private long accum = 0;
+    private int accum = 0;
 
     private int sizeToLimitMessage = 0;
 
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
 
-    private StringBuilder current = new StringBuilder();
+ //   private StringBuilder current = new StringBuilder();
 
     @Override
     public Tag fromByteBuffer(ByteBuffer buffer) {
@@ -59,42 +59,100 @@ public class XmppParser implements Parser<Tag> {
 
 //        System.out.println(new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
         try {
+
+
+            System.out.println("el buffer antes de parsesarlo" + buffer);
             tag = parse();
-            System.out.println("POS DEL BUFFER: " + parser.getLocationInfo().getEndingByteOffset());
-            long position = parser.getLocationInfo().getEndingByteOffset() - accum;
-            accum = parser.getLocationInfo().getEndingByteOffset();
-            System.out.println("POSITION DEL AUX: " + position);
 
             ByteBuffer aux = buffer.duplicate();
 
-            System.out.println(aux);
-            System.out.println(buffer);
+            System.out.println("el buffer despues de parsearlo" + buffer);
 
-            System.out.println("LLEGUE 1");
-            aux.position(buffer.position());
-            System.out.println("LLEGUE 2");
-            aux.limit((int) position + aux.position());
+            System.out.println("el buffer despues de parsearlo y compactarlo " + buffer);
 
-            System.out.println("LLEGUE 3");
-            buffer.position((int) position + buffer.position());
+            System.out.println("el aux es " + aux);
 
-            System.out.println("LLEGUE 4");
-            // TODO: APPEND
+
+            System.out.println("el aux " + new String(aux.array(), aux.position(), aux.limit(), StandardCharsets.UTF_8));
+
+
+
+            int position = parser.getLocation().getCharacterOffset() + sizeToLimitMessage - accum;
+            accum += position;
+
+            aux.limit(position);
+
+
+            System.out.println("buffer " + buffer);
+
+            System.out.println("el buffer antes de ponerle position " + new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
+
+            System.out.println("------------------------------------");
+
+//            buffer.compact();
+
+            buffer.position(position);
+
+            System.out.println("position position " + buffer);
+
+
+            System.out.println("el buffer despues de ponerle position " + new String(buffer.array(), buffer.position(), buffer.limit(), StandardCharsets.UTF_8));
+
+            System.out.println("------------------------------------");
+
+            System.out.println("el aux despues de limitarlo " + new String(aux.array(), aux.position(), aux.limit(), StandardCharsets.UTF_8));
+
+            //accum += parser.getLocationInfo().getEndingByteOffset();
+
+
+            currentMessage = aux;
+
+//            System.out.println("POS DEL BUFFER: " + parser.getLocationInfo().getEndingByteOffset());
+//            long position = parser.getLocationInfo().getEndingByteOffset() - accum;
+//            accum = parser.getLocationInfo().getEndingByteOffset();
+//            System.out.println("POSITION DEL AUX: " + position);
+//
+//            ByteBuffer aux = buffer.duplicate();
+//
+//            System.out.println(aux);
+//            System.out.println(buffer);
+//
+//            System.out.println("LLEGUE 1");
+//
+//
+//            System.out.println("imprimo antes de posicionarlo el aux");
+//            System.out.println(new String(aux.array(), aux.position(), aux.limit(), StandardCharsets.UTF_8));
+//            aux.position(buffer.position());
+//            System.out.println("LLEGUE 2");
+//            System.out.println("imprimo despues de limitarlo el aux");
+//            System.out.println(new String(aux.array(), aux.position(), aux.limit(), StandardCharsets.UTF_8));
+//
+//            System.out.println("imprimo antes de limitarlo el aux");
+//            System.out.println(new String(aux.array(), aux.position(), aux.limit(), StandardCharsets.UTF_8));
+//            aux.limit((int) position + aux.position());
+//            System.out.println("imprimo despues de limitarlo el aux");
+//            System.out.println(new String(aux.array(), aux.position(), aux.limit(), StandardCharsets.UTF_8));
+//
+//
+//            System.out.println("LLEGUE 3");
+//            buffer.position((int) position + buffer.position());
+
+       //     // TODO: APPEND
          /*   System.out.println("soy currentMessage " + currentMessage);
             currentMessage = concatBuffers(currentMessage,aux);
             System.out.println("soy currentMessage otra vez" + currentMessage);*/
-            currentMessage.put(aux);
+         //   currentMessage.put(aux);
 
-            System.out.println("LLEGUE 5");
-            System.out.println(aux);
-            System.out.println(buffer);
+            //System.out.println("LLEGUE 5");
+            //System.out.println(aux);
+           // System.out.println(buffer);
 
             //TODO ver como mierda calcular mejor el tema del tama;o para delimitar
 
         } catch (XMLStreamException e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-            System.out.println("Mal formado");
+           // System.out.println(e.getMessage());
+       //     e.printStackTrace();
+         //   System.out.println("Mal formado");
         }
         return tag;
     }
@@ -102,6 +160,7 @@ public class XmppParser implements Parser<Tag> {
     private Tag parse() throws XMLStreamException {
 
         while (parser.hasNext()) {
+            System.out.println("location" + parser.getLocation());
             switch (parser.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
                     System.out.println("START DOCUMENT");
@@ -115,6 +174,8 @@ public class XmppParser implements Parser<Tag> {
                     System.out.println("Name: " + name);
 
                     if (parser.getPrefix().equals("stream") && name.equals("stream")) {
+                        System.out.println("position del parser " + parser.getLocation().getCharacterOffset());
+                        System.out.println("tengo un stream:stream");
                         Stream retStream = new Stream();
                         fillTag(retStream);
                         return retStream;
@@ -173,12 +234,14 @@ public class XmppParser implements Parser<Tag> {
 
                     ////esto choto
                     sizeToLimitMessage += parser.getName().getLocalPart().toString().length();
+                    sizeToLimitMessage += parser.getPrefix().length();
+
                     System.out.println("tama;o de local part " + parser.getName().getLocalPart().toString().length());
                     System.out.println("tama;no del prefijo " + parser.getPrefix().length());
 
                     sizeToLimitMessage += parser.getPrefix().length();
                     sizeToLimitMessage += 3;
-                    if (!parser.getPrefix().toString().equals(""))
+                    if (parser.getPrefix() != null && !parser.getPrefix().toString().equals(""))
                         sizeToLimitMessage += 1;
                     /////
 
@@ -223,14 +286,35 @@ public class XmppParser implements Parser<Tag> {
 
     @Override
     public ByteBuffer toByteBuffer(Tag message) {
-        // TODO: !!!
-        System.out.println("Estoy en toBufer");
 
-        ByteBuffer ret = currentMessage.duplicate();
-        currentMessage.flip();
-        currentMessage.clear();
-        ret.flip();
-        return ret;
+
+        //TODO REVISAR
+        sizeToLimitMessage = 0;
+
+        return currentMessage;
+
+//        // TODO: !!!
+//      //  System.out.println("Estoy en toBuffer");
+//
+//        ByteBuffer ret = currentMessage.duplicate();
+//        System.out.println("imprimo current message antes de limipiarlo y flipearlo");
+//        System.out.println(new String(currentMessage.array(), currentMessage.position(), currentMessage.limit(), StandardCharsets.UTF_8));
+//        currentMessage.compact();
+//        currentMessage.flip();
+//        currentMessage.clear();
+//        System.out.println(currentMessage);
+//
+//        System.out.println("imprimo current message despues de limipiarlo y flipearlo");
+//        System.out.println(new String(currentMessage.array(), currentMessage.position(), currentMessage.limit(), StandardCharsets.UTF_8));
+//
+//        System.out.println("imprimo ret antes de flipearlo");
+//    //    System.out.println(new String(ret.array(), ret.position(), ret.limit(), StandardCharsets.UTF_8));
+//
+//     //<stream:stream xmlns:stream="hola">   ret.flip();
+//
+//        System.out.println("imprimo ret despues de flipearlo");
+//    //    System.out.println(new String(ret.array(), ret.position(), ret.limit(), StandardCharsets.UTF_8));
+//        return ret;
     }
 
     private int sizeBuffers(Queue<ByteBuffer> bufferList) {
