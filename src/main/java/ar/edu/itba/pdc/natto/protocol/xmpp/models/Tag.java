@@ -2,7 +2,7 @@ package ar.edu.itba.pdc.natto.protocol.xmpp.models;
 
 import java.util.*;
 
-
+@Deprecated
 public class Tag {
 
     private StringBuilder name = new StringBuilder();

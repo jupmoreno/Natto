@@ -6,12 +6,8 @@ import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
-import ar.edu.itba.pdc.natto.protocol.string.StringParserFactory;
-import ar.edu.itba.pdc.natto.protocol.string.StringProtocolFactory;
-import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParser;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppProtocolFactory;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
 import org.apache.commons.configuration2.ex.ConfigurationException;
@@ -63,8 +59,8 @@ public class Main {
     }
 
     private static void startServer(Config config) {
-        ParserFactory<Tag> xmppParsers = new XmppParserFactory();
-        ProtocolFactory<Tag> xmppProtocols = new XmppProtocolFactory();
+        ParserFactory<ByteBuffer> xmppParsers = new XmppParserFactory();
+        ProtocolFactory<ByteBuffer> xmppProtocols = new XmppProtocolFactory();
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)

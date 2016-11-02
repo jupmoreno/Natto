@@ -1,9 +1,10 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
 
-public class XmppParserFactory implements ParserFactory<Tag> {
+import java.nio.ByteBuffer;
+
+public class XmppParserFactory implements ParserFactory<ByteBuffer> {
 
     @Override
     public XmppParser get() {

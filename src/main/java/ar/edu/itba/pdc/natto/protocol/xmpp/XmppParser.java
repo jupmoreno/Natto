@@ -1,7 +1,6 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.Parser;
-import ar.edu.itba.pdc.natto.protocol.xmpp.models.Tag;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -11,15 +10,13 @@ import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 
 // TODO: Fijarse de siempre cerrar bien el parser anterior!
-public class XmppParser implements Parser<Tag> {
+public class XmppParser implements Parser<ByteBuffer> {
 
     //   private final static int BUFFER_MAX_SIZE = 10000;
 
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
 
-    //  private Queue<ByteBuffer> buffers = new LinkedList<>();
-    //  private Deque<Tag> tagDequeue = new LinkedList<>();
 
     private boolean inMessage = false;
     private boolean inBody = false;
@@ -27,7 +24,7 @@ public class XmppParser implements Parser<Tag> {
     StringBuilder sb = new StringBuilder();
 
     @Override
-    public Tag fromByteBuffer(ByteBuffer buffer) {
+    public ByteBuffer fromByteBuffer(ByteBuffer buffer) {
 
         if (buffer == null) {
             return null;
@@ -46,7 +43,6 @@ public class XmppParser implements Parser<Tag> {
         // Aca empieza la etapa de parseo
         try {
             while (parser.hasNext()) {
-                Tag tag = null;
                 switch (parser.next()) {
                     case AsyncXMLStreamReader.START_DOCUMENT:
                         System.out.println("start document");
@@ -71,7 +67,9 @@ public class XmppParser implements Parser<Tag> {
                         System.out.println("Incomplete!");
                         System.out.println("devuelvo sb " + sb);
                      //   buffer.clear();
-                        return new Tag(sb.toString());
+                        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+                        sb.setLength(0);
+                        return ret;
 
 
                     default:
@@ -81,10 +79,10 @@ public class XmppParser implements Parser<Tag> {
         } catch (XMLStreamException e) {
             e.printStackTrace();
         }
-
-
-   //     buffer.clear();
-        return new Tag(sb.toString());
+        System.out.println("porque devuelvo aca? ojo");
+        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+        sb.setLength(0);
+        return ret;
     }
 
     private void handleStartElement(){
@@ -159,7 +157,7 @@ public class XmppParser implements Parser<Tag> {
 
 
     @Override
-    public ByteBuffer toByteBuffer(Tag message) {
+    public ByteBuffer toByteBuffer(ByteBuffer message) {
 
 
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
