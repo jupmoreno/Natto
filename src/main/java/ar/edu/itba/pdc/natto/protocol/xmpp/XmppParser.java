@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 // TODO: Fijarse de siempre cerrar bien el parser anterior!
 public class XmppParser implements Parser<ByteBuffer> {
 
-    //   private final static int BUFFER_MAX_SIZE = 10000;
+    private final static int BUFFER_MAX_SIZE = 10000;
 
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
@@ -21,6 +21,8 @@ public class XmppParser implements Parser<ByteBuffer> {
     private boolean inMessage = false;
     private boolean inBody = false;
 
+
+    ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     StringBuilder sb = new StringBuilder();
 
     @Override
@@ -34,6 +36,7 @@ public class XmppParser implements Parser<ByteBuffer> {
         if(parser.getInputFeeder().needMoreInput()){
             try {
                 parser.getInputFeeder().feedInput(buffer);
+                retBuffer.clear();
 
             } catch (XMLStreamException e) {
                 e.printStackTrace();
@@ -163,7 +166,7 @@ public class XmppParser implements Parser<ByteBuffer> {
 
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
-        
+
         return ret;
     }
 
@@ -172,10 +175,10 @@ public class XmppParser implements Parser<ByteBuffer> {
     public ByteBuffer toByteBuffer(ByteBuffer message) {
 
 
-        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+        retBuffer = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
 
-        return ret;
+        return retBuffer;
     }
 
 
