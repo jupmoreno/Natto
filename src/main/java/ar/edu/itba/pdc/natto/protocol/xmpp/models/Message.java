@@ -9,6 +9,7 @@ package ar.edu.itba.pdc.natto.protocol.xmpp.models;
  information to another entity, similar to the communications that
  occur in a system such as email.
  */
+@Deprecated
 public class Message extends Tag {
 
     public Message(){

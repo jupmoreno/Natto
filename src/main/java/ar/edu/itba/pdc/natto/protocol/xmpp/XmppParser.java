@@ -77,7 +77,8 @@ public class XmppParser implements Parser<ByteBuffer> {
                 }
             }
         } catch (XMLStreamException e) {
-            e.printStackTrace();
+            return handleWrongFormat();
+
         }
         System.out.println("porque devuelvo aca? ojo");
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
@@ -155,6 +156,17 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     }
 
+    private ByteBuffer handleWrongFormat(){
+        System.out.println("Mal formado");
+        sb.setLength(0);
+        sb.append("</stream:stream>");
+
+        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+        sb.setLength(0);
+        
+        return ret;
+    }
+
 
     @Override
     public ByteBuffer toByteBuffer(ByteBuffer message) {
@@ -165,7 +177,6 @@ public class XmppParser implements Parser<ByteBuffer> {
 
         return ret;
     }
-
 
 
 }
