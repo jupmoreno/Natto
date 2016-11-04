@@ -24,7 +24,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-// TODO: Se puede sacar <T>?
+// TODO: Se puede sacar <T>? siii por el amor a dios sacar
 public class SocketConnectionHandler<T> implements ConnectionHandler, Connection {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
     private static final int BUFFER_SIZE = 1024;
@@ -43,9 +43,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private final Queue<ByteBuffer> messages;
 
     private boolean closeRequested = false;
-
-    //variable booleana para saber si ya ha tomado lugar la negociacion, si ir al xmpp parser or al negotiator
-    private boolean isVerified = false;
 
     public SocketConnectionHandler(final SocketChannel channel,
                                    final DispatcherSubscriber subscriber,
@@ -120,7 +117,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     public void handle_read() {
         int bytesRead;
 
-        //  logger.info("Channel " + channel.socket().getRemoteSocketAddress()
+      //  logger.info("Channel " + channel.socket().getRemoteSocketAddress()
         //        + " requested read operation");
 
         if (connection == this) { // TODO: Remove!
@@ -131,10 +128,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             }
             return;
         }
-
-
-        // si no estoy verificado voy a intentar leer adentro del negotiator no desde aca
-        if(isVerified){
 
         try {
             bytesRead = channel.read(readBuffer);
@@ -167,11 +160,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
 
             //while (readBuffer.hasRemaining()){
-            // TODO: ProtocolTask (?
-
-
-
-
+                // TODO: ProtocolTask (?
                 T request = parser.fromByteBuffer(readBuffer);
 
                 if (request != null) {
@@ -183,20 +172,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                 }
 
 
-                readBuffer.compact();
-                //}
+                 readBuffer.compact();
+            //}
 
 
-                //esto?
-                if(messages.isEmpty()){
-                    readBuffer.clear();
-                    this.requestRead();
-                }
-            }else{
-
-
-                //aca tengo que negociar, voy a leer y escribir desde el negotiator o envio rta hasta que este verificado, en ese caso como
-                //se que termino la negociacion?
+            if(messages.isEmpty()){
+                readBuffer.clear();
+                this.requestRead();
             }
 
         }
