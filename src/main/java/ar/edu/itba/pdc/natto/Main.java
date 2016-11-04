@@ -18,6 +18,9 @@ import java.nio.ByteBuffer;
 
 public class Main {
     public static void main(String[] args) {
+
+
+
 //        XmppParser parser = new XmppParser();
 //        ByteBuffer buffer = ByteBuffer.wrap("<stream:stream xmlns:stream=\"asd.org\"><b>asd</b>".getBytes());
 //        while (buffer.hasRemaining()) {
