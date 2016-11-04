@@ -49,6 +49,7 @@ public class XmppParser implements Parser<ByteBuffer> {
                 switch (parser.next()) {
                     case AsyncXMLStreamReader.START_DOCUMENT:
                         System.out.println("start document");
+                        handleStartDocument();
                         break;
 
                     case AsyncXMLStreamReader.START_ELEMENT:
@@ -74,6 +75,9 @@ public class XmppParser implements Parser<ByteBuffer> {
                         sb.setLength(0);
                         return ret;
 
+                    case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
+                        System.out.println("PROCESSING instruction");
+                        break;
 
                     default:
                         break;
@@ -87,6 +91,19 @@ public class XmppParser implements Parser<ByteBuffer> {
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
         return ret;
+    }
+
+    private void handleStartDocument() {
+
+        sb.append("<?xml ");
+        String version = parser.getVersion();
+        String encoding = parser.getCharacterEncodingScheme();
+        if(version != null)
+            sb.append("version=\"" + version + "\" ");
+        if(encoding != null)
+            sb.append("encoding=\"" + encoding + "\"");
+        sb.append("?>");
+
     }
 
     private void handleStartElement(){
@@ -103,18 +120,31 @@ public class XmppParser implements Parser<ByteBuffer> {
         }
         sb.append(name);
 
-        for(int i =0; i< parser.getAttributeCount(); i++){
-            sb.append(" ").append(parser.getAttributeName(i)).append("=\"").append(parser.getAttributeValue(i)).append("\"");
+
+        for(int i = 0; i < parser.getAttributeCount(); i++){
+            sb.append(" ");
+            if (!parser.getAttributePrefix(i).isEmpty()) {
+                sb.append(parser.getAttributePrefix(i)).append(":");
+            }
+            sb.append(parser.getAttributeLocalName(i)).append("=\"").append(parser.getAttributeValue(i)).append("\"");
         }
 
-        if(parser.getNamespaceURI().length() != 0){
-            sb.append(" xmlns:").append(parser.getPrefix()).append("=\"").append(parser.getNamespaceURI()).append("\"");
+
+        for(int i = 0; i < parser.getNamespaceCount(); i++){
+            sb.append(" ").append("xmlns");
+            if (!parser.getNamespacePrefix(i).isEmpty()) {
+                sb.append(":").append(parser.getNamespacePrefix(i));
+            }
+
+            sb.append("=\"").append(parser.getNamespaceURI(i)).append("\"");
         }
+
 
         sb.append(">");
     }
 
     public void handleCharacters(){
+
         if(inBody){ //TODO: se leetea?
             for (char c: parser.getText().toCharArray()) {
                 switch (c) {
@@ -131,7 +161,7 @@ public class XmppParser implements Parser<ByteBuffer> {
                         sb.append("0");
                         break;
                     case 'c':
-                        sb.append("&lt");
+                        sb.append("&lt;");
                         break;
                     default:
                         sb.append(c);
