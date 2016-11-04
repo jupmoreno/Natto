@@ -49,6 +49,7 @@ public class XmppParser implements Parser<ByteBuffer> {
                 switch (parser.next()) {
                     case AsyncXMLStreamReader.START_DOCUMENT:
                         System.out.println("start document");
+                        handleStartDocument();
                         break;
 
                     case AsyncXMLStreamReader.START_ELEMENT:
@@ -74,6 +75,9 @@ public class XmppParser implements Parser<ByteBuffer> {
                         sb.setLength(0);
                         return ret;
 
+                    case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
+                        System.out.println("PROCESSING instruction");
+                        break;
 
                     default:
                         break;
@@ -87,6 +91,19 @@ public class XmppParser implements Parser<ByteBuffer> {
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
         return ret;
+    }
+
+    private void handleStartDocument() {
+
+        sb.append("<?xml ");
+        String version = parser.getVersion();
+        String encoding = parser.getCharacterEncodingScheme();
+        if(version != null)
+            sb.append("version=\"" + version + "\" ");
+        if(encoding != null)
+            sb.append("encoding=\"" + encoding + "\"");
+        sb.append("?>");
+
     }
 
     private void handleStartElement(){
