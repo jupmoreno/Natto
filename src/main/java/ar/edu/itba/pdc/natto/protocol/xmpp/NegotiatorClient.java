@@ -9,18 +9,17 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-
 
 public class NegotiatorClient implements Negotiator {
 
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
 
-    private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
+ //   private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
 
     private boolean verified = false;
 
+    private StringBuilder sb = new StringBuilder();
 
     @Override
     public boolean isVerified() {
@@ -32,13 +31,14 @@ public class NegotiatorClient implements Negotiator {
        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
         VerificationState readResult = VerificationState.INCOMPLETE;
-        retBuffer = ByteBuffer.allocate(10000); // TODO SACAR ES UN ASCO PERO ALGO ANDA MAL SIN ESTO VER MALDITO BYTE BUFFER!!!!!!!
+//        retBuffer = ByteBuffer.allocate(10000); // TODO SACAR ES UN ASCO PERO ALGO ANDA MAL SIN ESTO VER MALDITO BYTE BUFFER!!!!!!!
 
         //TODO tengo que fijarme si necesito mas para leer o siempre le feedeo lo que me llega?
+
+
         if (reader.getInputFeeder().needMoreInput()) {
             try {
                 reader.getInputFeeder().feedInput(readBuffer);
-             //   readBuffer.clear();
 
             } catch (XMLStreamException e) {
                 System.out.println(e.getMessage());
@@ -60,27 +60,32 @@ public class NegotiatorClient implements Negotiator {
 
             if (readResult == VerificationState.FINISHED) {
                 System.out.println("ESTADO TERMINADO: escribo en el connection");
-                connection.requestWrite(retBuffer);
+                connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+
 
             //   System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
                 System.out.println("lo ultimo que mando ");
-                retBuffer.clear();
+               // retBuffer.clear();
+
+               // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
          //       System.out.println("lo que mando en PROCESS despesu de limpar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
                 verified = true;
                 return 1;
 
             } else if (readResult == VerificationState.IN_PROCESS) {
           //      System.out.println("lo que mando en PROCESS " + new String(retBuffer.array(), Charset.forName("UTF-8")));
-                connection.requestWrite(retBuffer);
-                retBuffer.clear();
+                connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+               // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
+                //retBuffer.clear();
            //     System.out.println("lo que mando en PROCESS despus de limpiar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
-                return 0;
 
             } else if (readResult == VerificationState.ERR) {
                 System.out.println("ERROR");
                 return -1;
+
             } else if (readResult == VerificationState.INCOMPLETE){
+
                 return 0;
             }
         }
@@ -135,16 +140,19 @@ public class NegotiatorClient implements Negotiator {
 
     private VerificationState handleStartDocument() {
         if (reader.getVersion() != null && reader.getEncoding() != null) { //TODO: SACAR solo para testear no deberia pasar esto
-            retBuffer.put("<?xml ".getBytes());
-
+          //  retBuffer.put("<?xml ".getBytes());
+            sb.append("<?xml ");
             if (reader.getVersion() != null) {
-                retBuffer.put("version= '".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
+               // retBuffer.put("version= '".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
+                sb.append("version= '").append(reader.getVersion()).append(" ");
             }
 
             if (reader.getEncoding() == null) {
-                retBuffer.put("encoding='UTF-8?>".getBytes());
+               // retBuffer.put("encoding='UTF-8?>".getBytes());
+                sb.append("encoding='UTF-8?>");
             } else { //TODO porque no seria null???? ver si hay que tener este caso en cuenta
-                retBuffer.put("encoding=".getBytes()).put(reader.getVersion().getBytes()).put("?>".getBytes());
+                sb.append("encoding=").append(reader.getVersion()).append("?>");
+                //retBuffer.put("encoding=".getBytes()).put(reader.getVersion().getBytes()).put("?>".getBytes());
             }
             return VerificationState.IN_PROCESS;
         }
@@ -169,7 +177,8 @@ public class NegotiatorClient implements Negotiator {
                     //hay uqe meterle algo adentro, algo de ese estilo cnNwYXV0aD1mNDVhM2E2Y2NmYmE4MDVmOGFkNzk4MjU0ZGI5MzdmNw==  //base64
                     System.out.println("el mecanismo es PLAIN");
 
-                    retBuffer.put("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes());
+                    sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
+                    //retBuffer.put("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes());
                     return VerificationState.FINISHED;
                 }
             }
@@ -183,23 +192,30 @@ public class NegotiatorClient implements Negotiator {
 
     private VerificationState handleStreamStream() {
 
+
         System.out.println("entro al handle stream stream");
-        retBuffer.put("<stream:stream ".getBytes());
+        sb.append("<stream:stream ");
+      //  retBuffer.put("<stream:stream ".getBytes());
 
         //TODO meter id ver como se hace
         //appendeo los atributos y cambio el to por un from, y el from por un to
         for (int i = 0; i < reader.getAttributeCount(); i++) {
-            retBuffer.put(" ".getBytes());
+            sb.append(" ");
+           // retBuffer.put(" ".getBytes());
             if (!reader.getAttributePrefix(i).isEmpty()) {
-                retBuffer.put(reader.getAttributePrefix(i).getBytes()).put(":".getBytes());
+                sb.append(reader.getAttributePrefix(i)).append(":");
+               // retBuffer.put(reader.getAttributePrefix(i).getBytes()).put(":".getBytes());
             }
             if (reader.getAttributeLocalName(i).equals("to")) {
-                retBuffer.put("from=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
+                sb.append("from=\"").append(reader.getAttributeLocalName(i)).append("\"");
+                //retBuffer.put("from=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
 
             } else if (reader.getAttributeLocalName(i).equals("from")) {
-                retBuffer.put("to=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
+                sb.append("to=\"").append(reader.getAttributeLocalName(i)).append("\"");
+               // retBuffer.put("to=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
             } else {
-                retBuffer.put(reader.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
+                sb.append(reader.getAttributeLocalName(i)).append("=\"").append(reader.getAttributeValue(i)).append("\"");
+               // retBuffer.put(reader.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
             }
         }
 
@@ -207,16 +223,23 @@ public class NegotiatorClient implements Negotiator {
         appendNamespaces();
 
         //mecanismos de encriptacion
-        retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
-        retBuffer.put("<mechanism>PLAIN</mechanism>".getBytes());
+        sb.append("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">");
+        sb.append("<mechanism>PLAIN</mechanism>");
+//        retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
+//        retBuffer.put("<mechanism>PLAIN</mechanism>".getBytes());
 
         //TODO: VER QUE HACER CON ESTO DE LOS ZIPS
         //mecanismos de compresion
-        retBuffer.put("<compression xmlns=\"http://jabber.org/features/compress\">".getBytes());
-        retBuffer.put("<method>zlib</method></compression>".getBytes());
+        sb.append("<compression xmlns=\"http://jabber.org/features/compress\">");
+        sb.append("<method>zlib</method></compression>");
 
-        retBuffer.put("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>".getBytes());
-        retBuffer.put("<register xmlns=\"http://jabber.org/features/iq-register\"/></stream:features>".getBytes());
+//        retBuffer.put("<compression xmlns=\"http://jabber.org/features/compress\">".getBytes());
+//        retBuffer.put("<method>zlib</method></compression>".getBytes());
+
+        sb.append("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>");
+        sb.append("<register xmlns=\"http://jabber.org/features/iq-register\"/></stream:features>");
+//        retBuffer.put("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>".getBytes());
+//        retBuffer.put("<register xmlns=\"http://jabber.org/features/iq-register\"/></stream:features>".getBytes());
 
         return VerificationState.IN_PROCESS;
     }
@@ -224,11 +247,14 @@ public class NegotiatorClient implements Negotiator {
 
     private void appendNamespaces() {
         for (int i = 0; i < reader.getNamespaceCount(); i++) {
-            retBuffer.put(" xmlns".getBytes());
+            sb.append(" xmlns");
+            //retBuffer.put(" xmlns".getBytes());
             if (!reader.getNamespacePrefix(i).isEmpty()) {
-                retBuffer.put(":".getBytes()).put(reader.getNamespacePrefix(i).getBytes());
+                sb.append(":").append(reader.getNamespacePrefix(i));
+                //retBuffer.put(":".getBytes()).put(reader.getNamespacePrefix(i).getBytes());
             }
-            retBuffer.put("=\"".getBytes()).put(reader.getNamespaceURI(i).getBytes()).put("\"".getBytes());
+            sb.append("=\"").append(reader.getNamespaceURI(i)).append("\" ");
+            //retBuffer.put("=\"".getBytes()).put(reader.getNamespaceURI(i).getBytes()).put("\" ".getBytes());
         }
     }
 
