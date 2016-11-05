@@ -65,7 +65,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
     @Override
     public StringBuilder process(StringBuilder message) {
-
+        System.out.println("Procesando...");
         if(message == null)
             return null;
 

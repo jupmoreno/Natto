@@ -161,12 +161,12 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-            readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
+         //   readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
 
             //while (readBuffer.hasRemaining()){
             // TODO: ProtocolTask (?
 
-            if(!negotiator.isVerified()){
+            if(false){
                 negotiator.handshake(this, readBuffer);
 
             }else{

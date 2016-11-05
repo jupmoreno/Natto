@@ -80,7 +80,7 @@ public class Main {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
                     .addProtocol(config.getXmppPort(), xmppParsers, xmppProtocols, negotiatorFactory)
                     //TODO poner todo bien
-                    .addProtocol(config.getPspPort(), nttpParsers, nttpProtocols, negotiatorFactory)
+                   // .addProtocol(config.getPspPort(), nttpParsers, nttpProtocols, negotiatorFactory)
                     .build();
 
             try {
