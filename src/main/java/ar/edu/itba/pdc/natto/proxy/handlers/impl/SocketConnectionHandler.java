@@ -166,7 +166,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             //while (readBuffer.hasRemaining()){
             // TODO: ProtocolTask (?
 
-            if(false){
+            if(!negotiator.isVerified()){
                 negotiator.handshake(this, readBuffer);
 
             }else{
