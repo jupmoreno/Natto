@@ -30,13 +30,13 @@ public class Main {
 //        while (buffer.hasRemaining()) {
 //            System.out.println(parser.fromByteBuffer(buffer));
 //        }
-
-        NegotiatorClient neg = new NegotiatorClient();
-        neg.handshake(null, ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()));
-
-        if (true) {
-            return;
-        }
+//
+//        NegotiatorClient neg = new NegotiatorClient();
+//        neg.handshake(null, ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()));
+//
+//        if (true) {
+//            return;
+//        }
 
         Arguments arguments = new Arguments();
 

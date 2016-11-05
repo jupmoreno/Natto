@@ -18,7 +18,7 @@ public class NegotiatorClient implements Negotiator {
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
 
     private ByteBuffer retBuffer = ByteBuffer.allocate(1000000);
-  //  private StringBuilder sb = new StringBuilder();
+    //  private StringBuilder sb = new StringBuilder();
 
     private boolean verified = false;
 
@@ -39,34 +39,39 @@ public class NegotiatorClient implements Negotiator {
     //voy a recibir una Connection a quien le requesteo escribir y leer
     public int handshake(Connection connection, ByteBuffer readBuffer) {
 
+        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), Charset.forName("UTF-8")));
+
         VerificationState readResult = VerificationState.INCOMPLETE;
 
         retBuffer.clear();
         while (readResult != VerificationState.FINISHED) {
 
-          //  connection.requestRead();
-
+            //  connection.requestRead();
 
             //TODO tengo que fijarme si necesito mas para leer o siempre le feedeo lo que me llega?
-            try {
-                reader.getInputFeeder().feedInput(readBuffer);
-            } catch (XMLStreamException e) {
-                System.out.println("error feedando al parser del client negotiator");
+            if (reader.getInputFeeder().needMoreInput()) {
+                try {
+                    reader.getInputFeeder().feedInput(readBuffer);
+                    //      readBuffer.clear();
+                } catch (XMLStreamException e) {
+                    System.out.println(e.getMessage());
+                    System.out.println("error feedando al parser del client negotiator");
+                }
             }
-
 
             try {
                 readResult = generateResp();
             } catch (XMLStreamException e) {
+                System.out.println(e.getMessage());
                 System.out.println("error del parseo del handshaking");
                 return -1;
             }
 
             if (readResult == VerificationState.FINISHED) {
                 System.out.println("ESTADO TERMINADO: escribo en el connection");
-             //   connection.requestWrite(retBuffer);
+                connection.requestWrite(retBuffer);
 
-                System.out.println("lo que mando en FINISHED "+ new String(retBuffer.array(), Charset.forName("UTF-8")));
+                System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), Charset.forName("UTF-8")));
 
                 System.out.println("lo ultimo que mando ");
                 retBuffer.clear();
@@ -74,9 +79,10 @@ public class NegotiatorClient implements Negotiator {
                 return 1;
 
             } else if (readResult == VerificationState.IN_PROCESS) {
-                System.out.println("lo que mando en PROCESS "+ new String(retBuffer.array(), Charset.forName("UTF-8")));
-              //  connection.requestWrite(retBuffer);
+                System.out.println("lo que mando en PROCESS " + new String(retBuffer.array(), Charset.forName("UTF-8")));
+                connection.requestWrite(retBuffer);
                 retBuffer.clear();
+                return 0;
 
             } else if (readResult == VerificationState.ERR) {
                 System.out.println("ERROR");
@@ -93,7 +99,11 @@ public class NegotiatorClient implements Negotiator {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
                     System.out.println("start document");
-                    return handleStartDocument();
+                    VerificationState vs = handleStartDocument(); //TODO SACAR
+                    if (vs != null) {
+                        return vs;
+                    }
+                    break;
 
 
                 case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
@@ -140,8 +150,10 @@ public class NegotiatorClient implements Negotiator {
             } else { //TODO porque no seria null???? ver si hay que tener este caso en cuenta
                 retBuffer.put("encoding=".getBytes()).put(reader.getVersion().getBytes()).put("?>".getBytes());
             }
+            return VerificationState.IN_PROCESS;
         }
-        return VerificationState.IN_PROCESS;
+        return null;
+
     }
 
 

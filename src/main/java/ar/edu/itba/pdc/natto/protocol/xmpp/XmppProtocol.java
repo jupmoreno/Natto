@@ -23,23 +23,6 @@ public class XmppProtocol implements Protocol<ByteBuffer>{
        //     negotiator message
         }
 
-
-
-//        System.out.println("El mensaje en el process de protocol es: " + message);
-//
-//        if(message.isWrongFormat())
-//            return message;
-//
-//        if(message.isTooBig()){
-//            //TODO
-//            return message;
-//        }
-//
-//        if(message.isMessage()){
-//            //TODO: ver si el usuario tiene habilitado el l33t
-//            l33tBody((Message) message);
-//        }
-
         return message;
     }
 

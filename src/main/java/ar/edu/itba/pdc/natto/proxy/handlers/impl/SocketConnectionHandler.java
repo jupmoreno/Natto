@@ -186,7 +186,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             }
 
         }
-        readBuffer.compact();
+      //  readBuffer.compact();
         //}
 
 
