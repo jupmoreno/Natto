@@ -13,6 +13,7 @@ import ar.edu.itba.pdc.natto.protocol.nttp.NttpProtocolFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.*;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
+import ar.edu.itba.pdc.natto.proxy.handlers.impl.SocketConnectionHandler;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.kohsuke.args4j.CmdLineException;
 
@@ -30,12 +31,12 @@ public class Main {
 //            System.out.println(parser.fromByteBuffer(buffer));
 //        }
 
-//        NegotiatorClient neg = new NegotiatorClient();
-//        neg.handshake(ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"OTRACOSA\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()), readBuffer);
-//
-//        if (true) {
-//            return;
-//        }
+        NegotiatorClient neg = new NegotiatorClient();
+        neg.handshake(null, ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()));
+
+        if (true) {
+            return;
+        }
 
         Arguments arguments = new Arguments();
 

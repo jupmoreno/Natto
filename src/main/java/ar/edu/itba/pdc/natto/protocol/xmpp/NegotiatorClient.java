@@ -9,6 +9,7 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 
 public class NegotiatorClient implements Negotiator {
@@ -17,7 +18,9 @@ public class NegotiatorClient implements Negotiator {
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
 
     private ByteBuffer retBuffer = ByteBuffer.allocate(1000000);
-    private StringBuilder sb = new StringBuilder();
+  //  private StringBuilder sb = new StringBuilder();
+
+    private boolean verified = false;
 
 
     //ver si devuelvo int o byte buffer si es que escribo adentro o afuera
@@ -29,19 +32,27 @@ public class NegotiatorClient implements Negotiator {
     //TODO
     @Override
     public boolean isVerified() {
-        return false;
+        return verified;
     }
 
     //TODO appendear directo al ret buffer y no al sb (para testear es mas facil :) asi )
     //voy a recibir una Connection a quien le requesteo escribir y leer
-    public int handshake(Connection connection, ByteBuffer readBuffer){
+    public int handshake(Connection connection, ByteBuffer readBuffer) {
 
         VerificationState readResult = VerificationState.INCOMPLETE;
 
-        while(readResult != VerificationState.FINISHED) {
+        retBuffer.clear();
+        while (readResult != VerificationState.FINISHED) {
 
-            connection.requestRead();
-            //Y AHORA!??!!?!
+          //  connection.requestRead();
+
+
+            //TODO tengo que fijarme si necesito mas para leer o siempre le feedeo lo que me llega?
+            try {
+                reader.getInputFeeder().feedInput(readBuffer);
+            } catch (XMLStreamException e) {
+                System.out.println("error feedando al parser del client negotiator");
+            }
 
 
             try {
@@ -53,21 +64,22 @@ public class NegotiatorClient implements Negotiator {
 
             if (readResult == VerificationState.FINISHED) {
                 System.out.println("ESTADO TERMINADO: escribo en el connection");
-                retBuffer.wrap(sb.toString().getBytes());
-                connection.requestWrite(retBuffer);
-                System.out.println("lo ultimo que mando " + sb);
-                sb.setLength(0);
+             //   connection.requestWrite(retBuffer);
+
+                System.out.println("lo que mando en FINISHED "+ new String(retBuffer.array(), Charset.forName("UTF-8")));
+
+                System.out.println("lo ultimo que mando ");
                 retBuffer.clear();
+                verified = true;
                 return 1;
 
             } else if (readResult == VerificationState.IN_PROCESS) {
-                System.out.println("el sb en proceso " + sb);
-                retBuffer.wrap(sb.toString().getBytes());
-                connection.requestWrite(retBuffer);
-                sb.setLength(0);
+                System.out.println("lo que mando en PROCESS "+ new String(retBuffer.array(), Charset.forName("UTF-8")));
+              //  connection.requestWrite(retBuffer);
                 retBuffer.clear();
 
-            }else if( readResult == VerificationState.ERR){
+            } else if (readResult == VerificationState.ERR) {
+                System.out.println("ERROR");
                 return -1;
             }
         }
@@ -75,7 +87,7 @@ public class NegotiatorClient implements Negotiator {
         return 0;
     }
 
-    private VerificationState generateResp() throws XMLStreamException{
+    private VerificationState generateResp() throws XMLStreamException {
 
         while (reader.hasNext()) {
             switch (reader.next()) {
@@ -115,41 +127,41 @@ public class NegotiatorClient implements Negotiator {
         return VerificationState.ERR;
     }
 
-    private VerificationState handleStartDocument(){
-        if(reader.getVersion() != null && reader.getEncoding() != null){ //TODO: SACAR solo para testear no deberia pasar esto
-            sb.append("<?xml ");
+    private VerificationState handleStartDocument() {
+        if (reader.getVersion() != null && reader.getEncoding() != null) { //TODO: SACAR solo para testear no deberia pasar esto
+            retBuffer.put("<?xml ".getBytes());
 
-            if(reader.getVersion() != null){
-                sb.append("version= '").append(reader.getVersion()).append("' ");
+            if (reader.getVersion() != null) {
+                retBuffer.put("version= '".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
             }
 
-            if(reader.getEncoding() == null){
-                sb.append("encoding='UTF-8?>");
-            }else{ //TODO porque no seria null???? ver si hay que tener este caso en cuenta
-                sb.append("encoding=").append(reader.getVersion()).append("?>");
+            if (reader.getEncoding() == null) {
+                retBuffer.put("encoding='UTF-8?>".getBytes());
+            } else { //TODO porque no seria null???? ver si hay que tener este caso en cuenta
+                retBuffer.put("encoding=".getBytes()).put(reader.getVersion().getBytes()).put("?>".getBytes());
             }
         }
         return VerificationState.IN_PROCESS;
     }
 
 
-    private VerificationState handleStartElement(){
+    private VerificationState handleStartElement() {
 
         String name = reader.getName().getLocalPart();
 
         //stream:Stream
-        if(name.equals("stream") && reader.getPrefix().equals("stream")){
+        if (name.equals("stream") && reader.getPrefix().equals("stream")) {
             return handleStreamStream();
 
             //auth
-        }else if(name.equals("auth")){
+        } else if (name.equals("auth")) {
 
-            for(int i = 0; i < reader.getAttributeCount(); i++){
-                if(reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")){
+            for (int i = 0; i < reader.getAttributeCount(); i++) {
+                if (reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")) {
                     //hay uqe meterle algo adentro, algo de ese estilo cnNwYXV0aD1mNDVhM2E2Y2NmYmE4MDVmOGFkNzk4MjU0ZGI5MzdmNw==  //base64
                     System.out.println("el mecanismo es PLAIN");
 
-                    sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
+                    retBuffer.put("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes());
                     return VerificationState.FINISHED;
                 }
             }
@@ -162,22 +174,23 @@ public class NegotiatorClient implements Negotiator {
         return VerificationState.ERR;
     }
 
-    private VerificationState handleStreamStream(){
-        sb.append("<stream:stream ");
+    private VerificationState handleStreamStream() {
+        retBuffer.put("<stream:stream ".getBytes());
 
         //TODO meter id ver como se hace
         //appendeo los atributos y cambio el to por un from, y el from por un to
-        for(int i = 0; i < reader.getAttributeCount(); i++){
-            sb.append(" ");
+        for (int i = 0; i < reader.getAttributeCount(); i++) {
+            retBuffer.put(" ".getBytes());
             if (!reader.getAttributePrefix(i).isEmpty()) {
-                sb.append(reader.getAttributePrefix(i)).append(":");
+                retBuffer.put(reader.getAttributePrefix(i).getBytes()).put(":".getBytes());
             }
-            if(reader.getAttributeLocalName(i).equals("to")){
-                sb.append("from=\"").append(reader.getAttributeName(i)).append("\"");
-            }else if(reader.getAttributeLocalName(i).equals("from")){
-                sb.append("to=\"").append(reader.getAttributeName(i)).append("\"");
-            }else{
-                sb.append(reader.getAttributeLocalName(i)).append("=\"").append(reader.getAttributeValue(i)).append("\"");
+            if (reader.getAttributeLocalName(i).equals("to")) {
+                retBuffer.put("from=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
+
+            } else if (reader.getAttributeLocalName(i).equals("from")) {
+                retBuffer.put("to=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
+            } else {
+                retBuffer.put(reader.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
             }
         }
 
@@ -185,29 +198,28 @@ public class NegotiatorClient implements Negotiator {
         appendNamespaces();
 
         //mecanismos de encriptacion
-        sb.append("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">");
-        sb.append("<mechanism>PLAIN</mechanism>");
+        retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
+        retBuffer.put("<mechanism>PLAIN</mechanism>".getBytes());
 
         //TODO: VER QUE HACER CON ESTO DE LOS ZIPS
         //mecanismos de compresion
-        sb.append("<compression xmlns=\"http://jabber.org/features/compress\">");
-        sb.append("<method>zlib</method></compression>");
+        retBuffer.put("<compression xmlns=\"http://jabber.org/features/compress\">".getBytes());
+        retBuffer.put("<method>zlib</method></compression>".getBytes());
 
-        sb.append("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>");
-        sb.append("<register xmlns=\"http://jabber.org/features/iq-register\"/>");
-        sb.append("</stream:features>");
+        retBuffer.put("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>".getBytes());
+        retBuffer.put("<register xmlns=\"http://jabber.org/features/iq-register\"/></stream:features>".getBytes());
 
         return VerificationState.IN_PROCESS;
     }
 
 
-    private void appendNamespaces(){
-        for(int i = 0; i < reader.getNamespaceCount(); i++){
-            sb.append(" ").append("xmlns");
+    private void appendNamespaces() {
+        for (int i = 0; i < reader.getNamespaceCount(); i++) {
+            retBuffer.put(" xmlns".getBytes());
             if (!reader.getNamespacePrefix(i).isEmpty()) {
-                sb.append(":").append(reader.getNamespacePrefix(i));
+                retBuffer.put(":".getBytes()).put(reader.getNamespacePrefix(i).getBytes());
             }
-            sb.append("=\"").append(reader.getNamespaceURI(i)).append("\"");
+            retBuffer.put("=\"".getBytes()).put(reader.getNamespaceURI(i).getBytes()).put("\"".getBytes());
         }
     }
 
