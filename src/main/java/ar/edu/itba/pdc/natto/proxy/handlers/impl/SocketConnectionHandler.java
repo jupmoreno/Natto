@@ -168,6 +168,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             if(!negotiator.isVerified()){
                 negotiator.handshake(this, readBuffer);
+
             }else{
                 if(actServer){  //TODO VER COMO SACAR ESTO Y QUE LO HAGA LA PRIMERA VEZ QUE ENTRA
                     if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
@@ -194,10 +195,10 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             }
 
         }
-      //  readBuffer.compact();
+      //
         //}
 
-
+      //  readBuffer.compact();
         if (messages.isEmpty()) {
             readBuffer.clear();
             this.requestRead();

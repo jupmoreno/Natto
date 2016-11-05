@@ -29,25 +29,26 @@ public class NegotiatorClient implements Negotiator {
 
     public int handshake(Connection connection, ByteBuffer readBuffer) {
 
-       // System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), Charset.forName("UTF-8")));
+       System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
         VerificationState readResult = VerificationState.INCOMPLETE;
         retBuffer = ByteBuffer.allocate(10000); // TODO SACAR ES UN ASCO PERO ALGO ANDA MAL SIN ESTO VER MALDITO BYTE BUFFER!!!!!!!
 
+        //TODO tengo que fijarme si necesito mas para leer o siempre le feedeo lo que me llega?
+        if (reader.getInputFeeder().needMoreInput()) {
+            try {
+                reader.getInputFeeder().feedInput(readBuffer);
+             //   readBuffer.clear();
+
+            } catch (XMLStreamException e) {
+                System.out.println(e.getMessage());
+                System.out.println("error feedando al parser del client negotiator");
+            }
+        }
+
         while (readResult != VerificationState.FINISHED) {
 
             //connection.requestRead();
-
-            //TODO tengo que fijarme si necesito mas para leer o siempre le feedeo lo que me llega?
-            if (reader.getInputFeeder().needMoreInput()) {
-                try {
-                    reader.getInputFeeder().feedInput(readBuffer);
-                    readBuffer.clear();
-                } catch (XMLStreamException e) {
-                    System.out.println(e.getMessage());
-                    System.out.println("error feedando al parser del client negotiator");
-                }
-            }
 
             try {
                 readResult = generateResp();
@@ -79,6 +80,8 @@ public class NegotiatorClient implements Negotiator {
             } else if (readResult == VerificationState.ERR) {
                 System.out.println("ERROR");
                 return -1;
+            } else if (readResult == VerificationState.INCOMPLETE){
+                return 0;
             }
         }
 
@@ -104,6 +107,7 @@ public class NegotiatorClient implements Negotiator {
                     break;
 
                 case AsyncXMLStreamReader.START_ELEMENT:
+                    System.out.println(reader.getLocalName());
                     System.out.println("start element");
                     return handleStartElement();
 
@@ -178,6 +182,8 @@ public class NegotiatorClient implements Negotiator {
     }
 
     private VerificationState handleStreamStream() {
+
+        System.out.println("entro al handle stream stream");
         retBuffer.put("<stream:stream ".getBytes());
 
         //TODO meter id ver como se hace
