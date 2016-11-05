@@ -43,6 +43,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     private final Negotiator negotiator;
 
+    private boolean actServer = true;
+
 
     //VOY A TENER QUE RECIBIR UNO
     public SocketConnectionHandler(final SocketChannel channel,
@@ -129,14 +131,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         //connection de servidor
 
 
-//        if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
-//            try {
-//                this.requestConnect(new InetSocketAddress(5222));
-//            } catch (IOException exception) {
-//                exception.printStackTrace();
-//            }
-//            return;
-//        }
+
 
         try {
             bytesRead = channel.read(readBuffer);
@@ -174,6 +169,19 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             if(!negotiator.isVerified()){
                 negotiator.handshake(this, readBuffer);
             }else{
+                if(actServer){  //TODO VER COMO SACAR ESTO Y QUE LO HAGA LA PRIMERA VEZ QUE ENTRA
+                    if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
+                        try {
+                            this.requestConnect(new InetSocketAddress(5222));
+                        } catch (IOException exception) {
+                            exception.printStackTrace();
+                        }
+                        return;
+                    }
+                    actServer = false;
+                }
+
+
                 T request = parser.fromByteBuffer(readBuffer);
 
                 if (request != null) {

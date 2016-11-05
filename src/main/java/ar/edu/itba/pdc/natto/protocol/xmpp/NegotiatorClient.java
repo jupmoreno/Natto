@@ -17,42 +17,32 @@ public class NegotiatorClient implements Negotiator {
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
 
-    private ByteBuffer retBuffer = ByteBuffer.allocate(1000000);
-    //  private StringBuilder sb = new StringBuilder();
+    private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
 
     private boolean verified = false;
 
 
-    //ver si devuelvo int o byte buffer si es que escribo adentro o afuera
-
-    //si hago todo desde aca adentro
-    //devuelvo -1 cuando es error y hay que cerrar todo bien
-    //devuelvo 1 cuando ya esta verificado y hay que pasar a parsear por el xmpp parser
-
-    //TODO
     @Override
     public boolean isVerified() {
         return verified;
     }
 
-    //TODO appendear directo al ret buffer y no al sb (para testear es mas facil :) asi )
-    //voy a recibir una Connection a quien le requesteo escribir y leer
     public int handshake(Connection connection, ByteBuffer readBuffer) {
 
-        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), Charset.forName("UTF-8")));
+       // System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), Charset.forName("UTF-8")));
 
         VerificationState readResult = VerificationState.INCOMPLETE;
+        retBuffer = ByteBuffer.allocate(10000); // TODO SACAR ES UN ASCO PERO ALGO ANDA MAL SIN ESTO VER MALDITO BYTE BUFFER!!!!!!!
 
-        retBuffer.clear();
         while (readResult != VerificationState.FINISHED) {
 
-            //  connection.requestRead();
+            //connection.requestRead();
 
             //TODO tengo que fijarme si necesito mas para leer o siempre le feedeo lo que me llega?
             if (reader.getInputFeeder().needMoreInput()) {
                 try {
                     reader.getInputFeeder().feedInput(readBuffer);
-                    //      readBuffer.clear();
+                    readBuffer.clear();
                 } catch (XMLStreamException e) {
                     System.out.println(e.getMessage());
                     System.out.println("error feedando al parser del client negotiator");
@@ -71,17 +61,19 @@ public class NegotiatorClient implements Negotiator {
                 System.out.println("ESTADO TERMINADO: escribo en el connection");
                 connection.requestWrite(retBuffer);
 
-                System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), Charset.forName("UTF-8")));
+            //   System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
                 System.out.println("lo ultimo que mando ");
                 retBuffer.clear();
+         //       System.out.println("lo que mando en PROCESS despesu de limpar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
                 verified = true;
                 return 1;
 
             } else if (readResult == VerificationState.IN_PROCESS) {
-                System.out.println("lo que mando en PROCESS " + new String(retBuffer.array(), Charset.forName("UTF-8")));
+          //      System.out.println("lo que mando en PROCESS " + new String(retBuffer.array(), Charset.forName("UTF-8")));
                 connection.requestWrite(retBuffer);
                 retBuffer.clear();
+           //     System.out.println("lo que mando en PROCESS despus de limpiar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
                 return 0;
 
             } else if (readResult == VerificationState.ERR) {
@@ -177,11 +169,10 @@ public class NegotiatorClient implements Negotiator {
                     return VerificationState.FINISHED;
                 }
             }
-            //si no me llego lo de auth plain tengo que tirar error no?
             return VerificationState.ERR;
         }
 
-        //VER UN POCO MAS?
+        //TODO VER UN POCO MAS?
 
         return VerificationState.ERR;
     }
