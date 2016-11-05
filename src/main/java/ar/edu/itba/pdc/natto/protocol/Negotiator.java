@@ -1,4 +1,4 @@
-package ar.edu.itba.pdc.natto.protocol.xmpp;
+package ar.edu.itba.pdc.natto.protocol;
 
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 
