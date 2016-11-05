@@ -11,6 +11,7 @@ import java.util.Queue;
 public class NttpParser implements Parser<StringBuilder>{
 
     ByteBuffer currBuffer = ByteBuffer.allocate(10000);
+    ByteBuffer retBuffer = ByteBuffer.allocate(10000);
     StringBuilder ret = new StringBuilder();
 
 
@@ -35,6 +36,8 @@ public class NttpParser implements Parser<StringBuilder>{
 
     @Override
     public ByteBuffer toByteBuffer(StringBuilder message) {
-        return ByteBuffer.wrap(message.toString().getBytes());
+        retBuffer.clear();
+        retBuffer = ByteBuffer.wrap(message.toString().getBytes());
+        return retBuffer;
     }
 }
