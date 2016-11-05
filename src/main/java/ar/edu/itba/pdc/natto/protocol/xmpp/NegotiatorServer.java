@@ -22,10 +22,17 @@ public class NegotiatorServer implements Negotiator {
     private boolean inMech = false;
     private boolean hasPlain = false;
 
-    @Override
-    public int handshake(Connection connection) {
 
-        verificationState readResult = verificationState.INCOMPLETE;
+    //TODO
+    @Override
+    public boolean isVerified() {
+        return false;
+    }
+
+    @Override
+    public int handshake(Connection connection, ByteBuffer readBuffer) {
+
+        VerificationState readResult = VerificationState.INCOMPLETE;
 
         //aca hay que poner bien de quien es TODO
         //el primero mandar es el cliente, nosotros actuamos como cliente cuando negociamos como el servidor
@@ -38,7 +45,7 @@ public class NegotiatorServer implements Negotiator {
 
         retBuffer.clear();
 
-        while(readResult != verificationState.FINISHED) {
+        while(readResult != VerificationState.FINISHED) {
             System.out.println("Entro al while");
 
 //            if(reader.getInputFeeder().needMoreInput()){
@@ -59,11 +66,11 @@ public class NegotiatorServer implements Negotiator {
             }
 
             //no tengo que escribir nada porque termina cuando recibe un success, no vuelve a mandar nada
-            if(readResult == verificationState.FINISHED){
+            if(readResult == VerificationState.FINISHED){
                 System.out.println("termine negociacion :)");
                 return 1;
             }
-            if(readResult == verificationState.IN_PROCESS){
+            if(readResult == VerificationState.IN_PROCESS){
 
             }
 
@@ -74,7 +81,7 @@ public class NegotiatorServer implements Negotiator {
     }
 
 
-    private verificationState generateResp() throws XMLStreamException {
+    private VerificationState generateResp() throws XMLStreamException {
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
@@ -103,7 +110,7 @@ public class NegotiatorServer implements Negotiator {
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("incomplete");
-                    return verificationState.INCOMPLETE;
+                    return VerificationState.INCOMPLETE;
 
                 default:
                     break;
@@ -111,35 +118,35 @@ public class NegotiatorServer implements Negotiator {
         }
 
         ///????
-        return verificationState.ERR;
+        return VerificationState.ERR;
 
     }
 
 
-    private verificationState handleEndElement(){
+    private VerificationState handleEndElement(){
         if(reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")){
             //TODO claramente AGFkbWluAGZyYW4xOTk0 no va hardcodeado CAMBIAR BIEN
             retBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes());
-            return verificationState.IN_PROCESS;
+            return VerificationState.IN_PROCESS;
         }
         if(reader.getName().equals("mechanisms")){
             inMech = false;
         }
 
         //TODO pensar bien que resp:
-        return verificationState.IN_PROCESS;
+        return VerificationState.IN_PROCESS;
 
     }
 
-    private verificationState handleStartElement(){
+    private VerificationState handleStartElement(){
         if(reader.getLocalName().equals("success") && hasPlain){
-            return verificationState.FINISHED;
+            return VerificationState.FINISHED;
         }
         if(reader.getLocalName().equals("mechanism")){
             inMech = true;
         }
 
-        return verificationState.IN_PROCESS;
+        return VerificationState.IN_PROCESS;
 
     }
 

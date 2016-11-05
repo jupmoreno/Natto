@@ -26,14 +26,19 @@ public class NegotiatorClient implements Negotiator {
     //devuelvo -1 cuando es error y hay que cerrar todo bien
     //devuelvo 1 cuando ya esta verificado y hay que pasar a parsear por el xmpp parser
 
+    //TODO
+    @Override
+    public boolean isVerified() {
+        return false;
+    }
 
     //TODO appendear directo al ret buffer y no al sb (para testear es mas facil :) asi )
     //voy a recibir una Connection a quien le requesteo escribir y leer
-    public int handshake(Connection connection){
+    public int handshake(Connection connection, ByteBuffer readBuffer){
 
-        verificationState readResult = verificationState.INCOMPLETE;
+        VerificationState readResult = VerificationState.INCOMPLETE;
 
-        while(readResult != verificationState.FINISHED) {
+        while(readResult != VerificationState.FINISHED) {
 
             connection.requestRead();
             //Y AHORA!??!!?!
@@ -46,7 +51,7 @@ public class NegotiatorClient implements Negotiator {
                 return -1;
             }
 
-            if (readResult == verificationState.FINISHED) {
+            if (readResult == VerificationState.FINISHED) {
                 System.out.println("ESTADO TERMINADO: escribo en el connection");
                 retBuffer.wrap(sb.toString().getBytes());
                 connection.requestWrite(retBuffer);
@@ -55,14 +60,14 @@ public class NegotiatorClient implements Negotiator {
                 retBuffer.clear();
                 return 1;
 
-            } else if (readResult == verificationState.IN_PROCESS) {
+            } else if (readResult == VerificationState.IN_PROCESS) {
                 System.out.println("el sb en proceso " + sb);
                 retBuffer.wrap(sb.toString().getBytes());
                 connection.requestWrite(retBuffer);
                 sb.setLength(0);
                 retBuffer.clear();
 
-            }else if( readResult == verificationState.ERR){
+            }else if( readResult == VerificationState.ERR){
                 return -1;
             }
         }
@@ -70,7 +75,7 @@ public class NegotiatorClient implements Negotiator {
         return 0;
     }
 
-    private verificationState generateResp() throws XMLStreamException{
+    private VerificationState generateResp() throws XMLStreamException{
 
         while (reader.hasNext()) {
             switch (reader.next()) {
@@ -99,7 +104,7 @@ public class NegotiatorClient implements Negotiator {
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("incomplete");
-                    return verificationState.INCOMPLETE;
+                    return VerificationState.INCOMPLETE;
 
                 default:
                     break;
@@ -107,10 +112,10 @@ public class NegotiatorClient implements Negotiator {
         }
 
         ///????
-        return verificationState.ERR;
+        return VerificationState.ERR;
     }
 
-    private verificationState handleStartDocument(){
+    private VerificationState handleStartDocument(){
         if(reader.getVersion() != null && reader.getEncoding() != null){ //TODO: SACAR solo para testear no deberia pasar esto
             sb.append("<?xml ");
 
@@ -124,11 +129,11 @@ public class NegotiatorClient implements Negotiator {
                 sb.append("encoding=").append(reader.getVersion()).append("?>");
             }
         }
-        return verificationState.IN_PROCESS;
+        return VerificationState.IN_PROCESS;
     }
 
 
-    private verificationState handleStartElement(){
+    private VerificationState handleStartElement(){
 
         String name = reader.getName().getLocalPart();
 
@@ -145,19 +150,19 @@ public class NegotiatorClient implements Negotiator {
                     System.out.println("el mecanismo es PLAIN");
 
                     sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
-                    return verificationState.FINISHED;
+                    return VerificationState.FINISHED;
                 }
             }
             //si no me llego lo de auth plain tengo que tirar error no?
-            return verificationState.ERR;
+            return VerificationState.ERR;
         }
 
         //VER UN POCO MAS?
 
-        return verificationState.ERR;
+        return VerificationState.ERR;
     }
 
-    private verificationState handleStreamStream(){
+    private VerificationState handleStreamStream(){
         sb.append("<stream:stream ");
 
         //TODO meter id ver como se hace
@@ -192,7 +197,7 @@ public class NegotiatorClient implements Negotiator {
         sb.append("<register xmlns=\"http://jabber.org/features/iq-register\"/>");
         sb.append("</stream:features>");
 
-        return verificationState.IN_PROCESS;
+        return VerificationState.IN_PROCESS;
     }
 
 

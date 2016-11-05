@@ -7,6 +7,7 @@ import static com.google.common.base.Preconditions.checkState;
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
+import ar.edu.itba.pdc.natto.protocol.NegotiatorFactory;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler;
@@ -50,12 +51,12 @@ public class MultiProtocolServer implements Server {
         }
 
         public <T> Builder addProtocol(int port, ParserFactory<T> parsers,
-                                       ProtocolFactory<T> protocols) throws IOException {
+                                       ProtocolFactory<T> protocols, NegotiatorFactory negotiatorFactory) throws IOException {
             checkArgument(port > 0 && port <= 65535, "Invalid port number");
             checkNotNull(parsers, "Parser factory can't be null");
             checkNotNull(protocols, "Protocol factory can't be null");
 
-            sockets.put(channel(parsers, protocols), port);
+            sockets.put(channel(parsers, protocols, negotiatorFactory), port);
 
             return this;
         }
@@ -65,13 +66,13 @@ public class MultiProtocolServer implements Server {
         }
 
         private <T> ServerSocketChannel channel(ParserFactory<T> parsers,
-                                                ProtocolFactory<T> protocols) throws IOException {
+                                                ProtocolFactory<T> protocols, NegotiatorFactory negotiatorFactory) throws IOException {
             ServerSocketChannel channel = ServerSocketChannel.open();
             // Adjusts channel to non blocking mode
             channel.configureBlocking(false);
 
             ConnectionHandlerFactory connectionHandlers = new SocketConnectionHandlerFactory<>(
-                    subscriber, parsers, protocols);
+                    subscriber, parsers, protocols, negotiatorFactory);
             AcceptHandler acceptHandler = new Acceptor(channel, subscriber, connectionHandlers);
 
             subscriber.subscribe(channel, ChannelOperation.ACCEPT, acceptHandler);

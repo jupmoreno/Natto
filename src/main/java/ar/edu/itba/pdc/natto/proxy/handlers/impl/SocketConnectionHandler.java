@@ -7,10 +7,7 @@ import static com.google.common.base.Preconditions.checkState;
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
-import ar.edu.itba.pdc.natto.protocol.Parser;
-import ar.edu.itba.pdc.natto.protocol.ParserFactory;
-import ar.edu.itba.pdc.natto.protocol.Protocol;
-import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.*;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
 import org.slf4j.Logger;
@@ -44,14 +41,15 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     private boolean closeRequested = false;
 
-    private boolean actServer = true;
+    private final Negotiator negotiator;
 
 
     //VOY A TENER QUE RECIBIR UNO
     public SocketConnectionHandler(final SocketChannel channel,
                                    final DispatcherSubscriber subscriber,
                                    final ParserFactory<T> parserFactory,
-                                   final ProtocolFactory<T> protocolFactory) {
+                                   final ProtocolFactory<T> protocolFactory, Negotiator negotiator) {
+
         checkNotNull(channel, "Channel can't be null");
         checkArgument(channel.isOpen(), "Channel isn't open");
         checkArgument(!channel.isBlocking(), "Channel is in blocking mode");
@@ -65,6 +63,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
         this.channel = channel;
         this.connection = this;
+
+        this.negotiator = negotiator;
 
         this.messages = new ConcurrentLinkedQueue<>();
         this.readBuffer = ByteBuffer.allocate(BUFFER_SIZE);
@@ -84,7 +84,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         server.connect(serverAddress);
 
         SocketConnectionHandler<T> serverHandler = new SocketConnectionHandler<>(server, subscriber,
-                parserFactory, protocolFactory);
+                parserFactory, protocolFactory, negotiator);
         serverHandler.connection = this;
         this.connection = serverHandler;
 
@@ -123,24 +123,20 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         int bytesRead;
 
 
-      //  logger.info("Channel " + channel.socket().getRemoteSocketAddress()
+        //  logger.info("Channel " + channel.socket().getRemoteSocketAddress()
         //        + " requested read operation");
 
         //connection de servidor
 
-        if(actServer){
-            //deberia llamar negotiator si me devuelve uno es que tengo que cambiar actServer a falso y
-            //empezar a actuar como proxy
-        }
 
-        if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
-            try {
-                this.requestConnect(new InetSocketAddress(5222));
-            } catch (IOException exception) {
-                exception.printStackTrace();
-            }
-            return;
-        }
+//        if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
+//            try {
+//                this.requestConnect(new InetSocketAddress(5222));
+//            } catch (IOException exception) {
+//                exception.printStackTrace();
+//            }
+//            return;
+//        }
 
         try {
             bytesRead = channel.read(readBuffer);
@@ -173,27 +169,34 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
 
             //while (readBuffer.hasRemaining()){
-                // TODO: ProtocolTask (?
+            // TODO: ProtocolTask (?
+
+            if(!negotiator.isVerified()){
+                negotiator.handshake(this, readBuffer);
+            }else{
                 T request = parser.fromByteBuffer(readBuffer);
 
                 if (request != null) {
                     T response = protocol.process(request);
                     System.out.println("RESPONSE: " + response); // TODO: Remove
                     if (response != null) {
-                        connection.requestWrite((ByteBuffer)request);
+                        connection.requestWrite((ByteBuffer) request);
                     }
                 }
-                 readBuffer.compact();
-            //}
-
-
-            if(messages.isEmpty()){
-                readBuffer.clear();
-                this.requestRead();
             }
 
         }
+        readBuffer.compact();
+        //}
+
+
+        if (messages.isEmpty()) {
+            readBuffer.clear();
+            this.requestRead();
+        }
+
     }
+
 
     @Override
     public void requestWrite(final ByteBuffer buffer) {

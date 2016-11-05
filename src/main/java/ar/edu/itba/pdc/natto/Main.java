@@ -4,9 +4,13 @@ import ar.edu.itba.pdc.natto.config.Arguments;
 import ar.edu.itba.pdc.natto.config.Config;
 import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
+import ar.edu.itba.pdc.natto.protocol.Negotiator;
+import ar.edu.itba.pdc.natto.protocol.NegotiatorFactory;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.nttp.NttpParserFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.NegotiatorClient;
+import ar.edu.itba.pdc.natto.protocol.xmpp.XmppNegotiatorFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
@@ -26,12 +30,12 @@ public class Main {
 //            System.out.println(parser.fromByteBuffer(buffer));
 //        }
 
-        NegotiatorClient neg = new NegotiatorClient();
-        neg.handshake(ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"OTRACOSA\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()));
-
-        if (true) {
-            return;
-        }
+//        NegotiatorClient neg = new NegotiatorClient();
+//        neg.handshake(ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"OTRACOSA\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()), readBuffer);
+//
+//        if (true) {
+//            return;
+//        }
 
         Arguments arguments = new Arguments();
 
@@ -66,10 +70,15 @@ public class Main {
     private static void startServer(Config config) {
         ParserFactory<ByteBuffer> xmppParsers = new XmppParserFactory();
         ProtocolFactory<ByteBuffer> xmppProtocols = new XmppProtocolFactory();
+        NegotiatorFactory negotiatorFactory = new XmppNegotiatorFactory();
+
+      //  ParserFactory<ByteBuffer> nttpParser = new NttpParserFactory();
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
-                    .addProtocol(config.getXmppPort(), xmppParsers, xmppProtocols)
+                    .addProtocol(config.getXmppPort(), xmppParsers, xmppProtocols, negotiatorFactory)
+                    //TODO poner todo bien
+                   // .addProtocol(config.getPspPort(), xmppParsers, xmppProtocols, negotiatorFactory)
                     .build();
 
             try {
