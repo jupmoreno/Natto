@@ -9,10 +9,8 @@ import ar.edu.itba.pdc.natto.protocol.NegotiatorFactory;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
 import ar.edu.itba.pdc.natto.protocol.nttp.NttpParserFactory;
-import ar.edu.itba.pdc.natto.protocol.xmpp.NegotiatorClient;
-import ar.edu.itba.pdc.natto.protocol.xmpp.XmppNegotiatorFactory;
-import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
-import ar.edu.itba.pdc.natto.protocol.xmpp.XmppProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.nttp.NttpProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.xmpp.*;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
 import org.apache.commons.configuration2.ex.ConfigurationException;
@@ -20,6 +18,8 @@ import org.kohsuke.args4j.CmdLineException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.HashSet;
 
 public class Main {
     public static void main(String[] args) {
@@ -72,13 +72,14 @@ public class Main {
         ProtocolFactory<ByteBuffer> xmppProtocols = new XmppProtocolFactory();
         NegotiatorFactory negotiatorFactory = new XmppNegotiatorFactory();
 
-      //  ParserFactory<ByteBuffer> nttpParser = new NttpParserFactory();
+        ParserFactory<StringBuilder> nttpParsers = new NttpParserFactory();
+        ProtocolFactory<StringBuilder> nttpProtocols = new NttpProtocolFactory(new XmppData(new HashMap<>(), new HashSet<>()));
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
                     .addProtocol(config.getXmppPort(), xmppParsers, xmppProtocols, negotiatorFactory)
                     //TODO poner todo bien
-                   // .addProtocol(config.getPspPort(), xmppParsers, xmppProtocols, negotiatorFactory)
+                    .addProtocol(config.getPspPort(), nttpParsers, nttpProtocols, negotiatorFactory)
                     .build();
 
             try {
