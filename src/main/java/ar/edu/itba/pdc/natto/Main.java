@@ -6,6 +6,7 @@ import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.xmpp.NegotiatorClient;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppProtocolFactory;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
@@ -19,17 +20,18 @@ import java.nio.ByteBuffer;
 public class Main {
     public static void main(String[] args) {
 
-
-
 //        XmppParser parser = new XmppParser();
 //        ByteBuffer buffer = ByteBuffer.wrap("<stream:stream xmlns:stream=\"asd.org\"><b>asd</b>".getBytes());
 //        while (buffer.hasRemaining()) {
 //            System.out.println(parser.fromByteBuffer(buffer));
 //        }
-//
-//        if (true) {
-//            return;
-//        }
+
+        NegotiatorClient neg = new NegotiatorClient();
+        neg.handshake(ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"OTRACOSA\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes()));
+
+        if (true) {
+            return;
+        }
 
         Arguments arguments = new Arguments();
 

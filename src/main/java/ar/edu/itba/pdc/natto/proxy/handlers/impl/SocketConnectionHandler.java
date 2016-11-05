@@ -44,6 +44,10 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     private boolean closeRequested = false;
 
+    private boolean actServer = true;
+
+
+    //VOY A TENER QUE RECIBIR UNO
     public SocketConnectionHandler(final SocketChannel channel,
                                    final DispatcherSubscriber subscriber,
                                    final ParserFactory<T> parserFactory,
@@ -66,6 +70,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         this.readBuffer = ByteBuffer.allocate(BUFFER_SIZE);
     }
 
+    //ACA RECIBO UN NEGOTIATOR ASIGNO EL QUE QUIERO
     public void requestConnect(final InetSocketAddress serverAddress) throws IOException {
         checkState(connection == this);
         checkNotNull(serverAddress, "Address can't be null");
@@ -117,10 +122,18 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     public void handle_read() {
         int bytesRead;
 
+
       //  logger.info("Channel " + channel.socket().getRemoteSocketAddress()
         //        + " requested read operation");
 
-        if (connection == this) { // TODO: Remove!
+        //connection de servidor
+
+        if(actServer){
+            //deberia llamar negotiator si me devuelve uno es que tengo que cambiar actServer a falso y
+            //empezar a actuar como proxy
+        }
+
+        if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
             try {
                 this.requestConnect(new InetSocketAddress(5222));
             } catch (IOException exception) {
@@ -133,11 +146,9 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             bytesRead = channel.read(readBuffer);
         } catch (IOException exception) {
             logger.error("Can't read channel channel", exception);
-
             // TODO: Cerrar la otra conexion && Cerrar key?
             Closeables.closeSilently(channel);
             connection.requestClose();
-
             return;
         }
 
@@ -152,6 +163,8 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             return;
         }
 
+
+        //LEER REQUEST CONNECT TODO
         // Cannot read more bytes than are immediately available
         if (bytesRead > 0) {
             readBuffer.flip();
@@ -170,8 +183,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                         connection.requestWrite((ByteBuffer)request);
                     }
                 }
-
-
                  readBuffer.compact();
             //}
 
