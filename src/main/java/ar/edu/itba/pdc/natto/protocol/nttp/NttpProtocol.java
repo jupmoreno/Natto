@@ -1,6 +1,11 @@
 package ar.edu.itba.pdc.natto.protocol.nttp;
 
 import ar.edu.itba.pdc.natto.protocol.Protocol;
+import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
+import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
+
+import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Created by user on 05/11/16.
@@ -8,6 +13,7 @@ import ar.edu.itba.pdc.natto.protocol.Protocol;
 public class NttpProtocol implements Protocol<StringBuilder> {
 
     private StringBuilder sb;
+    XmppData xmppData;
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto.
@@ -15,17 +21,23 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     private String[] authenticationMethods = {"plain", };
     private String authMethod = "";
 
+    public NttpProtocol(XmppData xmppData){
+        this.xmppData = xmppData;
+    }
+
     private enum Codes{
         OK('.', 00, "OK"),
         GO_AHEAD('.', 01, "Go Ahead"),
         LOGGED_IN('.', 02, "Logged in"),
         AUTH_METHODS('.', 03, "Authentication methods"),
+        USER_SILENCED('.', 04, "User silenced"),
         WHAT('?', 00, "What?"),
         WRONG_ARGS('!', 00, "Wrong arguments"),
         METHOD_NOT_SUPPORTED('!', 01, "Authentication method not supported"),
         ALREADY_AUTHORIZED('!', 02, "Already authorized"),
         WITHOUT_AUTH_METHOD('!', 03, "Authorization method not requested"),
         INCORRECT_USER_PASS('!', 04, "Incorrect user or password"),
+        USER_ALREADY_SILENCED('!', 05, "The user is already silenced"),
         ;
 
         private char type;
@@ -91,6 +103,11 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleHelp(String[] messageVec) {
+        if(messageVec.length > 1){
+            formulateResponse(Codes.WRONG_ARGS, null);
+            return;
+        }
+
         formulateResponse(Codes.OK, commands);
     }
 
@@ -161,6 +178,20 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleSilence(String[] messageVec) {
+        if(messageVec.length > 2){
+            formulateResponse(Codes.WRONG_ARGS, null);
+            return;
+        }
+
+        if(xmppData.isUserSilenced(messageVec[1])){
+            formulateResponse(Codes.USER_ALREADY_SILENCED, null);
+            return;
+        }
+
+        xmppData.silenceUser(messageVec[1]);
+        formulateResponse(Codes.USER_SILENCED, null);
+        return;
+
     }
 
     private void formulateResponse(Codes c, String[] lines){
