@@ -117,7 +117,6 @@ public class NegotiatorClient implements Negotiator {
 
                 case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
                     System.out.println("processing instruction");
-
                     break;
 
                 case AsyncXMLStreamReader.START_ELEMENT:
@@ -141,7 +140,6 @@ public class NegotiatorClient implements Negotiator {
                     if(reader.getLocalName().equals("auth"))
                         return VerificationState.FINISHED;
                     return VerificationState.IN_PROCESS;
-                  //  break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("incomplete");
@@ -181,14 +179,7 @@ public class NegotiatorClient implements Negotiator {
 
     private VerificationState handleStartElement() {
 
-        String name = reader.getName().getLocalPart();
-
-        //stream:Stream
-        if (name.equals("stream") && reader.getPrefix().equals("stream")) {
-            return handleStreamStream();
-
-            //auth
-        } else if (name.equals("auth")) {
+        if (reader.getLocalName().equals("auth")) {
             System.out.println("Estoy en auth");
             inAuth = true;
             for (int i = 0; i < reader.getAttributeCount(); i++) {
@@ -205,7 +196,6 @@ public class NegotiatorClient implements Negotiator {
         }
 
         //TODO VER UN POCO MAS?
-
         return VerificationState.ERR;
     }
 
