@@ -6,11 +6,13 @@ import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
-import org.omg.CORBA.INV_POLICY;
 
+import javax.xml.bind.DatatypeConverter;
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 import java.util.Base64;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class NegotiatorClient implements Negotiator {
 
@@ -270,9 +272,14 @@ public class NegotiatorClient implements Negotiator {
     }
 
     private void getUser(){
-        String user64 = reader.getText();
-        System.out.println("El user es: " + user64);
-        System.out.println("El user decodificado es: " + Base64.getDecoder().decode(user64));
+        String user64 = new String(Base64.getDecoder().decode(reader.getText()), UTF_8);
+        System.out.println("EL USUARIO ES " + user64);
+
+//                reader.getText();
+//        System.out.println("El user es: " + user64);
+//        System.out.println("El user decodificado es: " + new String(Base64.getDecoder().decode(user64), UTF_8));
+//        System.out.println("el usuario decodificado 2 es " + new String(DatatypeConverter.parseBase64Binary(user64), UTF_8));
+//      //  System.out.println("el tercero " + );
     }
 
 }
