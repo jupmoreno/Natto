@@ -26,18 +26,19 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private enum Codes{
-        OK('.', 00, "OK"),
-        GO_AHEAD('.', 01, "Go Ahead"),
-        LOGGED_IN('.', 02, "Logged in"),
-        AUTH_METHODS('.', 03, "Authentication methods"),
-        USER_SILENCED('.', 04, "User silenced"),
-        WHAT('?', 00, "What?"),
-        WRONG_ARGS('!', 00, "Wrong arguments"),
-        METHOD_NOT_SUPPORTED('!', 01, "Authentication method not supported"),
-        ALREADY_AUTHORIZED('!', 02, "Already authorized"),
-        WITHOUT_AUTH_METHOD('!', 03, "Authorization method not requested"),
-        INCORRECT_USER_PASS('!', 04, "Incorrect user or password"),
-        USER_ALREADY_SILENCED('!', 05, "The user is already silenced"),
+        OK('.', 00, "OK."),
+        GO_AHEAD('.', 01, "Go Ahead."),
+        LOGGED_IN('.', 02, "Logged in."),
+        AUTH_METHODS('.', 03, "Authentication methods."),
+        USER_SILENCED('.', 04, "User silenced."),
+        WHAT('?', 00, "What?."),
+        WRONG_ARGS('!', 00, "Wrong arguments."),
+        METHOD_NOT_SUPPORTED('!', 01, "Authentication method not supported."),
+        ALREADY_AUTHORIZED('!', 02, "Already authorized."),
+        WITHOUT_AUTH_METHOD('!', 03, "Authorization method not requested."),
+        INCORRECT_USER_PASS('!', 04, "Incorrect user or password."),
+        USER_ALREADY_SILENCED('!', 05, "The user is already silenced."),
+        TOO_MUCH_OUTPUT('X', 00, "Too much output to process.")
         ;
 
         private char type;
@@ -69,7 +70,14 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         if(message == null)
             return null;
 
+
         sb = message;
+
+        if(message.toString().equals("\nerror\n")){
+            handleTooBig();
+            return sb;
+        }
+
         String[] messageVec = sb.toString().split(" ");
 
         if(messageVec.length == 0){
@@ -100,6 +108,10 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             handleDefault(messageVec);
             return sb;
         }
+    }
+
+    private void handleTooBig() {
+        formulateResponse(Codes.TOO_MUCH_OUTPUT, null);
     }
 
     private void handleHelp(String[] messageVec) {
@@ -157,9 +169,9 @@ public class NttpProtocol implements Protocol<StringBuilder> {
                 }
             }
 
-            formulateResponse(Codes.WRONG_ARGS, null);
         }
 
+        formulateResponse(Codes.WRONG_ARGS, null);
 
 
     }
@@ -178,7 +190,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleSilence(String[] messageVec) {
-        if(messageVec.length > 2){
+        if(messageVec.length != 2){
             formulateResponse(Codes.WRONG_ARGS, null);
             return;
         }
@@ -201,7 +213,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             sb.append("+" + lines.length + " ");
         }
 
-        sb.append(c.getType()).append(" ").append(c.getCode()).append(" ").append(c.getMessage());
+        sb.append(c.getType()).append(" ").append(c.getCode()).append(" ").append(c.getMessage()).append("\n");
 
         if(lines != null){
             for(int i = 0; i < lines.length; i++){

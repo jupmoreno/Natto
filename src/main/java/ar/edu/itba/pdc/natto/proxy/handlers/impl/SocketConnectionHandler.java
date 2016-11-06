@@ -203,7 +203,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                     T response = protocol.process(request);
                     System.out.println("RESPONSE: " + response); // TODO: Remove
                     if (response != null) {
-                        connection.requestWrite((ByteBuffer) request);
+                        connection.requestWrite(parser.toByteBuffer(response));
                     }
                 }
             }

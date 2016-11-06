@@ -5,6 +5,8 @@ import ar.edu.itba.pdc.natto.protocol.Parser;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Queue;
 
 /**
@@ -12,39 +14,59 @@ import java.util.Queue;
  */
 public class NttpParser implements Parser<StringBuilder>{
 
-    ByteBuffer currBuffer = ByteBuffer.allocate(10000);
-    ByteBuffer retBuffer = ByteBuffer.allocate(10000);
-    StringBuilder ret = new StringBuilder();
+    private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
+    private StringBuilder ret = new StringBuilder();
+
+    private static final int MAX_SIZE = 30;
+
+    boolean foundCommand = false;
+    private StringBuilder commands = new StringBuilder();
 
 
     @Override
     public StringBuilder fromByteBuffer(ByteBuffer buffer) {
+        System.out.println("Esto es lo que recibo en el fromByteBuffer: " + new String(buffer.array(), buffer.position(), buffer.limit(), Charset.defaultCharset()));
 
-        ret.setLength(0);
-        currBuffer.put(buffer);
-        char curr;
-        System.out.println(new String(buffer.array(), Charset.forName("UTF-8")));
-        CharBuffer charBuffer = buffer.asCharBuffer();
-        while(currBuffer.hasRemaining()){
-            System.out.println("HOLA 1");
-            if((curr = (char) buffer.get()) == '\n'){
-                System.out.println("HOLA 2");
-                currBuffer.compact();
-                System.out.println("HOLA 3");
-                return ret;
+        if(foundCommand){
+            ret.setLength(0);
+            foundCommand = false;
+        }
+
+        String bufferStr = new String(buffer.array(), buffer.position(), buffer.limit(), Charset.forName("UTF-8"));
+        buffer.clear();
+
+        if(commands.length() + bufferStr.length() > MAX_SIZE){
+            ret.setLength(0);
+            commands.setLength(0);
+            ret.append("\nerror\n");
+            foundCommand = true;
+            return ret;
+        }
+
+        commands.append(bufferStr);
+
+        for(int i = 0; i < commands.length() && !foundCommand; i++){
+            if(commands.charAt(i) == '\n'){
+                foundCommand = true;
+                commands.delete(0,i + 1);
             }else{
-              //  System.out.println("HOLA 4 " + curr);
-                ret.append(curr);
+                ret.append(commands.charAt(i));
             }
         }
-        currBuffer.compact();
+
+        if(foundCommand){
+            System.out.println("Desde el fromByteBuffer voy a retornar " + ret);
+            return ret;
+        }
+
         return null;
+
 
     }
 
     @Override
     public ByteBuffer toByteBuffer(StringBuilder message) {
-        retBuffer.clear();
+        retBuffer.compact();
         retBuffer = ByteBuffer.wrap(message.toString().getBytes());
         return retBuffer;
     }
