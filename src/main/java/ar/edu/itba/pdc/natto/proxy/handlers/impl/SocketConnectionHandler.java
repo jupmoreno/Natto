@@ -32,22 +32,15 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private final Protocol<T> protocol;
 
     private final SocketChannel channel;
-    private Connection connection;
-
     private final ByteBuffer readBuffer;
     private final Queue<ByteBuffer> messages;
-
+    private Connection connection;
     private boolean closeRequested = false;
+    private boolean readRequested = false;
 
     private Negotiator negotiator;
 
     private boolean actServer = true;
-
-    private boolean connectRequested = false;
-    private boolean readRequested = false;
-
-    private ChannelOperation afterConnect = null;
-
 
     //VOY A TENER QUE RECIBIR UNO
     public SocketConnectionHandler(final SocketChannel channel,
@@ -82,8 +75,6 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         checkNotNull(serverAddress, "Address can't be null");
         checkArgument(!serverAddress.isUnresolved(), "Invalid address");
 
-        connectRequested = true;
-
         logger.info("Channel " + channel.socket().getRemoteSocketAddress()
                 + " requested connection to: " + serverAddress);
 
@@ -97,7 +88,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         serverHandler.negotiator = negotiator;
         this.connection = serverHandler;
 
-        subscriber.unsubscribe(channel, ChannelOperation.READWRITE);
+        subscriber.unsubscribe(channel, ChannelOperation.READ);
         subscriber.subscribe(server, ChannelOperation.CONNECT, serverHandler);
 
         return serverHandler;
@@ -112,13 +103,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                 logger.info("Established connection with server on " + serverAddress);
 
                 subscriber.unsubscribe(channel, ChannelOperation.CONNECT);
-                if(afterConnect != null){
-                    subscriber.subscribe(channel, afterConnect, this);
-                }else{
-                    subscriber.subscribe(channel, ChannelOperation.READ, this); //TODO JPM
+                if(messages.isEmpty()){
+                    subscriber.subscribe(channel, ChannelOperation.READ, this);
+                    connection.requestRead();
+                } else {
+                    readRequested = true;
+                    subscriber.subscribe(channel, ChannelOperation.WRITE, this);
                 }
-
-                //  connection.requestRead();
             }
         } catch (IOException exception) {
             logger.error("Couldn't establish connection with server", exception);
@@ -131,15 +122,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void requestRead() {
-        readRequested = true;
-        if(connectRequested){
-            afterConnect = ChannelOperation.READ;
-        }else{
-            if(messages.isEmpty()){
-                subscriber.subscribe(channel, ChannelOperation.READ, this); //TODO JPM
+        if(!channel.isConnectionPending()){
+            if (messages.isEmpty()) {
+                subscriber.subscribe(channel, ChannelOperation.READ, this);
+            } else {
+                readRequested = true;
             }
         }
-
     }
 
     @Override
@@ -183,7 +172,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
             readBuffer.flip();
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-         //   readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
+            //   readBuffer.limit(readBuffer.limit() - 1);       //TODO: SACAR ESTO QUE PUEDE ROMPER TOOD PARA SACAR EL \n
 
             //while (readBuffer.hasRemaining()){
             // TODO: ProtocolTask (?
@@ -205,25 +194,21 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                     }
                 }
             }
-
         }
-      //
+        //
         //}
 
-      //  readBuffer.compact();
+        //  readBuffer.compact();
         if (messages.isEmpty()) {
             readBuffer.clear();
-            this.requestRead();
+            subscriber.subscribe(channel, ChannelOperation.READ, this);
         }
-
     }
 
 
     @Override
     public void requestWrite(final ByteBuffer buffer) {
-        if(connectRequested){
-            afterConnect = ChannelOperation.WRITE;
-        }else{
+        if(!channel.isConnectionPending()){
             subscriber.subscribe(channel, ChannelOperation.WRITE, this);
         }
 
@@ -259,6 +244,10 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                     Closeables.closeSilently(channel);
                 } else {
                     connection.requestRead();
+                    if (readRequested) {
+                        subscriber.subscribe(channel, ChannelOperation.READ, this);
+                        readRequested = false;
+                    }
                 }
             }
         }
