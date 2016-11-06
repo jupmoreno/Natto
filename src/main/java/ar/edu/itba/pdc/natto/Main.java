@@ -70,12 +70,13 @@ public class Main {
     }
 
     private static void startServer(Config config) {
-        ParserFactory<ByteBuffer> xmppParsers = new XmppParserFactory();
+        XmppData data = new XmppData(new HashMap<>(), new HashSet<>());
+        ParserFactory<ByteBuffer> xmppParsers = new XmppParserFactory(data);
         ProtocolFactory<ByteBuffer> xmppProtocols = new XmppProtocolFactory();
         NegotiatorFactory negotiatorFactory = new XmppNegotiatorFactory();
 
         ParserFactory<StringBuilder> nttpParsers = new NttpParserFactory();
-        ProtocolFactory<StringBuilder> nttpProtocols = new NttpProtocolFactory(new XmppData(new HashMap<>(), new HashSet<>()));
+        ProtocolFactory<StringBuilder> nttpProtocols = new NttpProtocolFactory(data);
         NegotiatorFactory nttpNegotiatorFactory = new NttpNegotiatorFactory();
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
