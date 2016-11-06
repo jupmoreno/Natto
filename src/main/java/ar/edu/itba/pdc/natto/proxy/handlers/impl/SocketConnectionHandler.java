@@ -171,6 +171,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
             }else{
                 if(actServer){  //TODO VER COMO SACAR ESTO Y QUE LO HAGA LA PRIMERA VEZ QUE ENTRA
+                    System.out.println("Ahora hablo con el servidor");
                     if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
                         try {
                             this.requestConnect(new InetSocketAddress(5222));

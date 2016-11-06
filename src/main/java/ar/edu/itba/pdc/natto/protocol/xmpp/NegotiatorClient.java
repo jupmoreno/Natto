@@ -232,6 +232,7 @@ public class NegotiatorClient implements Negotiator {
         //mecanismos de encriptacion
         sb.append("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">");
         sb.append("<mechanism>PLAIN</mechanism>");
+        sb.append("</mechanisms>");
 //        retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
 //        retBuffer.put("<mechanism>PLAIN</mechanism>".getBytes());
 
