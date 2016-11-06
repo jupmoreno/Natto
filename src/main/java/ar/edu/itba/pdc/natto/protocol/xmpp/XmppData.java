@@ -56,6 +56,10 @@ public class XmppData {
         usersSilenced.add(checkNotNull(name));
     }
 
+    public void unsilenceUser(String name) {
+        usersSilenced.remove(checkNotNull(name));
+    }
+
     public void setSilence(boolean enabled) {
         this.silence = enabled;
     }
