@@ -21,12 +21,14 @@ public class NegotiatorServer implements Negotiator {
 
     private boolean inMech = false;
     private boolean hasPlain = false;
+    private boolean hasToWrite = false;
+
+    private boolean verified = false;
 
 
-    //TODO
     @Override
     public boolean isVerified() {
-        return false;
+        return verified;
     }
 
     @Override
@@ -34,25 +36,23 @@ public class NegotiatorServer implements Negotiator {
 
         VerificationState readResult = VerificationState.INCOMPLETE;
 
-        //aca hay que poner bien de quien es TODO
-        //el primero mandar es el cliente, nosotros actuamos como cliente cuando negociamos como el servidor
+        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
-
-        retBuffer.clear();
+        retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
 
         while(readResult != VerificationState.FINISHED) {
-            System.out.println("Entro al while");
 
-//            if(reader.getInputFeeder().needMoreInput()){
-//                try {
-//                    //aca deberia leer no feedearle el buffer que recibe, no deberia recibir buffer
-//                    reader.getInputFeeder().feedInput(buffer);
-//                    retBuffer.clear();
-//                } catch (XMLStreamException e) {
-//                    System.out.println("ERROR DE XML DE NEGOCIACION ADENTRO DEL NEGOTIATOR SERVER");
-//                    return -1;
-//                }
-//            }
+            if(reader.getInputFeeder().needMoreInput()){
+                try {
+                    System.out.println("feedeo al buffer");
+                    System.out.println("EL BUFFER QUE FFEEEDEO ES "+ new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
+                    reader.getInputFeeder().feedInput(readBuffer);
+                    retBuffer.clear();
+                } catch (XMLStreamException e) {
+                    System.out.println("ERROR DE XML DE NEGOCIACION ADENTRO DEL NEGOTIATOR SERVER");
+                    return -1;
+                }
+            }
 
             try {
                 readResult = generateResp();
@@ -60,14 +60,26 @@ public class NegotiatorServer implements Negotiator {
                 System.out.println("error en el generate resp de el negotiator con el server");
             }
 
-            //no tengo que escribir nada porque termina cuando recibe un success, no vuelve a mandar nada
-            if(readResult == VerificationState.FINISHED){
-                System.out.println("termine negociacion :)");
-                return 1;
-            }
-            if(readResult == VerificationState.IN_PROCESS){
 
+            switch (readResult){
+                case FINISHED:
+                    System.out.println("TERMINO DE NEGOCIAR :)");
+                    verified = true;
+                    return 1;
+
+                case IN_PROCESS:
+                    if(hasToWrite){
+                        connection.requestWrite(retBuffer);
+                        retBuffer = ByteBuffer.allocate(10000); //TODO SACAR DIUJ
+                    }
+
+                    break;
+
+                case INCOMPLETE:
+
+                    return 0;
             }
+
 
 
         }
@@ -119,22 +131,31 @@ public class NegotiatorServer implements Negotiator {
 
 
     private VerificationState handleEndElement(){
+        System.out.println("en el end element el nombre del tag es " + reader.getLocalName());
         if(reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")){
-            //TODO claramente AGFkbWluAGZyYW4xOTk0 no va hardcodeado CAMBIAR BIEN
-            retBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes());
+            //TODO claramente AGFkbWluAGZyYW4xOTk0 no va hardcodeado CAMBIAR BIEN POR EL USUARIO POSTA
+
+            retBuffer = ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes());
+            hasToWrite = true;
             return VerificationState.IN_PROCESS;
         }
         if(reader.getName().equals("mechanisms")){
             inMech = false;
         }
 
+        if(reader.getLocalName().equals("success")){
+            System.out.println("ESTA ACA EN END ELEMENT");
+        }
         //TODO pensar bien que resp:
         return VerificationState.IN_PROCESS;
 
     }
 
     private VerificationState handleStartElement(){
+        System.out.println("en en elemente l nombre del tag es " + reader.getLocalName());
+
         if(reader.getLocalName().equals("success") && hasPlain){
+            System.out.println("ESTA ACA EN START ELEMENT");
             return VerificationState.FINISHED;
         }
         if(reader.getLocalName().equals("mechanism")){

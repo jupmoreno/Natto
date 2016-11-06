@@ -48,6 +48,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     private boolean actServer = true;
 
     private boolean connectRequested = false;
+    private boolean readRequested = false;
 
     private ChannelOperation afterConnect = null;
 
@@ -134,6 +135,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void requestRead() {
+        readRequested = true;
         if(connectRequested){
             afterConnect = ChannelOperation.READ;
         }else{

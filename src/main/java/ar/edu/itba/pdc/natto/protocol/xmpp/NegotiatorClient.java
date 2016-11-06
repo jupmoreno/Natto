@@ -29,6 +29,8 @@ public class NegotiatorClient implements Negotiator {
     private StringBuilder auxUser = new StringBuilder();
     private String user;
 
+
+
 //    private final XmppData data;
 
 //    public NegotiatorClient(XmppData data){
@@ -43,7 +45,7 @@ public class NegotiatorClient implements Negotiator {
     public int handshake(Connection connection, ByteBuffer readBuffer) {
         sb.setLength(0);
 
-        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
+
 
         VerificationState readResult = VerificationState.INCOMPLETE;
 //        retBuffer = ByteBuffer.allocate(10000); // TODO SACAR ES UN ASCO PERO ALGO ANDA MAL SIN ESTO VER MALDITO BYTE BUFFER!!!!!!!
@@ -77,8 +79,8 @@ public class NegotiatorClient implements Negotiator {
             switch (readResult) {
                 case FINISHED:
 
-                    System.out.println("ESTADO TERMINADO: escribo en el connection");
-                    connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+                    connection.requestWrite(ByteBuffer.wrap("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes()));
+                    System.out.println("escribo success");
                     verified = true;
 //                    NetAddress netAddress = data.getUserAddress(user);
 //                    InetSocketAddress socketAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort()); //TODO CAMBIAR
@@ -94,10 +96,6 @@ public class NegotiatorClient implements Negotiator {
                     }
                     return 1;
 
-
-                    //   System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
-
-                    //System.out.println("lo ultimo que mando ");
                     // retBuffer.clear();
 
                     // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
@@ -111,7 +109,6 @@ public class NegotiatorClient implements Negotiator {
                     // retBuffer = ByteBuffer
                 // .allocate(10000); //TODO SACAR
                     //retBuffer.clear();
-                    //     System.out.println("lo que mando en PROCESS despus de limpiar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
                 case ERR:
                     System.out.println("ERROR");
@@ -207,14 +204,14 @@ public class NegotiatorClient implements Negotiator {
     private VerificationState handleStartElement() {
 
         if (reader.getLocalName().equals("auth")) {
-            System.out.println("Estoy en auth");
+           // System.out.println("Estoy en auth");
             inAuth = true;
             for (int i = 0; i < reader.getAttributeCount(); i++) {
                 if (reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")) {
                     //hay uqe meterle algo adentro, algo de ese estilo cnNwYXV0aD1mNDVhM2E2Y2NmYmE4MDVmOGFkNzk4MjU0ZGI5MzdmNw==  //base64
-                    System.out.println("el mecanismo es PLAIN");
+                  //  System.out.println("el mecanismo es PLAIN");
 
-                    sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
+                  //  sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
                     //retBuffer.put("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes());
                     return VerificationState.IN_PROCESS;
                 }
@@ -229,7 +226,7 @@ public class NegotiatorClient implements Negotiator {
     private VerificationState handleStreamStream() {
 
 
-        System.out.println("entro al handle stream stream");
+    //    System.out.println("entro al handle stream stream");
         sb.append("<stream:stream");
         //  retBuffer.put("<stream:stream ".getBytes());
 
@@ -297,10 +294,10 @@ public class NegotiatorClient implements Negotiator {
     }
 
     private void getUser(){
-        System.out.println("aux user en string es " + auxUser.toString());
+     //   System.out.println("aux user en string es " + auxUser.toString());
         String user64 = new String(Base64.getDecoder().decode(auxUser.toString()), UTF_8);
         auxUser.setLength(0);
-        System.out.println("EL USUARIO ES " + user64);
+   //     System.out.println("EL USUARIO ES " + user64);
         String[] userAndPass = user64.split(String.valueOf((char)0));
         user = userAndPass[1];
         System.out.println("user: " + userAndPass[1]);
