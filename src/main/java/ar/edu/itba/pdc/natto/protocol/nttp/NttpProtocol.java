@@ -21,6 +21,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     // Siempre que se modifique un comando hay que modificar esto.
     private final static String[] commands = {"help", "silence", "unsilence", "transformation", "metrics", "auth", "server", "state", "getSilenced"};
     private String[] authenticationMethods = {"plain", };
+    private String[] metrics = {"bytes", "accesses", };
     private String authMethod = "";
     private String user = "";
 
@@ -37,6 +38,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         USER_UNSILENCED('.', 5, "User unsilenced."),
         TRANSFORMATION_ENABLED('.', 6, "Transformation Enabled."),
         TRANSFORMATION_DISABLED('.', 7, "Transformation Disabled."),
+        METRIC_METHODS('.', 8, "Metric methods."),
         WHAT('?', 0, "What?."),
         WRONG_ARGS('?', 0, "Wrong arguments."),
         METHOD_NOT_SUPPORTED('!', 1, "Authentication method not supported."),
@@ -197,6 +199,35 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleMetrics(String[] messageVec) {
+        if(authorized){
+            formulateResponse(Codes.ALREADY_AUTHORIZED, null);
+            return;
+        }
+
+        if(messageVec.length == 1){
+            String[] metricsRet = {
+                "bytes: " + xmppData.getBytesTransferred(),
+                "acceses: " + xmppData.getAccessesAmount(),
+            };
+            formulateResponse(Codes.OK, metricsRet);
+            return;
+        }
+
+        if(messageVec.length == 2){
+            if(messageVec[1].compareToIgnoreCase("--methods") == 0){
+                formulateResponse(Codes.METRIC_METHODS, metrics);
+                return;
+            }else if(messageVec[1].compareToIgnoreCase("bytes") == 0){
+                formulateResponse(Codes.OK, new String[]{"bytes: " + xmppData.getBytesTransferred()});
+                return;
+            }else if(messageVec[1].compareToIgnoreCase("accesses") == 0){
+                formulateResponse(Codes.OK, new String[]{"accesses: " + xmppData.getAccessesAmount()});
+                return;
+            }
+        }
+
+        formulateResponse(Codes.WRONG_ARGS, null);
+
     }
 
     private void handleTransformation(String[] messageVec) {
@@ -305,7 +336,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             return;
         }
         String[] states = {
-                "Transformation: " + xmppData.isTransformEnabled(),
+                "Transformation: " + (xmppData.isTransformEnabled() ? "enabled" : "disabled"),
                 "User: " + user,
         };
         formulateResponse(Codes.OK, states);

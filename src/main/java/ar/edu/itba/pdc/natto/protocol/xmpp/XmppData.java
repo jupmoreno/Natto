@@ -17,6 +17,9 @@ public class XmppData {
     private final Set<String> usersSilenced;
     private boolean transform = Defaults.TRANSFORMATION_ENABLED;
 
+    private long bytesTransferred = 0;
+    private long accessesAmount = 0;
+
     public XmppData(Map<String, NetAddress> usersAddress, Set<String> usersSilenced) {
         this.usersAddress = usersAddress;
         this.usersSilenced = usersSilenced;
@@ -74,5 +77,21 @@ public class XmppData {
 
     public Set<String> getUsersSilenced(){
         return usersSilenced;
+    }
+
+    public void newAccess(){
+        accessesAmount++;
+    }
+
+    public void moreBytesTransferred(int bytes){
+        bytesTransferred += bytes;
+    }
+
+    public long getBytesTransferred() {
+        return bytesTransferred;
+    }
+
+    public long getAccessesAmount() {
+        return accessesAmount;
     }
 }
