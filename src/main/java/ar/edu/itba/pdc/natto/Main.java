@@ -8,6 +8,7 @@ import ar.edu.itba.pdc.natto.protocol.Negotiator;
 import ar.edu.itba.pdc.natto.protocol.NegotiatorFactory;
 import ar.edu.itba.pdc.natto.protocol.ParserFactory;
 import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
+import ar.edu.itba.pdc.natto.protocol.nttp.NttpNegotiatorFactory;
 import ar.edu.itba.pdc.natto.protocol.nttp.NttpParserFactory;
 import ar.edu.itba.pdc.natto.protocol.nttp.NttpProtocolFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.*;
@@ -75,12 +76,13 @@ public class Main {
 
         ParserFactory<StringBuilder> nttpParsers = new NttpParserFactory();
         ProtocolFactory<StringBuilder> nttpProtocols = new NttpProtocolFactory(new XmppData(new HashMap<>(), new HashSet<>()));
+        NegotiatorFactory nttpNegotiatorFactory = new NttpNegotiatorFactory();
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
                     .addProtocol(config.getXmppPort(), xmppParsers, xmppProtocols, negotiatorFactory)
                     //TODO poner todo bien
-                   // .addProtocol(config.getPspPort(), nttpParsers, nttpProtocols, negotiatorFactory)
+                    .addProtocol(config.getPspPort(), nttpParsers, nttpProtocols, nttpNegotiatorFactory)
                     .build();
 
             try {
