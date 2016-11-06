@@ -274,6 +274,9 @@ public class NegotiatorClient implements Negotiator {
     private void getUser(){
         String user64 = new String(Base64.getDecoder().decode(reader.getText()), UTF_8);
         System.out.println("EL USUARIO ES " + user64);
+        String[] userAndPass = user64.split(String.valueOf((char)0));
+        System.out.println("user: " + userAndPass[1]);
+        System.out.println("pass: " + userAndPass[2]);
 
 //                reader.getText();
 //        System.out.println("El user es: " + user64);
