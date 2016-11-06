@@ -15,7 +15,7 @@ public class NegotiatorClient implements Negotiator {
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
 
- //   private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
+    //   private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
 
     private boolean verified = false;
 
@@ -29,7 +29,7 @@ public class NegotiatorClient implements Negotiator {
     public int handshake(Connection connection, ByteBuffer readBuffer) {
         sb.setLength(0);
 
-       System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
+        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
         VerificationState readResult = VerificationState.INCOMPLETE;
 //        retBuffer = ByteBuffer.allocate(10000); // TODO SACAR ES UN ASCO PERO ALGO ANDA MAL SIN ESTO VER MALDITO BYTE BUFFER!!!!!!!
@@ -59,36 +59,42 @@ public class NegotiatorClient implements Negotiator {
                 return -1;
             }
 
-            if (readResult == VerificationState.FINISHED) {
-                System.out.println("ESTADO TERMINADO: escribo en el connection");
-                connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+
+            switch (readResult) {
+                case FINISHED:
+
+                    System.out.println("ESTADO TERMINADO: escribo en el connection");
+                    connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+                    verified = true;
+                    return 1;
 
 
-            //   System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
+                    //   System.out.println("lo que mando en FINISHED " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
-                System.out.println("lo ultimo que mando ");
-               // retBuffer.clear();
+                    //System.out.println("lo ultimo que mando ");
+                    // retBuffer.clear();
 
-               // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
-         //       System.out.println("lo que mando en PROCESS despesu de limpar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
-                verified = true;
-                return 1;
+                    // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
+                    //       System.out.println("lo que mando en PROCESS despesu de limpar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
-            } else if (readResult == VerificationState.IN_PROCESS) {
-          //      System.out.println("lo que mando en PROCESS " + new String(retBuffer.array(), Charset.forName("UTF-8")));
-                connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
-               // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
-                //retBuffer.clear();
-           //     System.out.println("lo que mando en PROCESS despus de limpiar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
-            } else if (readResult == VerificationState.ERR) {
-                System.out.println("ERROR");
-                return -1;
+                case IN_PROCESS:
+                    connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+                    sb.setLength(0);
+                    break;
+                    // retBuffer = ByteBuffer
+                // .allocate(10000); //TODO SACAR
+                    //retBuffer.clear();
+                    //     System.out.println("lo que mando en PROCESS despus de limpiar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
-            } else if (readResult == VerificationState.INCOMPLETE){
+                case ERR:
+                    System.out.println("ERROR");
+                    return -1;
 
-                return 0;
+                case INCOMPLETE:
+                    return 0;
             }
+
         }
 
         return 0;
@@ -141,18 +147,18 @@ public class NegotiatorClient implements Negotiator {
 
     private VerificationState handleStartDocument() {
         if (reader.getVersion() != null && reader.getEncoding() != null) { //TODO: SACAR solo para testear no deberia pasar esto
-          //  retBuffer.put("<?xml ".getBytes());
+            //  retBuffer.put("<?xml ".getBytes());
             sb.append("<?xml ");
             if (reader.getVersion() != null) {
-               // retBuffer.put("version= '".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
-                sb.append("version= '").append(reader.getVersion()).append(" ");
+                // retBuffer.put("version='".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
+                sb.append("version='").append(reader.getVersion()).append("' ");
             }
 
             if (reader.getEncoding() == null) {
-               // retBuffer.put("encoding='UTF-8?>".getBytes());
+                // retBuffer.put("encoding='UTF-8?>".getBytes());
                 sb.append("encoding='UTF-8?>");
             } else { //TODO porque no seria null???? ver si hay que tener este caso en cuenta
-                sb.append("encoding=").append(reader.getVersion()).append("?>");
+                sb.append("encoding='").append(reader.getVersion()).append("'?>");
                 //retBuffer.put("encoding=".getBytes()).put(reader.getVersion().getBytes()).put("?>".getBytes());
             }
             return VerificationState.IN_PROCESS;
@@ -195,17 +201,17 @@ public class NegotiatorClient implements Negotiator {
 
 
         System.out.println("entro al handle stream stream");
-        sb.append("<stream:stream ");
-      //  retBuffer.put("<stream:stream ".getBytes());
+        sb.append("<stream:stream");
+        //  retBuffer.put("<stream:stream ".getBytes());
 
         //TODO meter id ver como se hace
         //appendeo los atributos y cambio el to por un from, y el from por un to
         for (int i = 0; i < reader.getAttributeCount(); i++) {
             sb.append(" ");
-           // retBuffer.put(" ".getBytes());
+            // retBuffer.put(" ".getBytes());
             if (!reader.getAttributePrefix(i).isEmpty()) {
                 sb.append(reader.getAttributePrefix(i)).append(":");
-               // retBuffer.put(reader.getAttributePrefix(i).getBytes()).put(":".getBytes());
+                // retBuffer.put(reader.getAttributePrefix(i).getBytes()).put(":".getBytes());
             }
             if (reader.getAttributeLocalName(i).equals("to")) {
                 sb.append("from=\"").append(reader.getAttributeLocalName(i)).append("\"");
@@ -213,10 +219,10 @@ public class NegotiatorClient implements Negotiator {
 
             } else if (reader.getAttributeLocalName(i).equals("from")) {
                 sb.append("to=\"").append(reader.getAttributeLocalName(i)).append("\"");
-               // retBuffer.put("to=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
+                // retBuffer.put("to=\"".getBytes()).put(reader.getAttributeLocalName(i).getBytes()).put("\"".getBytes());
             } else {
                 sb.append(reader.getAttributeLocalName(i)).append("=\"").append(reader.getAttributeValue(i)).append("\"");
-               // retBuffer.put(reader.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
+                // retBuffer.put(reader.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
             }
         }
 
@@ -248,7 +254,7 @@ public class NegotiatorClient implements Negotiator {
 
     private void appendNamespaces() {
         for (int i = 0; i < reader.getNamespaceCount(); i++) {
-            sb.append(" xmlns");
+            sb.append("xmlns");
             //retBuffer.put(" xmlns".getBytes());
             if (!reader.getNamespacePrefix(i).isEmpty()) {
                 sb.append(":").append(reader.getNamespacePrefix(i));

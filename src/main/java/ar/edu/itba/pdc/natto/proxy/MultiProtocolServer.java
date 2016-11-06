@@ -109,7 +109,7 @@ public class MultiProtocolServer implements Server {
         } catch (IOException exception) {
             logger.error("Dispatcher force closed", exception);
         } finally {
-            //stop();
+            //stop(); //TODO DESCOMENTAR???
         }
     }
 
