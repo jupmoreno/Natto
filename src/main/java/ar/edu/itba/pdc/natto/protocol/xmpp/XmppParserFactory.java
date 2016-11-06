@@ -6,8 +6,14 @@ import java.nio.ByteBuffer;
 
 public class XmppParserFactory implements ParserFactory<ByteBuffer> {
 
+    private XmppData data;
+
+    public XmppParserFactory(XmppData data){
+        this.data = data;
+    }
+
     @Override
     public XmppParser get() {
-        return new XmppParser();
+        return new XmppParser(data);
     }
 }

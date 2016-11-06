@@ -18,12 +18,19 @@ public class XmppParser implements Parser<ByteBuffer> {
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
 
 
+    private XmppData xmppData;
+
     private boolean inMessage = false;
     private boolean inBody = false;
 
 
     ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     StringBuilder sb = new StringBuilder();
+
+
+    public XmppParser(XmppData data){
+        this.xmppData = data;
+    }
 
     @Override
     public ByteBuffer fromByteBuffer(ByteBuffer buffer) {
@@ -145,7 +152,7 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     public void handleCharacters(){
 
-        if(inBody){ //TODO: se leetea?
+        if(inBody && xmppData.isTransformEnabled()){ //TODO: se leetea?
             for (char c: parser.getText().toCharArray()) {
                 switch (c) {
                     case 'a':

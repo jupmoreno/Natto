@@ -1,14 +1,9 @@
 package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
 import ar.edu.itba.pdc.natto.protocol.*;
-import ar.edu.itba.pdc.natto.protocol.xmpp.NegotiatorServer;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
 import org.slf4j.Logger;
@@ -18,10 +13,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import static com.google.common.base.Preconditions.*;
 
 // TODO: Se puede sacar <T>? siii por el amor a dios sacar
 public class SocketConnectionHandler<T> implements ConnectionHandler, Connection {
