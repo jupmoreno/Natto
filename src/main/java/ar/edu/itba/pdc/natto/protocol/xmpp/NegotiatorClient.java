@@ -7,8 +7,9 @@ import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.stream.XMLStreamException;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
@@ -24,6 +25,15 @@ public class NegotiatorClient implements Negotiator {
     private boolean verified = false;
     private boolean inAuth = false;
     private StringBuilder sb = new StringBuilder();
+
+    private StringBuilder auxUser = new StringBuilder();
+    private String user;
+
+//    private final XmppData data;
+
+//    public NegotiatorClient(XmppData data){
+//        this.data = data;
+//    }
 
     @Override
     public boolean isVerified() {
@@ -70,6 +80,18 @@ public class NegotiatorClient implements Negotiator {
                     System.out.println("ESTADO TERMINADO: escribo en el connection");
                     connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
                     verified = true;
+//                    NetAddress netAddress = data.getUserAddress(user);
+//                    InetSocketAddress socketAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort()); //TODO CAMBIAR
+                    try {
+                        Connection server = connection.requestConnect(new InetSocketAddress(5222), new NegotiatorServer());
+                        server.requestWrite(ByteBuffer.wrap(new String("<?xml version=\"1.0\"?>\n" +
+                                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
+
+
+
+                    } catch (IOException exception) {
+                        exception.printStackTrace();
+                    }
                     return 1;
 
 
@@ -132,15 +154,18 @@ public class NegotiatorClient implements Negotiator {
 
                 case AsyncXMLStreamReader.CHARACTERS:
                     if(inAuth){
-                        getUser();
+                        auxUser.append(reader.getText());
                     }
                     System.out.println("characters");
 
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
-                    if(reader.getLocalName().equals("auth"))
+                    if(reader.getLocalName().equals("auth")){
+                        getUser();
                         return VerificationState.FINISHED;
+                    }
+
                     return VerificationState.IN_PROCESS;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
@@ -191,7 +216,7 @@ public class NegotiatorClient implements Negotiator {
 
                     sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
                     //retBuffer.put("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes());
-                    return VerificationState.FINISHED;
+                    return VerificationState.IN_PROCESS;
                 }
             }
             return VerificationState.ERR;
@@ -272,9 +297,12 @@ public class NegotiatorClient implements Negotiator {
     }
 
     private void getUser(){
-        String user64 = new String(Base64.getDecoder().decode(reader.getText()), UTF_8);
+        System.out.println("aux user en string es " + auxUser.toString());
+        String user64 = new String(Base64.getDecoder().decode(auxUser.toString()), UTF_8);
+        auxUser.setLength(0);
         System.out.println("EL USUARIO ES " + user64);
         String[] userAndPass = user64.split(String.valueOf((char)0));
+        user = userAndPass[1];
         System.out.println("user: " + userAndPass[1]);
         System.out.println("pass: " + userAndPass[2]);
 

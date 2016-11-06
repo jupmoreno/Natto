@@ -36,12 +36,7 @@ public class NegotiatorServer implements Negotiator {
 
         //aca hay que poner bien de quien es TODO
         //el primero mandar es el cliente, nosotros actuamos como cliente cuando negociamos como el servidor
-        retBuffer.wrap(new String("<?xml version=\"1.0\"?>\n" +
-                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes());
-        //escribo en el servidor el byte buffer y lo limpio
 
-        System.out.println("mando el tag de abrir <?xml version=\"1.0\"?>\n" +
-                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">");
 
         retBuffer.clear();
 

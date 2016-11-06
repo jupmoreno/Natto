@@ -8,6 +8,7 @@ import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
 import ar.edu.itba.pdc.natto.protocol.*;
+import ar.edu.itba.pdc.natto.protocol.xmpp.NegotiatorServer;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -41,9 +43,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     private boolean closeRequested = false;
 
-    private final Negotiator negotiator;
+    private Negotiator negotiator;
 
     private boolean actServer = true;
+
+    private boolean connectRequested = false;
+
+    private ChannelOperation afterConnect = null;
 
 
     //VOY A TENER QUE RECIBIR UNO
@@ -73,10 +79,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
     }
 
     //ACA RECIBO UN NEGOTIATOR ASIGNO EL QUE QUIERO
-    public void requestConnect(final InetSocketAddress serverAddress) throws IOException {
+    @Override
+    public Connection requestConnect(final InetSocketAddress serverAddress, final Negotiator negotiator) throws IOException {
         checkState(connection == this);
         checkNotNull(serverAddress, "Address can't be null");
         checkArgument(!serverAddress.isUnresolved(), "Invalid address");
+
+        connectRequested = true;
 
         logger.info("Channel " + channel.socket().getRemoteSocketAddress()
                 + " requested connection to: " + serverAddress);
@@ -88,10 +97,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
         SocketConnectionHandler<T> serverHandler = new SocketConnectionHandler<>(server, subscriber,
                 parserFactory, protocolFactory, negotiator);
         serverHandler.connection = this;
+        serverHandler.negotiator = negotiator;
         this.connection = serverHandler;
 
         subscriber.unsubscribe(channel, ChannelOperation.READWRITE);
         subscriber.subscribe(server, ChannelOperation.CONNECT, serverHandler);
+
+        return serverHandler;
     }
 
     @Override
@@ -103,8 +115,13 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                 logger.info("Established connection with server on " + serverAddress);
 
                 subscriber.unsubscribe(channel, ChannelOperation.CONNECT);
-                subscriber.subscribe(channel, ChannelOperation.READ, this);
-                connection.requestRead();
+                if(afterConnect != null){
+                    subscriber.subscribe(channel, afterConnect, this);
+                }else{
+                    subscriber.subscribe(channel, ChannelOperation.READ, this); //TODO JPM
+                }
+
+                //  connection.requestRead();
             }
         } catch (IOException exception) {
             logger.error("Couldn't establish connection with server", exception);
@@ -117,7 +134,14 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void requestRead() {
-        subscriber.subscribe(channel, ChannelOperation.READ, this);
+        if(connectRequested){
+            afterConnect = ChannelOperation.READ;
+        }else{
+            if(messages.isEmpty()){
+                subscriber.subscribe(channel, ChannelOperation.READ, this); //TODO JPM
+            }
+        }
+
     }
 
     @Override
@@ -170,18 +194,7 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
                 negotiator.handshake(this, readBuffer);
 
             }else{
-                if(actServer){  //TODO VER COMO SACAR ESTO Y QUE LO HAGA LA PRIMERA VEZ QUE ENTRA
-                    System.out.println("Ahora hablo con el servidor");
-                    if (connection == this) { // TODO: Remove! HABLA DE CLIENTE A SERVIDOR
-                        try {
-                            this.requestConnect(new InetSocketAddress(5222));
-                        } catch (IOException exception) {
-                            exception.printStackTrace();
-                        }
-                        return;
-                    }
-                    actServer = false;
-                }
+
 
 
                 T request = parser.fromByteBuffer(readBuffer);
@@ -210,7 +223,12 @@ public class SocketConnectionHandler<T> implements ConnectionHandler, Connection
 
     @Override
     public void requestWrite(final ByteBuffer buffer) {
-        subscriber.subscribe(channel, ChannelOperation.WRITE, this);
+        if(connectRequested){
+            afterConnect = ChannelOperation.WRITE;
+        }else{
+            subscriber.subscribe(channel, ChannelOperation.WRITE, this);
+        }
+
         messages.offer(buffer);
     }
 
