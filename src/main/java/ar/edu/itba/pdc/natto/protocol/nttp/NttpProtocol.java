@@ -18,12 +18,28 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     private XmppData xmppData;
 
     private boolean authorized = false;
-    // Siempre que se modifique un comando hay que modificar esto.
-    private final static String[] commands = {"help", "silence", "unsilence", "transformation", "metrics", "auth", "server", "state", "getSilenced"};
+    // Siempre que se modifique un comando hay que modificar esto y helps.
+    private final static String[] commands = {"help", "silence", "unsilence", "transformation", "metrics", "auth", "state", "getSilenced", "server"};
     private String[] authenticationMethods = {"plain", };
     private String[] metrics = {"bytes", "accesses", };
     private String authMethod = "";
     private String user = "";
+    private String[] helps = {
+        "Without parameter: shows all the available commands. With parameter @command: shows information about the use of @command",
+        "Recieves an @user as parameter. Silences @user",
+        "Recieves an @user as parameter. Unsilences @user",
+        "Recieves an @user as parameter. Unsilences @user",
+        "Recieves a \"true\" or \"false\" as parameter. Enables l33t transformations if parameter is \"true\", or disables l33t transformations if parameter is \"false\".",
+        "Without parameters: shows all available metrics. " +
+                "With parameter @metric: shows the information about @metric. +" +
+                "With head value --methods and without parameters: shows the available metrics.",
+        "With head value --methods: shows the available authentication methods. " +
+                "With head value --request and parameter @method: requests authentication by using the specified @method. +" +
+                "With parameters @user and @password and after authentication requested: authenticates user with the specific @user and @password.",
+        "Shows the state of relevant variables.",
+        "Shows the silenced users.",
+        "",
+    };
 
     public NttpProtocol(XmppData xmppData){
         this.xmppData = xmppData;
@@ -122,12 +138,26 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleHelp(String[] messageVec) {
-        if(messageVec.length > 1){
-            formulateResponse(Codes.WRONG_ARGS, null);
+        if(messageVec.length == 1){
+            formulateResponse(Codes.OK, commands);
             return;
         }
 
-        formulateResponse(Codes.OK, commands);
+
+        if(messageVec.length == 2){
+            for(int i = 0; i < commands.length; i++){
+                if(messageVec[1].compareToIgnoreCase(commands[i]) == 0){
+                    formulateResponse(Codes.OK, new String[]{
+                        commands[i] + ":",
+                        helps[i],
+                    });
+                    return;
+                }
+            }
+        }
+
+        formulateResponse(Codes.WRONG_ARGS, null);
+
     }
 
     private void handleAuth(String[] messageVec) {
@@ -199,8 +229,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleMetrics(String[] messageVec) {
-        if(authorized){
-            formulateResponse(Codes.ALREADY_AUTHORIZED, null);
+        if(user.equals("")){
+            formulateResponse(Codes.MUST_AUTH, null);
             return;
         }
 
@@ -301,6 +331,20 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         return;
     }
 
+    private void handleGetSilenced(String[] messageVec){
+        if(user.equals("")){
+            formulateResponse(Codes.MUST_AUTH, null);
+            return;
+        }
+        if(messageVec.length != 1){
+            formulateResponse(Codes.WRONG_ARGS, null);
+            return;
+        }
+
+        String[] users = xmppData.getUsersSilenced().toArray(new String[xmppData.getUsersSilenced().size()]);
+        formulateResponse(Codes.OK, users);
+    }
+
     private void handleDefault() {
         formulateResponse(Codes.WHAT, null);
     }
@@ -340,20 +384,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
                 "User: " + user,
         };
         formulateResponse(Codes.OK, states);
-    }
-
-    private void handleGetSilenced(String[] messageVec){
-        if(user.equals("")){
-            formulateResponse(Codes.MUST_AUTH, null);
-            return;
-        }
-        if(messageVec.length != 1){
-            formulateResponse(Codes.WRONG_ARGS, null);
-            return;
-        }
-
-        String[] users = xmppData.getUsersSilenced().toArray(new String[xmppData.getUsersSilenced().size()]);
-        formulateResponse(Codes.OK, users);
     }
 
 }
