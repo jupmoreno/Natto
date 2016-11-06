@@ -71,4 +71,8 @@ public class XmppData {
     public boolean isTransformEnabled() {
         return transform;
     }
+
+    public Set<String> getUsersSilenced(){
+        return usersSilenced;
+    }
 }

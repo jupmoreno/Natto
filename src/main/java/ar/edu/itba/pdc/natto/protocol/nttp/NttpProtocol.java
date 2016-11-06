@@ -6,6 +6,7 @@ import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 
 /**
@@ -14,11 +15,11 @@ import java.util.HashSet;
 public class NttpProtocol implements Protocol<StringBuilder> {
 
     private StringBuilder sb;
-    XmppData xmppData;
+    private XmppData xmppData;
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto.
-    private final static String[] commands = {"help", "silence", "unsilence", "transformation", "metrics", "auth", "server", };
+    private final static String[] commands = {"help", "silence", "unsilence", "transformation", "metrics", "auth", "server", "state", "getSilenced"};
     private String[] authenticationMethods = {"plain", };
     private String authMethod = "";
     private String user = "";
@@ -34,8 +35,10 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         AUTH_METHODS('.', 3, "Authentication methods."),
         USER_SILENCED('.', 4, "User silenced."),
         USER_UNSILENCED('.', 5, "User unsilenced."),
+        TRANSFORMATION_ENABLED('.', 6, "Transformation Enabled."),
+        TRANSFORMATION_DISABLED('.', 7, "Transformation Disabled."),
         WHAT('?', 0, "What?."),
-        WRONG_ARGS('?', 0, "Wrong amount of arguments."),
+        WRONG_ARGS('?', 0, "Wrong arguments."),
         METHOD_NOT_SUPPORTED('!', 1, "Authentication method not supported."),
         ALREADY_AUTHORIZED('!', 2, "Already authorized."),
         WITHOUT_AUTH_METHOD('!', 3, "Authorization method not requested."),
@@ -105,6 +108,10 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             handleServer(messageVec);
         }else if(messageVec[0].compareToIgnoreCase("help") == 0){
             handleHelp(messageVec);
+        }else if(messageVec[0].compareToIgnoreCase("state") == 0){
+            handleState(messageVec);
+        }else if(messageVec[0].compareToIgnoreCase("getSilenced") == 0){
+            handleGetSilenced(messageVec);
         }else{
             handleDefault();
         }
@@ -193,6 +200,29 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleTransformation(String[] messageVec) {
+        if(user.equals("")){
+            formulateResponse(Codes.MUST_AUTH, null);
+            return;
+        }
+        if(messageVec.length != 2 ){
+            formulateResponse(Codes.WRONG_ARGS, null);
+            return;
+        }
+
+        if( messageVec[1].compareToIgnoreCase("true") == 0 ){
+            xmppData.setTransformation(true);
+            formulateResponse(Codes.TRANSFORMATION_ENABLED, null);
+            return;
+        }
+
+        else if(messageVec[1].compareToIgnoreCase("false") == 0 ){
+            xmppData.setTransformation(false);
+            formulateResponse(Codes.TRANSFORMATION_DISABLED, null);
+            return;
+        }
+
+        formulateResponse(Codes.WRONG_ARGS, null);
+
     }
 
     private void handleSilence(String[] messageVec) {
@@ -219,6 +249,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
 
     private void handleUnsilence(String[] messageVec) {
+        System.out.println("el usuario que quiero unsilenciar es " + messageVec[1]);
         if(user.equals("")){
             formulateResponse(Codes.MUST_AUTH, null);
             return;
@@ -263,4 +294,35 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         }
 
     }
+
+    private void handleState(String[] messageVec){
+        if(user.equals("")){
+            formulateResponse(Codes.MUST_AUTH, null);
+            return;
+        }
+        if(messageVec.length != 1){
+            formulateResponse(Codes.WRONG_ARGS, null);
+            return;
+        }
+        String[] states = {
+                "Transformation: " + xmppData.isTransformEnabled(),
+                "User: " + user,
+        };
+        formulateResponse(Codes.OK, states);
+    }
+
+    private void handleGetSilenced(String[] messageVec){
+        if(user.equals("")){
+            formulateResponse(Codes.MUST_AUTH, null);
+            return;
+        }
+        if(messageVec.length != 1){
+            formulateResponse(Codes.WRONG_ARGS, null);
+            return;
+        }
+
+        String[] users = xmppData.getUsersSilenced().toArray(new String[xmppData.getUsersSilenced().size()]);
+        formulateResponse(Codes.OK, users);
+    }
+
 }
