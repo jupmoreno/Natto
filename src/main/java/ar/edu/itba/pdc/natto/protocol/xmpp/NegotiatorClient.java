@@ -27,6 +27,7 @@ public class NegotiatorClient implements Negotiator {
     }
 
     public int handshake(Connection connection, ByteBuffer readBuffer) {
+        sb.setLength(0);
 
        System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
