@@ -19,6 +19,7 @@ public class NegotiatorClient implements Negotiator {
 
     private boolean verified = false;
 
+    private boolean inAuth = false;
     private StringBuilder sb = new StringBuilder();
 
     @Override
@@ -124,6 +125,9 @@ public class NegotiatorClient implements Negotiator {
                     return handleStartElement();
 
                 case AsyncXMLStreamReader.CHARACTERS:
+                    if(inAuth){
+                        getUser();
+                    }
                     System.out.println("characters");
 
                     break;
@@ -178,7 +182,7 @@ public class NegotiatorClient implements Negotiator {
 
             //auth
         } else if (name.equals("auth")) {
-
+            inAuth = true;
             for (int i = 0; i < reader.getAttributeCount(); i++) {
                 if (reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")) {
                     //hay uqe meterle algo adentro, algo de ese estilo cnNwYXV0aD1mNDVhM2E2Y2NmYmE4MDVmOGFkNzk4MjU0ZGI5MzdmNw==  //base64
@@ -233,6 +237,7 @@ public class NegotiatorClient implements Negotiator {
         sb.append("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">");
         sb.append("<mechanism>PLAIN</mechanism>");
         sb.append("</mechanisms>");
+
 //        retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
 //        retBuffer.put("<mechanism>PLAIN</mechanism>".getBytes());
 
@@ -264,6 +269,11 @@ public class NegotiatorClient implements Negotiator {
             sb.append("=\"").append(reader.getNamespaceURI(i)).append("\" ");
             //retBuffer.put("=\"".getBytes()).put(reader.getNamespaceURI(i).getBytes()).put("\" ".getBytes());
         }
+    }
+
+    private void getUser(){
+        String user64 = reader.getText();
+        System.out.println(user64);
     }
 
 }
