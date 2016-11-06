@@ -6,9 +6,11 @@ import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
+import org.omg.CORBA.INV_POLICY;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
+import java.util.Base64;
 
 public class NegotiatorClient implements Negotiator {
 
@@ -18,7 +20,6 @@ public class NegotiatorClient implements Negotiator {
     //   private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
 
     private boolean verified = false;
-
     private boolean inAuth = false;
     private StringBuilder sb = new StringBuilder();
 
@@ -122,7 +123,11 @@ public class NegotiatorClient implements Negotiator {
                 case AsyncXMLStreamReader.START_ELEMENT:
                     System.out.println(reader.getLocalName());
                     System.out.println("start element");
-                    return handleStartElement();
+                    if(reader.getLocalName().equals("stream") && reader.getPrefix().equals("stream")){
+                        return handleStreamStream();
+                    }
+                    handleStartElement();
+                    break;
 
                 case AsyncXMLStreamReader.CHARACTERS:
                     if(inAuth){
@@ -133,8 +138,10 @@ public class NegotiatorClient implements Negotiator {
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
-                    System.out.println("end element");
-                    break;
+                    if(reader.getLocalName().equals("auth"))
+                        return VerificationState.FINISHED;
+                    return VerificationState.IN_PROCESS;
+                  //  break;
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     System.out.println("incomplete");
@@ -182,6 +189,7 @@ public class NegotiatorClient implements Negotiator {
 
             //auth
         } else if (name.equals("auth")) {
+            System.out.println("Estoy en auth");
             inAuth = true;
             for (int i = 0; i < reader.getAttributeCount(); i++) {
                 if (reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")) {
@@ -273,7 +281,8 @@ public class NegotiatorClient implements Negotiator {
 
     private void getUser(){
         String user64 = reader.getText();
-        System.out.println(user64);
+        System.out.println("El user es: " + user64);
+        System.out.println("El user decodificado es: " + Base64.getDecoder().decode(user64));
     }
 
 }
