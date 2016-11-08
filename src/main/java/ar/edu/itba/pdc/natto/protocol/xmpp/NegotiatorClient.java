@@ -28,6 +28,7 @@ public class NegotiatorClient implements Negotiator {
 
     private StringBuilder auxUser = new StringBuilder();
     private String user;
+    private String user64;
 
 
 
@@ -85,7 +86,9 @@ public class NegotiatorClient implements Negotiator {
 //                    NetAddress netAddress = data.getUserAddress(user);
 //                    InetSocketAddress socketAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort()); //TODO CAMBIAR
                     try {
-                        Connection server = connection.requestConnect(new InetSocketAddress(5222), new NegotiatorServer());
+                        NegotiatorServer neg = new NegotiatorServer();
+                        neg.setUser64(user64);
+                        Connection server = connection.requestConnect(new InetSocketAddress(5222), neg);
                         server.requestWrite(ByteBuffer.wrap(new String("<?xml version=\"1.0\"?>\n" +
                                 "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
 
@@ -158,6 +161,7 @@ public class NegotiatorClient implements Negotiator {
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
+                    System.out.println("en el end element lo que me llega es " + reader.getLocalName());
                     if(reader.getLocalName().equals("auth")){
                         getUser();
                         return VerificationState.FINISHED;
@@ -294,6 +298,8 @@ public class NegotiatorClient implements Negotiator {
     }
 
     private void getUser(){
+        user64 = auxUser.toString();
+        System.out.println("el usuario en 64 es " + auxUser.toString());
      //   System.out.println("aux user en string es " + auxUser.toString());
         String user64 = new String(Base64.getDecoder().decode(auxUser.toString()), UTF_8);
         auxUser.setLength(0);

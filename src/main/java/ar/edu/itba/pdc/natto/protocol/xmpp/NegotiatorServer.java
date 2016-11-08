@@ -25,6 +25,12 @@ public class NegotiatorServer implements Negotiator {
 
     private boolean verified = false;
 
+    private String user64;
+
+    public NegotiatorServer(){
+        System.out.println("creo el negotiator del server");
+    }
+
 
     @Override
     public boolean isVerified() {
@@ -33,6 +39,10 @@ public class NegotiatorServer implements Negotiator {
 
     @Override
     public int handshake(Connection connection, ByteBuffer readBuffer) {
+
+        System.out.println("entro al handshake");
+        ///TODO SACARRRR
+        reader = inputF.createAsyncForByteBuffer();
 
         VerificationState readResult = VerificationState.INCOMPLETE;
 
@@ -44,12 +54,13 @@ public class NegotiatorServer implements Negotiator {
 
             if(reader.getInputFeeder().needMoreInput()){
                 try {
-                    System.out.println("feedeo al buffer");
-                    System.out.println("EL BUFFER QUE FFEEEDEO ES "+ new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
+                  //  System.out.println("feedeo al buffer");
+                   // System.out.println("EL BUFFER QUE FFEEEDEO ES "+ new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
                     reader.getInputFeeder().feedInput(readBuffer);
                     retBuffer.clear();
                 } catch (XMLStreamException e) {
                     System.out.println("ERROR DE XML DE NEGOCIACION ADENTRO DEL NEGOTIATOR SERVER");
+                    System.out.println(e.getMessage());
                     return -1;
                 }
             }
@@ -57,7 +68,9 @@ public class NegotiatorServer implements Negotiator {
             try {
                 readResult = generateResp();
             } catch (XMLStreamException e) {
-                System.out.println("error en el generate resp de el negotiator con el server");
+            //    System.out.println("error en el generate resp de el negotiator con el server");
+              //
+                //  System.out.println(e.getMessage());
             }
 
 
@@ -93,32 +106,32 @@ public class NegotiatorServer implements Negotiator {
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
-                    System.out.println("start document");
+                   // System.out.println("start document");
 
 
                 case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
-                    System.out.println("processing instruction");
+                 //   System.out.println("processing instruction");
 
                     break;
 
                 case AsyncXMLStreamReader.START_ELEMENT:
-                    System.out.println("start element");
+               //     System.out.println("start element");
                     return handleStartElement();
 
                 case AsyncXMLStreamReader.CHARACTERS:
                     if(inMech && reader.getText().equals("PLAIN")){
                         hasPlain = true;
                     }
-                    System.out.println("characters");
-                    System.out.println("los characters que me llegan son " + reader.getText());
+                    //System.out.println("characters");
+                    //System.out.println("los characters que me llegan son " + reader.getText());
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
-                    System.out.println("end element");
+                    //System.out.println("end element");
                     return handleEndElement();
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    System.out.println("incomplete");
+                    //System.out.println("incomplete");
                     return VerificationState.INCOMPLETE;
 
                 default:
@@ -133,11 +146,10 @@ public class NegotiatorServer implements Negotiator {
 
 
     private VerificationState handleEndElement(){
-        System.out.println("en el end element el nombre del tag es " + reader.getLocalName());
+     //   System.out.println("en el end element el nombre del tag es " + reader.getLocalName());
         if(reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")){
-            //TODO claramente AGFkbWluAGZyYW4xOTk0 no va hardcodeado CAMBIAR BIEN POR EL USUARIO POSTA
-
-            retBuffer = ByteBuffer.wrap(new String("<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">AGFkbWluAGZyYW4xOTk0</auth>").getBytes());
+            String ret = "<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">" + user64 + "</auth>";
+            retBuffer = ByteBuffer.wrap(ret.getBytes());
             hasToWrite = true;
             return VerificationState.IN_PROCESS;
         }
@@ -146,7 +158,7 @@ public class NegotiatorServer implements Negotiator {
         }
 
         if(reader.getLocalName().equals("success")){
-            System.out.println("ESTA ACA EN END ELEMENT");
+       //     System.out.println("ESTA ACA EN END ELEMENT");
         }
         //TODO pensar bien que resp:
         return VerificationState.IN_PROCESS;
@@ -154,10 +166,10 @@ public class NegotiatorServer implements Negotiator {
     }
 
     private VerificationState handleStartElement(){
-        System.out.println("en en elemente l nombre del tag es " + reader.getLocalName());
+  //      System.out.println("en en elemente l nombre del tag es " + reader.getLocalName());
 
         if(reader.getLocalName().equals("success") && hasPlain){
-            System.out.println("ESTA ACA EN START ELEMENT");
+    //        System.out.println("ESTA ACA EN START ELEMENT");
             return VerificationState.FINISHED;
         }
         if(reader.getLocalName().equals("mechanism")){
@@ -168,4 +180,7 @@ public class NegotiatorServer implements Negotiator {
 
     }
 
+    public void setUser64(String user64) {
+        this.user64 = user64;
+    }
 }

@@ -34,6 +34,7 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     @Override
     public ByteBuffer fromByteBuffer(ByteBuffer buffer) {
+        System.out.println("ENTRO AL XMPP PARSER");
 
         if (buffer == null) {
             return null;
