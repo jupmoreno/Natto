@@ -27,11 +27,6 @@ public class NegotiatorServer implements Negotiator {
 
     private String user64;
 
-    public NegotiatorServer(){
-        System.out.println("creo el negotiator del server");
-    }
-
-
     @Override
     public boolean isVerified() {
         return verified;
@@ -40,37 +35,36 @@ public class NegotiatorServer implements Negotiator {
     @Override
     public int handshake(Connection connection, ByteBuffer readBuffer) {
 
-        System.out.println("entro al handshake");
-        ///TODO SACARRRR
-        reader = inputF.createAsyncForByteBuffer();
-
         VerificationState readResult = VerificationState.INCOMPLETE;
 
         System.out.println("ENTRO AL HANDSHAKE Y EL BUFFER QUE ME ENTRA ES " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
         retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
 
+        if(reader.getInputFeeder().needMoreInput()){
+            try {
+                System.out.println("feedeo al buffer");
+                System.out.println("EL BUFFER QUE FFEEEDEO ES "+ new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
+                reader.getInputFeeder().feedInput(readBuffer);
+                retBuffer.clear();
+            } catch (XMLStreamException e) {
+                System.out.println("ERROR DE XML DE NEGOCIACION ADENTRO DEL NEGOTIATOR SERVER");
+                System.out.println(e.getMessage());
+                return -1;
+            }
+        }
+
         while(readResult != VerificationState.FINISHED) {
 
-            if(reader.getInputFeeder().needMoreInput()){
-                try {
-                  //  System.out.println("feedeo al buffer");
-                   // System.out.println("EL BUFFER QUE FFEEEDEO ES "+ new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
-                    reader.getInputFeeder().feedInput(readBuffer);
-                    retBuffer.clear();
-                } catch (XMLStreamException e) {
-                    System.out.println("ERROR DE XML DE NEGOCIACION ADENTRO DEL NEGOTIATOR SERVER");
-                    System.out.println(e.getMessage());
-                    return -1;
-                }
-            }
+
 
             try {
                 readResult = generateResp();
             } catch (XMLStreamException e) {
             //    System.out.println("error en el generate resp de el negotiator con el server");
               //
-                //  System.out.println(e.getMessage());
+                System.out.println(e.getMessage());
+                return 1;
             }
 
 
@@ -79,6 +73,7 @@ public class NegotiatorServer implements Negotiator {
                     System.out.println("TERMINO DE NEGOCIAR :)");
                     verified = true;
                     //TODO: habilitar que el cliente pueda escribir en el servidor
+                   // connection.requestRead();  ???
                     return 1;
 
                 case IN_PROCESS:
@@ -106,11 +101,11 @@ public class NegotiatorServer implements Negotiator {
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
-                   // System.out.println("start document");
+                   System.out.println("start document");
 
 
                 case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
-                 //   System.out.println("processing instruction");
+                    System.out.println("processing instruction");
 
                     break;
 

@@ -30,6 +30,7 @@ public class NegotiatorClient implements Negotiator {
     private String user;
     private String user64;
 
+    private NegotiatorServer neg = null;
 
 
 //    private final XmppData data;
@@ -40,12 +41,19 @@ public class NegotiatorClient implements Negotiator {
 
     @Override
     public boolean isVerified() {
+        if(neg == null || !neg.isVerified())
+            return false;
+
+        System.out.println("es true? " + verified);
         return verified;
     }
 
     public int handshake(Connection connection, ByteBuffer readBuffer) {
         sb.setLength(0);
 
+        if(verified){
+            return 1;
+        }
 
 
         VerificationState readResult = VerificationState.INCOMPLETE;
@@ -66,7 +74,7 @@ public class NegotiatorClient implements Negotiator {
 
         while (readResult != VerificationState.FINISHED) {
 
-            //connection.requestRead();
+
 
             try {
                 readResult = generateResp();
@@ -86,7 +94,7 @@ public class NegotiatorClient implements Negotiator {
 //                    NetAddress netAddress = data.getUserAddress(user);
 //                    InetSocketAddress socketAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort()); //TODO CAMBIAR
                     try {
-                        NegotiatorServer neg = new NegotiatorServer();
+                        neg = new NegotiatorServer();
                         neg.setUser64(user64);
                         Connection server = connection.requestConnect(new InetSocketAddress(5222), neg);
                         server.requestWrite(ByteBuffer.wrap(new String("<?xml version=\"1.0\"?>\n" +
@@ -186,6 +194,8 @@ public class NegotiatorClient implements Negotiator {
         if (reader.getVersion() != null && reader.getEncoding() != null) { //TODO: SACAR solo para testear no deberia pasar esto
             //  retBuffer.put("<?xml ".getBytes());
             sb.append("<?xml ");
+            ByteBuffer buffer1 = null;
+            buffer1.putChar('a').asCharBuffer();
             if (reader.getVersion() != null) {
                 // retBuffer.put("version='".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
                 sb.append("version='").append(reader.getVersion()).append("' ");
