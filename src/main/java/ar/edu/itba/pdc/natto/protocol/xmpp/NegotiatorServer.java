@@ -65,6 +65,7 @@ public class NegotiatorServer implements Negotiator {
                 case FINISHED:
                     System.out.println("TERMINO DE NEGOCIAR :)");
                     verified = true;
+                    //TODO: habilitar que el cliente pueda escribir en el servidor
                     return 1;
 
                 case IN_PROCESS:
@@ -76,7 +77,7 @@ public class NegotiatorServer implements Negotiator {
                     break;
 
                 case INCOMPLETE:
-
+                    connection.requestRead();
                     return 0;
             }
 
@@ -109,6 +110,7 @@ public class NegotiatorServer implements Negotiator {
                         hasPlain = true;
                     }
                     System.out.println("characters");
+                    System.out.println("los characters que me llegan son " + reader.getText());
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
