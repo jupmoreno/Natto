@@ -5,7 +5,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
 
-public class NttpParser implements Parser<StringBuilder>{
+public class NttpParser {
 
     private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
     private StringBuilder ret = new StringBuilder();
@@ -17,7 +17,6 @@ public class NttpParser implements Parser<StringBuilder>{
     private StringBuilder commands = new StringBuilder();
 
 
-    @Override
     public StringBuilder fromByteBuffer(ByteBuffer buffer) {
         int originalPosition = buffer.position();
         int moved = 0;
@@ -88,7 +87,6 @@ public class NttpParser implements Parser<StringBuilder>{
 
     }
 
-    @Override
     public ByteBuffer toByteBuffer(StringBuilder message) {
         return ByteBuffer.wrap(message.toString().getBytes());
     }

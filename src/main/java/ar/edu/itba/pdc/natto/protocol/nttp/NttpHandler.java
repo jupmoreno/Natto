@@ -27,16 +27,22 @@ public class NttpHandler implements ProtocolHandler {
     @Override
     public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
 
-        StringBuilder request = parser.fromByteBuffer(buffer);
+        while (buffer.hasRemaining()) {
 
-        if (request != null) {
-            StringBuilder response = protocol.process(request);
-            System.out.println("RESPONSE: " + response); // TODO: Remove
-            if (response != null) {
-                me.requestWrite(parser.toByteBuffer(response));
+            StringBuilder request = parser.fromByteBuffer(buffer);
+
+            if (request != null) {
+                StringBuilder response = protocol.process(request);
+                System.out.println("RESPONSE: " + response); // TODO: Remove
+                if (response != null) {
+                    me.requestWrite(parser.toByteBuffer(response));
+                    if(isQuit(response)){
+                        me.requestClose(); //TODO: esta bien?
+                    }
+                }
             }
-        }
 
+        }
     }
 
     @Override
@@ -47,5 +53,19 @@ public class NttpHandler implements ProtocolHandler {
     @Override
     public void beforeClose(Connection me, Connection other) {
         // TODO:
+    }
+
+    private boolean isQuit(StringBuilder command){
+        String[] commandStrs = command.toString().split(" ");
+
+        if(commandStrs.length == 4){
+            return commandStrs[0].equals(".") && commandStrs[1].equals("10");
+        }
+
+        if(commandStrs.length > 4){
+            return commandStrs[1].equals(".") && commandStrs[2].equals("10");
+        }
+
+        return false;
     }
 }
