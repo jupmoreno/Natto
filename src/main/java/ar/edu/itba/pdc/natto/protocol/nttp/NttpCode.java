@@ -13,14 +13,14 @@ public enum NttpCode {
     TRANSFORMATION_DISABLED('.', 7, "Transformation Disabled."),
     METRIC_METHODS('.', 8, "Metric methods."),
     WHAT('?', 0, "What?."),
-    WRONG_ARGS('?', 0, "Wrong arguments."),
+    WRONG_ARGS('!', 0, "Wrong arguments."),
     METHOD_NOT_SUPPORTED('!', 1, "Authentication method not supported."),
     ALREADY_AUTHORIZED('!', 2, "Already authorized."),
     WITHOUT_AUTH_METHOD('!', 3, "Authorization method not requested."),
     INCORRECT_USER_PASS('!', 4, "Incorrect user or password."),
     USER_ALREADY_SILENCED('!', 5, "This user is already silenced."),
     USER_ALREADY_UNSILENCED('!', 6, "This user was not silenced."),
-    MUST_AUTH('!', 07, "You need to authenticate."),
+    MUST_AUTH('!', 7, "You need to authenticate."),
     TOO_MUCH_OUTPUT('X', 0, "Too much output to process.")
     ;
 
