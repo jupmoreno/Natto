@@ -102,6 +102,9 @@ public class XmppParser implements Parser<ByteBuffer> {
     }
 
     private void handleStartDocument() {
+        if (parser.getVersion() == null && parser.getEncoding() == null) {
+            return;
+        }
 
         sb.append("<?xml ");
         String version = parser.getVersion();
