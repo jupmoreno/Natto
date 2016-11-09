@@ -264,19 +264,13 @@ public class NegotiatorClient implements Negotiator {
 
     /**Error Handlers**/
 
-    /* TODO  If the error is triggered by the initial stream header, the receiving
-   entity MUST still send the opening <stream> tag, include the <error/>
-   element as a child of the stream element, and send the closing
-   </stream> tag (preferably in the same TCP packet).*/
-
-
-
+    
     //TODO: CERRAR CONNECTION ETC
-
     /**
      * RFC 4.9.3.25.  unsupported-version
      */
     private VerificationState handleWrongVersion() {
+        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
         if(initialStream){
             retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'".getBytes());
         }
@@ -291,6 +285,7 @@ public class NegotiatorClient implements Negotiator {
      * RFC 4.9.3.1.  bad-format
      */
     private int handleWrongFormat(Connection connection) {
+        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
         if(initialStream){
             connection.requestWrite(ByteBuffer.wrap("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'><stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
             auxUser.setLength(0);
@@ -306,6 +301,7 @@ public class NegotiatorClient implements Negotiator {
      * RFC 4.9.3.12.  not-authorized
      */
     private VerificationState handleNotAuthorized() {
+        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
         if(initialStream){
             retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>".getBytes());
         }
