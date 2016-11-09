@@ -9,7 +9,6 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 
-// TODO: Fijarse de siempre cerrar bien el parser anterior!
 public class XmppParser implements Parser<ByteBuffer> {
 
     private final static int BUFFER_MAX_SIZE = 10000;
@@ -28,20 +27,19 @@ public class XmppParser implements Parser<ByteBuffer> {
     StringBuilder sb = new StringBuilder();
 
 
-    public XmppParser(XmppData data){
+    public XmppParser(XmppData data) {
         this.xmppData = data;
     }
 
     @Override
     public ByteBuffer fromByteBuffer(ByteBuffer buffer) {
-        System.out.println("ENTRO AL XMPP PARSER");
 
         if (buffer == null) {
             return null;
         }
 
 
-        if(parser.getInputFeeder().needMoreInput()){
+        if (parser.getInputFeeder().needMoreInput()) {
             try {
                 parser.getInputFeeder().feedInput(buffer);
                 retBuffer.clear();
@@ -51,7 +49,7 @@ public class XmppParser implements Parser<ByteBuffer> {
             }
         }
 
-        // Aca empieza la etapa de parseo
+        /*Parsing Starts*/
         try {
             while (parser.hasNext()) {
                 switch (parser.next()) {
@@ -78,7 +76,7 @@ public class XmppParser implements Parser<ByteBuffer> {
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                         System.out.println("Incomplete!");
                         System.out.println("devuelvo sb " + sb);
-                     //   buffer.clear();
+                        //   buffer.clear();
                         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
                         sb.setLength(0);
                         return ret;
@@ -109,30 +107,30 @@ public class XmppParser implements Parser<ByteBuffer> {
         sb.append("<?xml ");
         String version = parser.getVersion();
         String encoding = parser.getCharacterEncodingScheme();
-        if(version != null)
+        if (version != null)
             sb.append("version=\"" + version + "\" ");
-        if(encoding != null)
+        if (encoding != null)
             sb.append("encoding=\"" + encoding + "\"");
         sb.append("?>");
 
     }
 
-    private void handleStartElement(){
+    private void handleStartElement() {
         String name = parser.getName().getLocalPart().toString();
-        if(name.equals("message")){
+        if (name.equals("message")) {
             inMessage = true;
-        }else if(name.equals("body") && inMessage){
+        } else if (name.equals("body") && inMessage) {
             inBody = true;
         }
 
         sb.append("<");
-        if(parser.getPrefix().length() != 0){
+        if (parser.getPrefix().length() != 0) {
             sb.append(parser.getPrefix()).append(":");
         }
         sb.append(name);
 
 
-        for(int i = 0; i < parser.getAttributeCount(); i++){
+        for (int i = 0; i < parser.getAttributeCount(); i++) {
             sb.append(" ");
             if (!parser.getAttributePrefix(i).isEmpty()) {
                 sb.append(parser.getAttributePrefix(i)).append(":");
@@ -141,7 +139,7 @@ public class XmppParser implements Parser<ByteBuffer> {
         }
 
 
-        for(int i = 0; i < parser.getNamespaceCount(); i++){
+        for (int i = 0; i < parser.getNamespaceCount(); i++) {
             sb.append(" ").append("xmlns");
             if (!parser.getNamespacePrefix(i).isEmpty()) {
                 sb.append(":").append(parser.getNamespacePrefix(i));
@@ -154,10 +152,10 @@ public class XmppParser implements Parser<ByteBuffer> {
         sb.append(">");
     }
 
-    public void handleCharacters(){
+    public void handleCharacters() {
 
-        if(inBody && xmppData.isTransformEnabled()){ //TODO: se leetea?
-            for (char c: parser.getText().toCharArray()) {
+        if (inBody && xmppData.isTransformEnabled()) { //TODO: se leetea?
+            for (char c : parser.getText().toCharArray()) {
                 switch (c) {
                     case 'a':
                         sb.append("4");
@@ -179,40 +177,25 @@ public class XmppParser implements Parser<ByteBuffer> {
                         break;
                 }
             }
-        }else{
+        } else {
             sb.append(parser.getText());
         }
 
     }
 
-    private void handleEndElement(){
+    private void handleEndElement() {
         sb.append("</");
-        if(parser.getPrefix().length() != 0){
+        if (parser.getPrefix().length() != 0) {
             sb.append(parser.getPrefix()).append(":");
         }
         sb.append(parser.getName().getLocalPart()).append(">");
 
 
-        if(parser.getName().getLocalPart().equals("body"))
+        if (parser.getName().getLocalPart().equals("body"))
             inBody = false;
-        if(parser.getName().getLocalPart().equals("message"))
+        if (parser.getName().getLocalPart().equals("message"))
             inMessage = false;
 
-    }
-
-
-    /**
-     * RFC 4.9.3.1.  bad-format
-     */
-    private ByteBuffer handleWrongFormat(){
-        System.out.println("Mal formado");
-        sb.setLength(0);
-        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
-        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-        sb.setLength(0);
-        //TODO: cerrar connection etc
-
-        return ret;
     }
 
 
@@ -223,6 +206,27 @@ public class XmppParser implements Parser<ByteBuffer> {
         sb.setLength(0);
 
         return retBuffer;
+    }
+
+
+    /**Error Handlers**/
+
+     /* TODO  If the error is triggered by the initial stream header, the receiving
+   entity MUST still send the opening <stream> tag, include the <error/>
+   element as a child of the stream element, and send the closing
+   </stream> tag (preferably in the same TCP packet).*/
+
+    /**
+     * RFC 4.9.3.1.  bad-format
+     */
+    private ByteBuffer handleWrongFormat() {
+        sb.setLength(0);
+        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
+        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+        sb.setLength(0);
+        //TODO: cerrar connection etc
+
+        return ret;
     }
 
 

@@ -165,6 +165,13 @@ public class NegotiatorServer implements Negotiator {
 
     /**Error Handlers**/
 
+     /* TODO  If the error is triggered by the initial stream header, the receiving
+   entity MUST still send the opening <stream> tag, include the <error/>
+   element as a child of the stream element, and send the closing
+   </stream> tag (preferably in the same TCP packet).*/
+
+
+    //TODO:cerrar connection
     /**
      * RFC 4.9.3.1.  bad-format
      */
