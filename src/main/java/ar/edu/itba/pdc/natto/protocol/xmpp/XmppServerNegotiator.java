@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
+import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
@@ -9,8 +10,7 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 
-
-public class NegotiatorServer implements Negotiator {
+public class XmppServerNegotiator implements ProtocolHandler {
 
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
@@ -25,14 +25,39 @@ public class NegotiatorServer implements Negotiator {
     private String user64;
 
     @Override
-    public boolean isVerified() {
-        return verified;
+    public void afterConnect(Connection me, Connection other) {
+
     }
 
     @Override
+    public void afterRead(Connection me, Connection other, ByteBuffer readBuffer) {
+        int ret = handshake(me, readBuffer);
+
+        if (ret == -1) {
+            // TODO Error
+            me.requestClose();
+            // TODO: Mandarle algo al cliente y cerrarlo
+        } else if (ret == 1) {
+            // TODO: crear nuevos handlers
+            me.setHandler(null);
+            // TODO: JP!
+            other.setHandler(null);
+        }
+    }
+
+    @Override
+    public void afterWrite(Connection me, Connection other) {
+
+    }
+
+    @Override
+    public void beforeClose(Connection me, Connection other) {
+
+    }
+
     public int handshake(Connection connection, ByteBuffer readBuffer) {
 
-        VerificationState readResult = VerificationState.INCOMPLETE;
+        NegotiationStatus readResult = NegotiationStatus.INCOMPLETE;
 
         if(reader.getInputFeeder().needMoreInput()){
             try {
@@ -42,7 +67,7 @@ public class NegotiatorServer implements Negotiator {
             }
         }
 
-        while(readResult != VerificationState.FINISHED) {
+        while(readResult != NegotiationStatus.FINISHED) {
 
             try {
                 readResult = generateResp();
@@ -85,7 +110,7 @@ public class NegotiatorServer implements Negotiator {
     }
 
 
-    private VerificationState generateResp() throws XMLStreamException {
+    private NegotiationStatus generateResp() throws XMLStreamException {
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
@@ -110,40 +135,40 @@ public class NegotiatorServer implements Negotiator {
                     return handleEndElement();
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                    return VerificationState.INCOMPLETE;
+                    return NegotiationStatus.INCOMPLETE;
 
                 default:
                     break;
             }
         }
 
-        return VerificationState.ERR;
+        return NegotiationStatus.ERR;
 
     }
 
 
-    private VerificationState handleEndElement(){
+    private NegotiationStatus handleEndElement(){
 
         if(reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")){
             String ret = "<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">" + user64 + "</auth>";
             retBuffer = ByteBuffer.wrap(ret.getBytes());
             hasToWrite = true;
-            return VerificationState.IN_PROCESS;
+            return NegotiationStatus.IN_PROCESS;
         }
         if(reader.getName().equals("mechanisms")){
             inMech = false;
         }
 
         if(reader.getLocalName().equals("success") && hasPlain){
-            return VerificationState.FINISHED;
+            return NegotiationStatus.FINISHED;
         }
 
         //TODO pensar bien que resp:
-        return VerificationState.IN_PROCESS;
+        return NegotiationStatus.IN_PROCESS;
 
     }
 
-    private VerificationState handleStartElement(){
+    private NegotiationStatus handleStartElement(){
 
         if(reader.getLocalName().equals("mechanism")){
             inMech = true;
@@ -154,14 +179,9 @@ public class NegotiatorServer implements Negotiator {
         }
 
 
-        return VerificationState.IN_PROCESS;
+        return NegotiationStatus.IN_PROCESS;
 
     }
-
-    public void setUser64(String user64) {
-        this.user64 = user64;
-    }
-
 
     /**Error Handlers**/
 
@@ -181,10 +201,10 @@ public class NegotiatorServer implements Negotiator {
     /**
      * RFC 4.9.3.12.  not-authorized
      */
-    private VerificationState handleNotAuthorized(){
+    private NegotiationStatus handleNotAuthorized(){
         retBuffer.clear();
         retBuffer = ByteBuffer.wrap("<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
         hasToWrite = true;
-        return VerificationState.ERR;
+        return NegotiationStatus.ERR;
     }
 }
