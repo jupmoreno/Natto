@@ -1,7 +1,5 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
-import ar.edu.itba.pdc.natto.protocol.ProtocolFactory;
-
 import java.nio.ByteBuffer;
 
 /**

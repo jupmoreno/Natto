@@ -1,6 +1,5 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
-import ar.edu.itba.pdc.natto.protocol.Negotiator;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;

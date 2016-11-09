@@ -4,6 +4,8 @@ import ar.edu.itba.pdc.natto.config.Arguments;
 import ar.edu.itba.pdc.natto.config.Config;
 import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
+import ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory;
+import ar.edu.itba.pdc.natto.protocol.nttp.NttpHandlerFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
@@ -45,9 +47,10 @@ public class Main {
     }
 
     private static void startServer(Config config) {
-        XmppData data = new XmppData(config.getXmppUserServers(), config.getXmppSilencedUsers());
+        XmppData xmppData = new XmppData(config.getXmppUserServers(), config.getXmppSilencedUsers());
 
         // TODO: Crear factories de cada protocolo
+        ProtocolHandlerFactory nttpHandlerFactory = new NttpHandlerFactory(xmppData);
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
