@@ -1,14 +1,8 @@
 package ar.edu.itba.pdc.natto.protocol.nttp;
 
-import ar.edu.itba.pdc.natto.protocol.Parser;
-
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
 
 
 public class NttpParser implements Parser<StringBuilder>{

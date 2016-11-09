@@ -1,12 +1,6 @@
 package ar.edu.itba.pdc.natto.protocol.nttp;
 
-import ar.edu.itba.pdc.natto.protocol.Protocol;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
-import ar.edu.itba.pdc.natto.protocol.xmpp.XmppParserFactory;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 
 
 /**
