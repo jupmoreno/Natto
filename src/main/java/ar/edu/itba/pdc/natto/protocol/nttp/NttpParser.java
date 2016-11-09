@@ -16,7 +16,7 @@ public class NttpParser implements Parser<StringBuilder>{
     private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
     private StringBuilder ret = new StringBuilder();
 
-    private static final int MAX_SIZE = 15;
+    private static final int MAX_SIZE = 500;
 
     boolean foundCommand = false;
     boolean tooBig = false;

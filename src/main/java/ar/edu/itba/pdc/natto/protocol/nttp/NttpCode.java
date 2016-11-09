@@ -21,7 +21,8 @@ public enum NttpCode {
     USER_ALREADY_SILENCED('!', 5, "This user is already silenced."),
     USER_ALREADY_UNSILENCED('!', 6, "This user was not silenced."),
     MUST_AUTH('!', 7, "You need to authenticate."),
-    TOO_MUCH_OUTPUT('X', 0, "Too much output to process.")
+    TOO_MUCH_OUTPUT('!', 8, "Too much output to process."),
+    SERVER_ERROR('X', 0, "Server Error."),
     ;
 
     private char type;

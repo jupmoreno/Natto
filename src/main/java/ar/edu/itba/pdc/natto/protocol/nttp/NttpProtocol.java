@@ -28,7 +28,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         "Without parameter: shows all the available commands. With parameter @command: shows information about the use of @command",
         "Recieves an @user as parameter. Silences @user",
         "Recieves an @user as parameter. Unsilences @user",
-        "Recieves an @user as parameter. Unsilences @user",
         "Recieves a \"true\" or \"false\" as parameter. Enables l33t transformations if parameter is \"true\", or disables l33t transformations if parameter is \"false\".",
         "Without parameters: shows all available metrics. " +
                 "With parameter @metric: shows the information about @metric. +" +
