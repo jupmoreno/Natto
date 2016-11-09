@@ -5,9 +5,7 @@ import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 
 import java.nio.ByteBuffer;
 
-/**
- * Created by user on 05/11/16.
- */
+
 public class NttpNegotiator implements Negotiator {
     @Override
     public boolean isVerified() {

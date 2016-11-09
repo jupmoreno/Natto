@@ -1,8 +1,6 @@
 package ar.edu.itba.pdc.natto.protocol.nttp;
 
-/**
- * Created by user on 09/11/16.
- */
+
 public enum NttpCode {
 
     OK('.', 0, "OK."),

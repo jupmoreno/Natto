@@ -9,9 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
 
-/**
- * Created by user on 05/11/16.
- */
+
 public class NttpParser implements Parser<StringBuilder>{
 
     private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
