@@ -47,7 +47,7 @@ public class XmppParser implements Parser<ByteBuffer> {
                 retBuffer.clear();
 
             } catch (XMLStreamException e) {
-                e.printStackTrace();
+                return handleWrongFormat();
             }
         }
 
@@ -200,13 +200,17 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     }
 
+
+    /**
+     * RFC 4.9.3.1.  bad-format
+     */
     private ByteBuffer handleWrongFormat(){
         System.out.println("Mal formado");
         sb.setLength(0);
-        sb.append("</stream:stream>");
-
+        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
+        //TODO: cerrar connection etc
 
         return ret;
     }
@@ -214,7 +218,6 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     @Override
     public ByteBuffer toByteBuffer(ByteBuffer message) {
-
 
         retBuffer = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);

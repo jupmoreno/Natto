@@ -32,6 +32,8 @@ public class NegotiatorClient implements Negotiator {
 
     private NegotiatorServer neg = null;
 
+    private boolean hasToWrite = false;
+
 
 //    private final XmppData data;
 
@@ -41,7 +43,7 @@ public class NegotiatorClient implements Negotiator {
 
     @Override
     public boolean isVerified() {
-        if(neg == null || !neg.isVerified())
+        if (neg == null || !neg.isVerified())
             return false;
 
         System.out.println("es true? " + verified);
@@ -51,7 +53,7 @@ public class NegotiatorClient implements Negotiator {
     public int handshake(Connection connection, ByteBuffer readBuffer) {
         sb.setLength(0);
 
-        if(verified){
+        if (verified) {
             return 1;
         }
 
@@ -67,21 +69,18 @@ public class NegotiatorClient implements Negotiator {
                 reader.getInputFeeder().feedInput(readBuffer);
 
             } catch (XMLStreamException e) {
-                System.out.println(e.getMessage());
-                System.out.println("error feedando al parser del client negotiator");
+                return handleWrongFormat(connection);
             }
         }
 
         while (readResult != VerificationState.FINISHED) {
 
 
-
             try {
                 readResult = generateResp();
             } catch (XMLStreamException e) {
-                System.out.println(e.getMessage());
-                System.out.println("error del parseo del handshaking");
-                return -1;
+                return handleWrongFormat(connection);
+
             }
 
 
@@ -101,29 +100,35 @@ public class NegotiatorClient implements Negotiator {
                                 "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
 
 
-
                     } catch (IOException exception) {
                         exception.printStackTrace();
                     }
                     return 1;
 
-                    // retBuffer.clear();
+                // retBuffer.clear();
 
-                    // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
-                    //       System.out.println("lo que mando en PROCESS despesu de limpar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
+                // retBuffer = ByteBuffer.allocate(10000); //TODO SACAR
+                //       System.out.println("lo que mando en PROCESS despesu de limpar" + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
 
 
                 case IN_PROCESS:
                     connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
                     sb.setLength(0);
                     break;
-                    // retBuffer = ByteBuffer
+                // retBuffer = ByteBuffer
                 // .allocate(10000); //TODO SACAR
-                    //retBuffer.clear();
+                //retBuffer.clear();
 
                 case ERR:
                     System.out.println("ERROR");
+                    if (hasToWrite) {
+                        connection.requestWrite(ByteBuffer.wrap(sb.toString().getBytes()));
+                        hasToWrite = false;
+                    }
+                    sb.setLength(0);
+                    auxUser.setLength(0);
                     return -1;
+
 
                 case INCOMPLETE:
                     return 0;
@@ -154,14 +159,14 @@ public class NegotiatorClient implements Negotiator {
                 case AsyncXMLStreamReader.START_ELEMENT:
                     System.out.println(reader.getLocalName());
                     System.out.println("start element");
-                    if(reader.getLocalName().equals("stream") && reader.getPrefix().equals("stream")){
+                    if (reader.getLocalName().equals("stream") && reader.getPrefix().equals("stream")) {
                         return handleStreamStream();
                     }
                     handleStartElement();
                     break;
 
                 case AsyncXMLStreamReader.CHARACTERS:
-                    if(inAuth){
+                    if (inAuth) {
                         auxUser.append(reader.getText());
                     }
                     System.out.println("characters");
@@ -170,7 +175,7 @@ public class NegotiatorClient implements Negotiator {
 
                 case AsyncXMLStreamReader.END_ELEMENT:
                     System.out.println("en el end element lo que me llega es " + reader.getLocalName());
-                    if(reader.getLocalName().equals("auth")){
+                    if (reader.getLocalName().equals("auth")) {
                         getUser();
                         return VerificationState.FINISHED;
                     }
@@ -194,8 +199,6 @@ public class NegotiatorClient implements Negotiator {
         if (reader.getVersion() != null && reader.getEncoding() != null) { //TODO: SACAR solo para testear no deberia pasar esto
             //  retBuffer.put("<?xml ".getBytes());
             sb.append("<?xml ");
-            ByteBuffer buffer1 = null;
-            buffer1.putChar('a').asCharBuffer();
             if (reader.getVersion() != null) {
                 // retBuffer.put("version='".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
                 sb.append("version='").append(reader.getVersion()).append("' ");
@@ -218,20 +221,23 @@ public class NegotiatorClient implements Negotiator {
     private VerificationState handleStartElement() {
 
         if (reader.getLocalName().equals("auth")) {
-           // System.out.println("Estoy en auth");
+            // System.out.println("Estoy en auth");
             inAuth = true;
             for (int i = 0; i < reader.getAttributeCount(); i++) {
                 if (reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")) {
                     //hay uqe meterle algo adentro, algo de ese estilo cnNwYXV0aD1mNDVhM2E2Y2NmYmE4MDVmOGFkNzk4MjU0ZGI5MzdmNw==  //base64
-                  //  System.out.println("el mecanismo es PLAIN");
+                    //  System.out.println("el mecanismo es PLAIN");
 
-                  //  sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
+                    //  sb.append("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>");
                     //retBuffer.put("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes());
                     return VerificationState.IN_PROCESS;
                 }
             }
             return VerificationState.ERR;
         }
+
+        if(reader.getLocalName().equals("message") || reader.getLocalName().equals("iq") || reader.getLocalName().equals("presence"))
+            return handleNotAuthorized();
 
         //TODO VER UN POCO MAS?
         return VerificationState.ERR;
@@ -240,13 +246,18 @@ public class NegotiatorClient implements Negotiator {
     private VerificationState handleStreamStream() {
 
 
-    //    System.out.println("entro al handle stream stream");
+        //    System.out.println("entro al handle stream stream");
         sb.append("<stream:stream");
         //  retBuffer.put("<stream:stream ".getBytes());
 
         //TODO meter id ver como se hace
         //appendeo los atributos y cambio el to por un from, y el from por un to
         for (int i = 0; i < reader.getAttributeCount(); i++) {
+
+            if (reader.getAttributeLocalName(i).equals("version") && !reader.getAttributeValue(i).equals("\"1.0\"") && !reader.getAttributeValue(i).equals("'1.0'") && !reader.getAttributeValue(i).equals("1.0")) {
+                return handleWrongVersion();
+            }
+
             sb.append(" ");
             // retBuffer.put(" ".getBytes());
             if (!reader.getAttributePrefix(i).isEmpty()) {
@@ -307,14 +318,14 @@ public class NegotiatorClient implements Negotiator {
         }
     }
 
-    private void getUser(){
+    private void getUser() {
         user64 = auxUser.toString();
         System.out.println("el usuario en 64 es " + auxUser.toString());
-     //   System.out.println("aux user en string es " + auxUser.toString());
+        //   System.out.println("aux user en string es " + auxUser.toString());
         String user64 = new String(Base64.getDecoder().decode(auxUser.toString()), UTF_8);
         auxUser.setLength(0);
-   //     System.out.println("EL USUARIO ES " + user64);
-        String[] userAndPass = user64.split(String.valueOf((char)0));
+        //     System.out.println("EL USUARIO ES " + user64);
+        String[] userAndPass = user64.split(String.valueOf((char) 0));
         user = userAndPass[1];
         System.out.println("user: " + userAndPass[1]);
         System.out.println("pass: " + userAndPass[2]);
@@ -324,6 +335,40 @@ public class NegotiatorClient implements Negotiator {
 //        System.out.println("El user decodificado es: " + new String(Base64.getDecoder().decode(user64), UTF_8));
 //        System.out.println("el usuario decodificado 2 es " + new String(DatatypeConverter.parseBase64Binary(user64), UTF_8));
 //      //  System.out.println("el tercero " + );
+    }
+
+
+    //TODO: CERRAR CONNECTION ETC
+    /**
+     * RFC 4.9.3.25.  unsupported-version
+     */
+    private VerificationState handleWrongVersion() {
+        sb.append("><stream:error><unsupported-version xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
+        hasToWrite = true;
+
+        return VerificationState.ERR;
+    }
+
+    //TODO: IDEM CONNECTION
+    /**
+     * RFC 4.9.3.1.  bad-format
+     */
+    private int handleWrongFormat(Connection connection){
+        connection.requestWrite(ByteBuffer.wrap("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
+        sb.setLength(0);
+        auxUser.setLength(0);
+        return -1;
+    }
+
+    //TODO:cierro conenection!
+    /**
+     * RFC 4.9.3.12.  not-authorized
+     */
+    private VerificationState handleNotAuthorized(){
+        sb.setLength(0);
+        sb.append("<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
+        hasToWrite = true;
+        return VerificationState.ERR;
     }
 
 }
