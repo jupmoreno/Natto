@@ -24,6 +24,7 @@ public class NegotiatorClient implements Negotiator {
 
     private boolean verified = false;
     private boolean inAuth = false;
+    private boolean initialStream = true;
 
     private StringBuilder auxUser = new StringBuilder();
     private String user;
@@ -128,6 +129,7 @@ public class NegotiatorClient implements Negotiator {
                 case AsyncXMLStreamReader.START_ELEMENT:
 
                     if (reader.getLocalName().equals("stream") && reader.getPrefix().equals("stream")) {
+                        initialStream = false;
                         return handleStreamStream();
                     }
                     handleStartElement();
@@ -275,6 +277,9 @@ public class NegotiatorClient implements Negotiator {
      * RFC 4.9.3.25.  unsupported-version
      */
     private VerificationState handleWrongVersion() {
+        if(initialStream){
+            retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'".getBytes());
+        }
         retBuffer.put("><stream:error><unsupported-version xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
         hasToWrite = true;
         return VerificationState.ERR;
@@ -286,6 +291,11 @@ public class NegotiatorClient implements Negotiator {
      * RFC 4.9.3.1.  bad-format
      */
     private int handleWrongFormat(Connection connection) {
+        if(initialStream){
+            connection.requestWrite(ByteBuffer.wrap("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'><stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
+            auxUser.setLength(0);
+            return -1;
+        }
         connection.requestWrite(ByteBuffer.wrap("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
         auxUser.setLength(0);
         return -1;
@@ -296,6 +306,9 @@ public class NegotiatorClient implements Negotiator {
      * RFC 4.9.3.12.  not-authorized
      */
     private VerificationState handleNotAuthorized() {
+        if(initialStream){
+            retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>".getBytes());
+        }
         retBuffer.put("<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
         hasToWrite = true;
         return VerificationState.ERR;

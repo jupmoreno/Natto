@@ -21,6 +21,7 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     private boolean inMessage = false;
     private boolean inBody = false;
+    private boolean initialSetup = true;
 
 
     ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
@@ -117,6 +118,9 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     private void handleStartElement() {
         String name = parser.getName().getLocalPart().toString();
+        if(name.equals("stream") && parser.getPrefix().equals("stream")){
+            initialSetup = false;
+        }
         if (name.equals("message")) {
             inMessage = true;
         } else if (name.equals("body") && inMessage) {
@@ -211,16 +215,17 @@ public class XmppParser implements Parser<ByteBuffer> {
 
     /**Error Handlers**/
 
-     /* TODO  If the error is triggered by the initial stream header, the receiving
-   entity MUST still send the opening <stream> tag, include the <error/>
-   element as a child of the stream element, and send the closing
-   </stream> tag (preferably in the same TCP packet).*/
-
     /**
      * RFC 4.9.3.1.  bad-format
      */
     private ByteBuffer handleWrongFormat() {
         sb.setLength(0);
+
+        //TODO: ver bien que poner en el stream inicial si rompe todo
+        /*If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
+        if(initialSetup){
+            sb.append("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>");
+        }
         sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
