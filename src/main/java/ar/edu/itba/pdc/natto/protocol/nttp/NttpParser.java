@@ -5,6 +5,7 @@ import ar.edu.itba.pdc.natto.protocol.Parser;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -15,57 +16,86 @@ public class NttpParser implements Parser<StringBuilder>{
     private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
     private StringBuilder ret = new StringBuilder();
 
-    private static final int MAX_SIZE = 500;
+    private static final int MAX_SIZE = 15;
 
     boolean foundCommand = false;
+    boolean tooBig = false;
     private StringBuilder commands = new StringBuilder();
 
 
     @Override
     public StringBuilder fromByteBuffer(ByteBuffer buffer) {
-        System.out.println("Esto es lo que recibo en el fromByteBuffer: " + new String(buffer.array(), buffer.position(), buffer.limit(), Charset.defaultCharset()));
+        int originalPosition = buffer.position();
+        int moved = 0;
+        CharBuffer charBuffer = StandardCharsets.UTF_8.decode(buffer);
+
+        if(!charBuffer.hasRemaining()){
+            return null;
+        }
+
+        char current = '0';
+
+        if (tooBig) {
+            while (charBuffer.hasRemaining() && (current = charBuffer.get()) != '\n') {
+                moved++;
+            }
+
+            if (!charBuffer.hasRemaining()) {
+                if (current == '\n') {
+                    foundCommand = true;
+                    tooBig = false;
+                }
+                return null;
+            }
+
+            moved++;
+
+            tooBig = false;
+            foundCommand = true;
+        }
 
         if(foundCommand){
             ret.setLength(0);
             foundCommand = false;
         }
 
-        String bufferStr = new String(buffer.array(), buffer.position(), buffer.limit(), Charset.forName("UTF-8"));
-        buffer.clear();
 
-        if(commands.length() + bufferStr.length() > MAX_SIZE){
-            ret.setLength(0);
-            commands.setLength(0);
-            ret.append("\nerror\n");
-            foundCommand = true;
-            return ret;
-        }
 
-        commands.append(bufferStr);
+        while(charBuffer.hasRemaining() && (current = charBuffer.get()) != '\n'){
+            ret.append(current);
+            moved++;
+            System.out.println(buffer);
 
-        for(int i = 0; i < commands.length() && !foundCommand; i++){
-            if(commands.charAt(i) == '\n'){
-                foundCommand = true;
-                commands.delete(0,i + 1);
-            }else{
-                ret.append(commands.charAt(i));
+            if(ret.length() > MAX_SIZE){
+                handleTooBig();
+                System.out.println("Devuelvo " + ret);
+                buffer.position(originalPosition + moved);
+                return ret;
             }
         }
 
-        if(foundCommand){
-            System.out.println("Desde el fromByteBuffer voy a retornar " + ret);
+        if(current == '\n'){
+            foundCommand = true;
+            System.out.println("Devuelvo " + ret);
+            buffer.position(originalPosition + moved + 1);
             return ret;
         }
 
+        System.out.println("Devuelvooo null");
+        buffer.position(originalPosition + moved);
         return null;
 
+    }
+
+    private void handleTooBig() {
+        ret.setLength(0);
+        tooBig = true;
+        ret.append("\nerror\n");
 
     }
 
     @Override
     public ByteBuffer toByteBuffer(StringBuilder message) {
-        retBuffer.compact();
-        retBuffer = ByteBuffer.wrap(message.toString().getBytes());
-        return retBuffer;
+        return ByteBuffer.wrap(message.toString().getBytes());
     }
 }
