@@ -222,7 +222,7 @@ public class XmppParser implements Parser<ByteBuffer> {
         sb.setLength(0);
 
         //TODO: ver bien que poner en el stream inicial si rompe todo
-        /*If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
+        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
         if(initialSetup){
             sb.append("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>");
         }
