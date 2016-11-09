@@ -54,6 +54,7 @@ public class Main {
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
+                    .addProtocol(1081, nttpHandlerFactory)
                     // TODO: Add protocols
                     .build();
 

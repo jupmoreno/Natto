@@ -6,31 +6,32 @@ import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
 /**
  * Created by user on 05/11/16.
  */
-public class NttpProtocol implements Protocol<StringBuilder> {
+public class NttpProtocol {
 
     private StringBuilder sb;
     private XmppData xmppData;
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto y helps.
-    private final static String[] commands = {"help", "silence", "unsilence", "transformation", "metrics", "auth", "state", "getSilenced",};
+    private final static String[] commands = {"help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced",};
     private String[] authenticationMethods = {"plain", };
     private String[] metrics = {"bytes", "accesses", };
     private String authMethod = "";
     private String user = "";
     private String[] helps = {
-        "Without parameter: shows all the available commands. With parameter @command: shows information about the use of @command",
-        "Recieves an @user as parameter. Silences @user",
-        "Recieves an @user as parameter. Unsilences @user",
-        "Recieves a \"true\" or \"false\" as parameter. Enables l33t transformations if parameter is \"true\", or disables l33t transformations if parameter is \"false\".",
-        "Without parameters: shows all available metrics. " +
-                "With parameter @metric: shows the information about @metric. +" +
-                "With head value --methods and without parameters: shows the available metrics.",
-        "With head value --methods: shows the available authentication methods. " +
-                "With head value --request and parameter @method: requests authentication by using the specified @method. +" +
-                "With parameters @user and @password and after authentication requested: authenticates user with the specific @user and @password.",
-        "Shows the state of relevant variables.",
-        "Shows the silenced users.",
+            "Without parameter: shows all the available commands. With parameter @command: shows information about the use of @command",
+            "With head value --methods: shows the available authentication methods. " +
+                    "With head value --request and parameter @method: requests authentication by using the specified @method. +" +
+                    "With parameters @user and @password and after authentication requested: authenticates user with the specific @user and @password.",
+            "Quits and ends connection.",
+            "Recieves an @user as parameter. Silences @user",
+            "Recieves an @user as parameter. Unsilences @user",
+            "Recieves a \"true\" or \"false\" as parameter. Enables l33t transformations if parameter is \"true\", or disables l33t transformations if parameter is \"false\".",
+                    "Without parameters: shows all available metrics. " +
+                    "With parameter @metric: shows the information about @metric. +" +
+                    "With head value --methods and without parameters: shows the available metrics.",
+            "Shows the state of relevant variables.",
+            "Shows the silenced users.",
     };
 
     public NttpProtocol(XmppData xmppData){
@@ -38,7 +39,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
 
-    @Override
     public StringBuilder process(StringBuilder message) {
         System.out.println("Procesando... " + message);
         if(message == null)
@@ -70,6 +70,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             handleMetrics(messageVec);
         }else if(messageVec[0].compareToIgnoreCase("auth") == 0){
             handleAuth(messageVec);
+        }else if(messageVec[0].compareToIgnoreCase("quit") == 0){
+            handleQuit(messageVec);
         }else if(messageVec[0].compareToIgnoreCase("help") == 0){
             handleHelp(messageVec);
         }else if(messageVec[0].compareToIgnoreCase("state") == 0){
@@ -150,7 +152,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             if(authMethod.compareToIgnoreCase("plain") == 0){
                 if(plainAuth(messageVec[1], messageVec[2])){
                     formulateResponse(NttpCode.LOGGED_IN, null);
-                    user = messageVec[1];
                     return;
                 }else{
                     formulateResponse(NttpCode.INCORRECT_USER_PASS, null);
@@ -166,9 +167,30 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private boolean plainAuth(String user, String password) {
-        //TODO
+        //TODO: autorizarse bien
+        this.user = user;
         authorized = true;
         return true;
+    }
+
+    private void handleQuit(String[] messageVec) {
+
+        if(messageVec.length != 1 ){
+            formulateResponse(NttpCode.WRONG_ARGS, null);
+            return;
+        }
+
+        if(user.equals("")){
+            formulateResponse(NttpCode.BYE_BYE, null);
+            return;
+        }
+
+        //TODO: desloguarse bien y terminar la conección
+        user = "";
+        authMethod = "";
+        authorized = false;
+        formulateResponse(NttpCode.BYE_BYE, null);
+
     }
 
     private void handleMetrics(String[] messageVec) {
@@ -247,7 +269,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
         xmppData.silenceUser(messageVec[1]);
         formulateResponse(NttpCode.USER_SILENCED, null);
-        return;
 
     }
 
@@ -271,7 +292,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
         xmppData.unsilenceUser(messageVec[1]);
         formulateResponse(NttpCode.USER_UNSILENCED, null);
-        return;
     }
 
     private void handleGetSilenced(String[] messageVec){
