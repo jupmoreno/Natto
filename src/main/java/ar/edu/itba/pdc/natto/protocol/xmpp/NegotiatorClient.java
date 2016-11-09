@@ -103,6 +103,7 @@ public class NegotiatorClient implements Negotiator {
                         hasToWrite = false;
                     }
                     auxUser.setLength(0);
+                    connection.requestClose();
                     return -1;
 
 
@@ -264,7 +265,7 @@ public class NegotiatorClient implements Negotiator {
 
     /**Error Handlers**/
 
-    
+
     //TODO: CERRAR CONNECTION ETC
     /**
      * RFC 4.9.3.25.  unsupported-version

@@ -77,6 +77,7 @@ public class NegotiatorServer implements Negotiator {
                         connection.requestWrite(retBuffer);
                         retBuffer.clear();
                     }
+                    connection.requestClose();
             }
 
         }
