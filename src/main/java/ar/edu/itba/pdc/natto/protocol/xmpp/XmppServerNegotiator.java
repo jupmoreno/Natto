@@ -33,7 +33,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
     private String user64;
     private String username;
 
-    private ByteBuffer clientResponse = ByteBuffer.allocate(100000);
+  //  private ByteBuffer clientResponse = ByteBuffer.allocate(100000);
     private String tagClientResponse = null;
 
     private final XmppData data;
@@ -61,8 +61,10 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
         if(sentAuth){
             System.out.println("meto en el client response el buffer " + new String(readBuffer.array(), readBuffer.position(),readBuffer.limit()));
-            clientResponse = readBuffer.duplicate();
-            System.out.println("lo uqe tengo en el client response " + new String(clientResponse.array(), clientResponse.position(), clientResponse.position()));
+            retBuffer.clear();
+            retBuffer = readBuffer.duplicate();
+
+            System.out.println("lo uqe tengo en el client response " + new String(retBuffer.array(), retBuffer.position(), retBuffer.position()));
         }
 
 
@@ -82,11 +84,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
             // TODO: Mandarle algo al cliente y cerrarlo
         } else if (ret == 1) {
 
-            System.out.println("TERMINO");
-            System.out.println("TERMINO");
-            System.out.println("TERMINO");
-
-            other.requestWrite(clientResponse);
+            other.requestWrite(retBuffer);
 
             //TODOOOOOO!!!!!!!!!!!!!
             // TODO: crear nuevos handlers
@@ -152,7 +150,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
                         sentAuth = true;
                     }
                     if(sentAuth){
-                        other.requestWrite(clientResponse);
+                        other.requestWrite(retBuffer);
                     }
 
                     break;
@@ -223,7 +221,6 @@ public class XmppServerNegotiator implements ProtocolHandler {
             String ret = "<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">" + user64 + "</auth>";
             retBuffer.clear(); //TODO ?
             retBuffer = ByteBuffer.wrap(ret.getBytes());
-            hasToWrite = true;
             haveToSendAuth = true;
             System.out.println("mando el auth");
             return NegotiationStatus.IN_PROCESS;
