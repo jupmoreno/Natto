@@ -68,6 +68,8 @@ public class MultiProtocolServer implements Server {
         }
 
         public MultiProtocolServer build() {
+            checkState(!sockets.isEmpty(), "Should at least add one protocol");
+
             return new MultiProtocolServer(sockets, dispatcher);
         }
     }
