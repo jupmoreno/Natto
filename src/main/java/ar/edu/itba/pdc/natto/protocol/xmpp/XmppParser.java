@@ -89,35 +89,27 @@ public class XmppParser implements ProtocolHandler {
             while (parser.hasNext()) {
                 switch (parser.next()) {
                     case AsyncXMLStreamReader.START_DOCUMENT:
-                        System.out.println("start document");
                         handleStartDocument();
                         break;
 
                     case AsyncXMLStreamReader.START_ELEMENT:
-                        System.out.println("start element " + parser.getName());
                         handleStartElement();
                         break;
 
                     case AsyncXMLStreamReader.CHARACTERS:
-                        System.out.println("Character: " + parser.getText());
                         handleCharacters();
                         break;
 
                     case AsyncXMLStreamReader.END_ELEMENT:
-                        System.out.println("End element: " + parser.getName());
                         handleEndElement();
                         break;
 
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        System.out.println("Incomplete!");
-                        System.out.println("devuelvo sb " + sb);
-                        //   buffer.clear();
                         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
                         sb.setLength(0);
                         return ret;
 
                     case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
-                        System.out.println("PROCESSING instruction");
                         break;
 
                     default:
@@ -128,7 +120,8 @@ public class XmppParser implements ProtocolHandler {
             return handleWrongFormat();
 
         }
-        System.out.println("porque devuelvo aca? ojo");
+
+        //TODO ?
         ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
         sb.setLength(0);
         return ret;
