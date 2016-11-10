@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.stream.XMLStreamException;
+import javax.xml.ws.soap.SOAPBinding;
 import java.nio.ByteBuffer;
 
 public class XmppServerNegotiator implements ProtocolHandler {
@@ -24,6 +25,8 @@ public class XmppServerNegotiator implements ProtocolHandler {
     private boolean inMech = false;
     private boolean hasPlain = false;
     private boolean hasToWrite = false;
+
+    private boolean haveToSendAuth = false;
     private boolean sentAuth = false;
 
     private boolean verified = false;
@@ -53,7 +56,18 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     @Override
     public void afterRead(Connection me, Connection other, ByteBuffer readBuffer) {
-        int ret = handshake(me, readBuffer);
+
+        System.out.println("el buffer que me entra es " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
+
+        if(sentAuth){
+            System.out.println("meto en el client response el buffer " + new String(readBuffer.array(), readBuffer.position(),readBuffer.limit()));
+            clientResponse = readBuffer.duplicate();
+            System.out.println("lo uqe tengo en el client response " + new String(clientResponse.array(), clientResponse.position(), clientResponse.position()));
+        }
+
+
+        int ret = handshake(me, other, readBuffer);
+
 
         if (ret == -1) {
             // TODO Error
@@ -68,11 +82,19 @@ public class XmppServerNegotiator implements ProtocolHandler {
             // TODO: Mandarle algo al cliente y cerrarlo
         } else if (ret == 1) {
 
+            System.out.println("TERMINO");
+            System.out.println("TERMINO");
+            System.out.println("TERMINO");
+
+            other.requestWrite(clientResponse);
+
             //TODOOOOOO!!!!!!!!!!!!!
             // TODO: crear nuevos handlers
             me.setHandler(new XmppParser(data));
             me.requestRead();
+
             // TODO: JP!
+
             other.setHandler(new XmppParser(data));
             other.requestRead();
 //            other.requestWrite(ByteBuffer.wrap("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes()));
@@ -90,15 +112,17 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     }
 
-    public int handshake(Connection connection, ByteBuffer readBuffer) {
+    public int handshake(Connection me, Connection other,  ByteBuffer readBuffer) {
 
+        System.out.println("Entro a handshake");
         NegotiationStatus readResult = NegotiationStatus.INCOMPLETE;
 
         if (reader.getInputFeeder().needMoreInput()) {
             try {
+                System.out.println("lo feedeo asique no deberia estar incomplete (?)");
                 reader.getInputFeeder().feedInput(readBuffer);
             } catch (XMLStreamException e) {
-                return handleWrongFormat(connection);
+                return handleWrongFormat(me);
             }
         }
 
@@ -107,35 +131,43 @@ public class XmppServerNegotiator implements ProtocolHandler {
             try {
                 readResult = generateResp();
             } catch (XMLStreamException e) {
-                return handleWrongFormat(connection);
+                return handleWrongFormat(me);
             }
 
 
             switch (readResult) {
                 case FINISHED:
                     verified = true;
-                    retBuffer.clear();
                     return 1;
 
                 case IN_PROCESS:
+                    System.out.println("in process");
                     if (hasToWrite) {
-                        connection.requestWrite(retBuffer);
-                        retBuffer.clear();
+                        me.requestWrite(retBuffer);
                         hasToWrite = false;
+                    }
+                    if(haveToSendAuth){
+                        me.requestWrite(retBuffer);
+                        haveToSendAuth = false;
+                        sentAuth = true;
+                    }
+                    if(sentAuth){
+                        other.requestWrite(clientResponse);
                     }
 
                     break;
 
                 case INCOMPLETE:
-                    connection.requestRead();
+                    System.out.println("incomplete");
+                    me.requestRead();
                     return 0;
 
                 case ERR:
+                    System.out.println("error");
                     if (hasToWrite) {
-                        connection.requestWrite(retBuffer);
-                        retBuffer.clear();
+                        me.requestWrite(retBuffer);
                     }
-                    connection.requestClose();
+                    me.requestClose();
             }
 
         }
@@ -157,18 +189,22 @@ public class XmppServerNegotiator implements ProtocolHandler {
                     break;
 
                 case AsyncXMLStreamReader.START_ELEMENT:
+                    System.out.println("start element");
                     return handleStartElement();
 
                 case AsyncXMLStreamReader.CHARACTERS:
+                    System.out.println("characters");
                     if (inMech && reader.getText().equals("PLAIN")) {
                         hasPlain = true;
                     }
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
+                    System.out.println("end element");
                     return handleEndElement();
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
+                    System.out.println("entr oa ca a incomplete???");
                     return NegotiationStatus.INCOMPLETE;
 
                 default:
@@ -185,26 +221,33 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
         if (reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")) {
             String ret = "<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">" + user64 + "</auth>";
+            retBuffer.clear(); //TODO ?
             retBuffer = ByteBuffer.wrap(ret.getBytes());
             hasToWrite = true;
-            sentAuth = true;
+            haveToSendAuth = true;
+            System.out.println("mando el auth");
             return NegotiationStatus.IN_PROCESS;
         }
         if (reader.getName().equals("mechanisms")) {
             inMech = false;
         }
 
-        if(sentAuth && tagClientResponse != null && tagClientResponse.equals(reader.getName())){
-            StringBuilder closingTag = new StringBuilder("</");
-//            if(!reader.getPrefix().equals("")){
-//                closingTag.append(reader.getPrefix())
-//            }
+        if(sentAuth && tagClientResponse != null && tagClientResponse.equals(reader.getName().toString())){
+            System.out.println("ACA TERMINO");
+            return NegotiationStatus.FINISHED;
 
         }
 
-        if (reader.getLocalName().equals("success") && hasPlain) {
+        if(sentAuth && tagClientResponse == null){
+            System.out.println("me llego el tag ultimo que dice successss !!!!");
             return NegotiationStatus.FINISHED;
         }
+
+
+
+//        if (reader.getLocalName().equals("success") && hasPlain) {
+//            return NegotiationStatus.FINISHED;
+//        }
 
         //TODO pensar bien que resp:
         return NegotiationStatus.IN_PROCESS;
@@ -212,6 +255,11 @@ public class XmppServerNegotiator implements ProtocolHandler {
     }
 
     private NegotiationStatus handleStartElement() {
+
+        if(sentAuth && tagClientResponse == null){
+            System.out.println("el primer tag que le voy a mandar al cliente es "+reader.getName().toString());
+            tagClientResponse = reader.getName().toString();
+        }
 
         if (reader.getLocalName().equals("mechanism")) {
             inMech = true;

@@ -65,6 +65,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
             InetSocketAddress serverAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort());
             XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user);
 
+            System.out.println("conecto con el servidor");
             try {
                 me.requestConnect(serverAddress, serverNegotiator);
             } catch (IOException exception) {
