@@ -13,8 +13,8 @@ public class NttpHandler implements ProtocolHandler {
     private NttpProtocol protocol;
     private NttpParser parser;
 
-    public NttpHandler(XmppData xmppData) {
-        protocol = new NttpProtocol(xmppData);
+    public NttpHandler(NttpData nttpData, XmppData xmppData) {
+        protocol = new NttpProtocol(nttpData, xmppData);
         parser = new NttpParser();
     }
 

@@ -14,14 +14,15 @@ public class Config {
     private final FileBasedConfigurationBuilder<XMLConfiguration> builder;
     private final XMLConfiguration config;
 
-    private int pspPort;
+    private int nttpPort;
+    private final Map<String, String> nttpUsers;
 
     private int xmppPort;
     private boolean xmppSilenceEnabled;
-    private Set<String> xmppSilencedUsers;
+    private final Set<String> xmppSilencedUsers;
     private boolean xmppTransformationEnabled;
     private NetAddress xmppDefaultServer;
-    private Map<String, NetAddress> xmppUserServers;
+    private final Map<String, NetAddress> xmppUserServers;
 
     public Config(String path) throws ConfigurationException {
         Configurations configs = new Configurations();
@@ -29,9 +30,27 @@ public class Config {
         builder = configs.xmlBuilder(path);
         config = builder.getConfiguration();
 
-        pspPort = config.getInt("psp.port", Defaults.PSP_PORT);
-        if (!NetAddress.isValidPort(pspPort)) {
-            pspPort = Defaults.PSP_PORT;
+        nttpPort = config.getInt("psp.port", Defaults.PSP_PORT);
+        if (!NetAddress.isValidPort(nttpPort)) {
+            nttpPort = Defaults.PSP_PORT;
+        }
+
+        nttpUsers = new HashMap<>();
+        List<HierarchicalConfiguration<ImmutableNode>> nttpUsersPasswords =
+                config.configurationsAt("psp.passwords.password");
+        for (HierarchicalConfiguration nttpUserPassword : nttpUsersPasswords) {
+            String user = nttpUserPassword.getString("[@user]", null);
+
+            if (user != null) {
+                String password = nttpUserPassword.getString(".", null);
+
+                if (password != null) {
+                    nttpUsers.put(user, password);
+                }
+            }
+        }
+        if (nttpUsers.isEmpty()) {
+            nttpUsers.put("admin", "admin");
         }
 
         xmppPort = config.getInt("xmpp.port", Defaults.XMPP_PORT);
@@ -80,14 +99,14 @@ public class Config {
         }
     }
 
-    public void setPspPort(int pspPort) {
-        if (NetAddress.isValidPort(pspPort)) {
-            this.pspPort = pspPort;
+    public void setNttpPort(int nttpPort) {
+        if (NetAddress.isValidPort(nttpPort)) {
+            this.nttpPort = nttpPort;
         }
     }
 
-    public int getPspPort() {
-        return pspPort;
+    public int getNttpPort() {
+        return nttpPort;
     }
 
     public void setXmppPort(int xmppPort) {
@@ -134,7 +153,19 @@ public class Config {
         return xmppUserServers;
     }
 
+    public Map<String, String> getNttpUsers() {
+        return nttpUsers;
+    }
+
     public void save() throws ConfigurationException {
+        config.clearTree("psp.passwords");
+        for (String user : nttpUsers.keySet()) {
+            String password = nttpUsers.get(user);
+
+            config.addProperty("psp.passwords.password(-1)", password);
+            config.addProperty("psp.passwords.password[@user]", user);
+        }
+
         config.clearTree("xmpp.silenced");
         config.addProperty("xmpp.silenced[@enabled]", xmppSilenceEnabled);
 

@@ -5,8 +5,10 @@ import ar.edu.itba.pdc.natto.config.Config;
 import ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher;
 import ar.edu.itba.pdc.natto.dispatcher.Dispatcher;
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory;
+import ar.edu.itba.pdc.natto.protocol.nttp.NttpData;
 import ar.edu.itba.pdc.natto.protocol.nttp.NttpHandlerFactory;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
+import ar.edu.itba.pdc.natto.protocol.xmpp.XmppHandlerFactory;
 import ar.edu.itba.pdc.natto.proxy.MultiProtocolServer;
 import ar.edu.itba.pdc.natto.proxy.Server;
 import org.apache.commons.configuration2.ex.ConfigurationException;
@@ -48,14 +50,15 @@ public class Main {
 
     private static void startServer(Config config) {
         XmppData xmppData = new XmppData(config.getXmppUserServers(), config.getXmppSilencedUsers());
+        NttpData nttpData = new NttpData(config.getNttpUsers());
 
-        // TODO: Crear factories de cada protocolo
-        ProtocolHandlerFactory nttpHandlerFactory = new NttpHandlerFactory(xmppData);
+        ProtocolHandlerFactory nttpHandlerFactory = new NttpHandlerFactory(nttpData, xmppData);
+        ProtocolHandlerFactory xmppHandlerFactory = new XmppHandlerFactory(xmppData);
 
         try (Dispatcher dispatcher = new ConcreteDispatcher()) {
             Server proxyServer = new MultiProtocolServer.Builder(dispatcher)
                     .addProtocol(1081, nttpHandlerFactory)
-                    // TODO: Add protocols
+                    .addProtocol(1080, xmppHandlerFactory)
                     .build();
 
             try {
@@ -73,12 +76,12 @@ public class Main {
     }
 
     private static void fillConfigWithArguments(Config configuration, Arguments arguments) {
-        if (arguments.getProxyPspPort() != null) {
-            configuration.setPspPort(arguments.getProxyPspPort());
+        if (arguments.getNttpPort() != null) {
+            configuration.setNttpPort(arguments.getNttpPort());
         }
 
-        if (arguments.getProxyXmppPort() != null) {
-            configuration.setXmppPort(arguments.getProxyXmppPort());
+        if (arguments.getXmppPort() != null) {
+            configuration.setXmppPort(arguments.getXmppPort());
         }
 
         if (arguments.getServerAddress() != null) {

@@ -1,7 +1,7 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
-import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory;
+import ar.edu.itba.pdc.natto.protocol.nttp.NttpHandler;
 
 public class XmppHandlerFactory implements ProtocolHandlerFactory {
 
@@ -12,7 +12,7 @@ public class XmppHandlerFactory implements ProtocolHandlerFactory {
     }
 
     @Override
-    public ProtocolHandler get() {
+    public XmppClientNegotiator get() {
         return new XmppClientNegotiator(data);
     }
 }

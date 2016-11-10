@@ -6,7 +6,9 @@ import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
 public class NttpProtocol implements Protocol<StringBuilder> {
 
     private StringBuilder sb;
-    private XmppData xmppData;
+
+    private final NttpData nttpData;
+    private final XmppData xmppData;
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto y helps.
@@ -31,7 +33,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             "Shows the silenced users.",
     };
 
-    public NttpProtocol(XmppData xmppData) {
+    public NttpProtocol(NttpData nttpData, XmppData xmppData) {
+        this.nttpData = nttpData;
         this.xmppData = xmppData;
     }
 

@@ -16,11 +16,11 @@ public class Arguments {
 
     @Option(name = "--xmpp-port", metaVar = "<port>", usage = "Sets the proxy's XMPP listening"
             + " port number")
-    private Integer proxyXmppPort;
+    private Integer xmppPort;
 
-    @Option(name = "--psp-port", metaVar = "<port>", usage = "Sets the proxy's PSP listening"
+    @Option(name = "--nttp-port", metaVar = "<port>", usage = "Sets the proxy's NTTP listening"
             + " port number")
-    private Integer proxyPspPort;
+    private Integer nttpPort;
 
     @Option(name = "--config-file", aliases = {"-c"}, metaVar = "<path>",
             usage = "Sets the proxy's config file")
@@ -51,12 +51,12 @@ public class Arguments {
         return serverPort;
     }
 
-    public Integer getProxyXmppPort() {
-        return proxyXmppPort;
+    public Integer getXmppPort() {
+        return xmppPort;
     }
 
-    public Integer getProxyPspPort() {
-        return proxyPspPort;
+    public Integer getNttpPort() {
+        return nttpPort;
     }
 
     public String getConfigPath() {
