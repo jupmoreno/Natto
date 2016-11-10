@@ -143,7 +143,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
             readBuffer.flip();
             handler.afterRead(this, connection, readBuffer);
-            // TODO: buffer.clear(); (?.
+            readBuffer.clear();
         }
     }
 

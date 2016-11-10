@@ -1,11 +1,12 @@
 package ar.edu.itba.pdc.natto.protocol.nttp;
 
+import ar.edu.itba.pdc.natto.protocol.Parser;
+
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
-
-public class NttpParser {
+public class NttpParser implements Parser<StringBuilder> {
 
     private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
     private StringBuilder ret = new StringBuilder();
@@ -22,7 +23,7 @@ public class NttpParser {
         int moved = 0;
         CharBuffer charBuffer = StandardCharsets.UTF_8.decode(buffer);
 
-        if(!charBuffer.hasRemaining()){
+        if (!charBuffer.hasRemaining()) {
             return null;
         }
 
@@ -47,19 +48,18 @@ public class NttpParser {
             foundCommand = true;
         }
 
-        if(foundCommand){
+        if (foundCommand) {
             ret.setLength(0);
             foundCommand = false;
         }
 
 
-
-        while(charBuffer.hasRemaining() && (current = charBuffer.get()) != '\n'){
+        while (charBuffer.hasRemaining() && (current = charBuffer.get()) != '\n') {
             ret.append(current);
             moved++;
             System.out.println(buffer);
 
-            if(ret.length() > MAX_SIZE){
+            if (ret.length() > MAX_SIZE) {
                 handleTooBig();
                 System.out.println("Devuelvo " + ret);
                 buffer.position(originalPosition + moved);
@@ -67,7 +67,7 @@ public class NttpParser {
             }
         }
 
-        if(current == '\n'){
+        if (current == '\n') {
             foundCommand = true;
             System.out.println("Devuelvo " + ret);
             buffer.position(originalPosition + moved + 1);
