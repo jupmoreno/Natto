@@ -2,15 +2,19 @@ package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
+import ar.edu.itba.pdc.natto.proxy.handlers.impl.Acceptor;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 
 public class XmppServerNegotiator implements ProtocolHandler {
+    private static final Logger logger = LoggerFactory.getLogger(XmppServerNegotiator.class);
 
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
@@ -20,12 +24,30 @@ public class XmppServerNegotiator implements ProtocolHandler {
     private boolean inMech = false;
     private boolean hasPlain = false;
     private boolean hasToWrite = false;
+    private boolean sentAuth = false;
 
     private boolean verified = false;
     private String user64;
+    private String username;
+
+    private ByteBuffer clientResponse = ByteBuffer.allocate(100000);
+    private String tagClientResponse = null;
+
+    private final XmppData data;
+
+    public XmppServerNegotiator(XmppData data, String user64, String username) {
+        this.user64 = user64;
+        this.username = username;
+        this.data = data;
+    }
+
 
     @Override
     public void afterConnect(Connection me, Connection other) {
+        me.requestWrite(ByteBuffer.wrap(("<?xml version=\"1.0\"?>" +
+                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" " +
+                "version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" " +
+                "xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
 
     }
 
@@ -36,17 +58,30 @@ public class XmppServerNegotiator implements ProtocolHandler {
         if (ret == -1) {
             // TODO Error
             me.requestClose();
+            other.requestWrite(ByteBuffer.wrap(("<stream:error>" +
+                    "<internal-server-error xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>" +
+                    "</stream:error>" +
+                    "</stream:stream>").getBytes()));
+            other.requestClose();
+
+
             // TODO: Mandarle algo al cliente y cerrarlo
         } else if (ret == 1) {
+
+            //TODOOOOOO!!!!!!!!!!!!!
             // TODO: crear nuevos handlers
-            me.setHandler(null);
+            me.setHandler(new XmppParser(data));
+            me.requestRead();
             // TODO: JP!
-            other.setHandler(null);
+            other.setHandler(new XmppParser(data));
+            other.requestRead();
+//            other.requestWrite(ByteBuffer.wrap("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes()));
         }
     }
 
     @Override
     public void afterWrite(Connection me, Connection other) {
+        me.requestRead();
 
     }
 
@@ -59,7 +94,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
         NegotiationStatus readResult = NegotiationStatus.INCOMPLETE;
 
-        if(reader.getInputFeeder().needMoreInput()){
+        if (reader.getInputFeeder().needMoreInput()) {
             try {
                 reader.getInputFeeder().feedInput(readBuffer);
             } catch (XMLStreamException e) {
@@ -67,7 +102,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
             }
         }
 
-        while(readResult != NegotiationStatus.FINISHED) {
+        while (readResult != NegotiationStatus.FINISHED) {
 
             try {
                 readResult = generateResp();
@@ -76,15 +111,14 @@ public class XmppServerNegotiator implements ProtocolHandler {
             }
 
 
-            switch (readResult){
+            switch (readResult) {
                 case FINISHED:
                     verified = true;
                     retBuffer.clear();
-                    //TODO: habilitar que el cliente pueda escribir en el servidor
                     return 1;
 
                 case IN_PROCESS:
-                    if(hasToWrite){
+                    if (hasToWrite) {
                         connection.requestWrite(retBuffer);
                         retBuffer.clear();
                         hasToWrite = false;
@@ -97,7 +131,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
                     return 0;
 
                 case ERR:
-                    if(hasToWrite){
+                    if (hasToWrite) {
                         connection.requestWrite(retBuffer);
                         retBuffer.clear();
                     }
@@ -126,7 +160,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
                     return handleStartElement();
 
                 case AsyncXMLStreamReader.CHARACTERS:
-                    if(inMech && reader.getText().equals("PLAIN")){
+                    if (inMech && reader.getText().equals("PLAIN")) {
                         hasPlain = true;
                     }
                     break;
@@ -147,19 +181,28 @@ public class XmppServerNegotiator implements ProtocolHandler {
     }
 
 
-    private NegotiationStatus handleEndElement(){
+    private NegotiationStatus handleEndElement() {
 
-        if(reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")){
+        if (reader.getPrefix().equals("stream") && reader.getLocalName().equals("features")) {
             String ret = "<auth xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\" mechanism=\"PLAIN\">" + user64 + "</auth>";
             retBuffer = ByteBuffer.wrap(ret.getBytes());
             hasToWrite = true;
+            sentAuth = true;
             return NegotiationStatus.IN_PROCESS;
         }
-        if(reader.getName().equals("mechanisms")){
+        if (reader.getName().equals("mechanisms")) {
             inMech = false;
         }
 
-        if(reader.getLocalName().equals("success") && hasPlain){
+        if(sentAuth && tagClientResponse != null && tagClientResponse.equals(reader.getName())){
+            StringBuilder closingTag = new StringBuilder("</");
+//            if(!reader.getPrefix().equals("")){
+//                closingTag.append(reader.getPrefix())
+//            }
+
+        }
+
+        if (reader.getLocalName().equals("success") && hasPlain) {
             return NegotiationStatus.FINISHED;
         }
 
@@ -168,13 +211,13 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     }
 
-    private NegotiationStatus handleStartElement(){
+    private NegotiationStatus handleStartElement() {
 
-        if(reader.getLocalName().equals("mechanism")){
+        if (reader.getLocalName().equals("mechanism")) {
             inMech = true;
         }
 
-        if(reader.getLocalName().equals("message") || reader.getLocalName().equals("iq") || reader.getLocalName().equals("presence")){
+        if (reader.getLocalName().equals("message") || reader.getLocalName().equals("iq") || reader.getLocalName().equals("presence")) {
             return handleNotAuthorized();
         }
 
@@ -186,10 +229,11 @@ public class XmppServerNegotiator implements ProtocolHandler {
     /**Error Handlers**/
 
     //TODO:cerrar connection
+
     /**
      * RFC 4.9.3.1.  bad-format
      */
-    private int handleWrongFormat(Connection connection){
+    private int handleWrongFormat(Connection connection) {
         connection.requestWrite(ByteBuffer.wrap("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
         System.out.println("ERROR DE XML DE NEGOCIACION ADENTRO DEL NEGOTIATOR SERVER");
         return -1;
@@ -198,10 +242,11 @@ public class XmppServerNegotiator implements ProtocolHandler {
     }
 
     //TODO:cierro conenection!
+
     /**
      * RFC 4.9.3.12.  not-authorized
      */
-    private NegotiationStatus handleNotAuthorized(){
+    private NegotiationStatus handleNotAuthorized() {
         retBuffer.clear();
         retBuffer = ByteBuffer.wrap("<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
         hasToWrite = true;

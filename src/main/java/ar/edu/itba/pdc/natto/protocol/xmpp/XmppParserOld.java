@@ -212,26 +212,7 @@
 //    }
 //
 //
-//    /**Error Handlers**/
 //
-//    /**
-//     * RFC 4.9.3.1.  bad-format
-//     */
-//    private ByteBuffer handleWrongFormat() {
-//        sb.setLength(0);
-//
-//        //TODO: ver bien que poner en el stream inicial si rompe todo
-//        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
-//        if(initialSetup){
-//            sb.append("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>");
-//        }
-//        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
-//        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-//        sb.setLength(0);
-//        //TODO: cerrar connection etc
-//
-//        return ret;
-//    }
 //
 //
 //}

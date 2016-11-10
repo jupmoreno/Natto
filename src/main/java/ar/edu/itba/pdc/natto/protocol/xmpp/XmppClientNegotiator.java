@@ -7,6 +7,8 @@ import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
@@ -19,6 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 // ASK: No hay q usar encode?
 public class XmppClientNegotiator implements ProtocolHandler {
+    private static final Logger logger = LoggerFactory.getLogger(XmppClientNegotiator.class);
 
     private final XmppData data;
 
@@ -51,29 +54,23 @@ public class XmppClientNegotiator implements ProtocolHandler {
         int ret = handshake(me, readBuffer);
 
         if (ret == -1) {
-            // TODO Error
+            //TODO HACER ALGO MAS JP????
+            logger.error("Failed to parse xmpp message");
             me.requestClose();
         } else if (ret == 1) {
-            // FIXME: Mandar success cuando se termine de conectar con el servidor, sino no autentifica si el usuario es valido con su contraseña
-            me.requestWrite(ByteBuffer.wrap("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes()));
             verified = true;
             NetAddress netAddress = data.getUserAddress(user);
             InetSocketAddress socketAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort());
 
-            try {
-                InetSocketAddress serverAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort());
+            InetSocketAddress serverAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort());
+            XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user);
 
-                // TODO: Cambiar null por NegotiationServer
-                // TODO: Pasar el usuario al NegotiationServer (en el constructor)
-                me.requestConnect(serverAddress, null);
-                // TODO: Poner en NegotiationServer after connect
-//                        server.requestWrite(ByteBuffer.wrap(("<?xml version=\"1.0\"?>\n" +
-//                                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" " +
-//                                "version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" " +
-//                                "xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
+            try {
+                me.requestConnect(serverAddress, serverNegotiator);
             } catch (IOException exception) {
-                // TODO: Handle exception
-                exception.printStackTrace();
+                logger.error("Failed to request server connection", exception);
+                me.requestClose();
+                // TODO: Hacer algo mas? JP
             }
         }
     }
@@ -248,8 +245,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
 
         appendNamespaces();
 
-        // FIXME: Sacar startttls
-        retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
+        retBuffer.put("><stream:features><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
         retBuffer.put("<mechanism>PLAIN</mechanism></mechanisms>".getBytes());
 
         retBuffer.put("<compression xmlns=\"http://jabber.org/features/compress\">".getBytes());
@@ -257,8 +253,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
 
         retBuffer.put("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>".getBytes());
 
-        // TODO: Register hacerlo o sacarlo?
-        retBuffer.put("<register xmlns=\"http://jabber.org/features/iq-register\"/></stream:features>".getBytes());
+        retBuffer.put("</stream:features>".getBytes());
 
         return NegotiationStatus.IN_PROCESS;
     }
@@ -278,19 +273,15 @@ public class XmppClientNegotiator implements ProtocolHandler {
 
         try {
             user = new String(Base64.getDecoder().decode(user64), UTF_8);
+            String[] userAndPass = user.split(String.valueOf('\0'), 3);
+            user = userAndPass[1];
         } catch (Exception e) {
             return handleInvalidUser();
         }
-
-        String[] userAndPass = user.split(String.valueOf('\0'));
-        user = userAndPass[1];
         return NegotiationStatus.FINISHED;
     }
 
     /**Error Handlers**/
-
-
-    //TODO: CERRAR CONNECTION ETC
 
     /**
      * RFC 4.9.3.25.  unsupported-version
@@ -305,7 +296,6 @@ public class XmppClientNegotiator implements ProtocolHandler {
         return NegotiationStatus.ERR;
     }
 
-    //TODO: IDEM CONNECTION
 
     /**
      * RFC 4.9.3.1.  bad-format
@@ -322,8 +312,6 @@ public class XmppClientNegotiator implements ProtocolHandler {
         return -1;
     }
 
-    //TODO:cierro connection!
-
     /**
      * RFC 4.9.3.12.  not-authorized
      */
@@ -337,8 +325,6 @@ public class XmppClientNegotiator implements ProtocolHandler {
         return NegotiationStatus.ERR;
     }
 
-
-    //TODO cierro connection!
 
     /**
      * RFC 4.9.3.22.  unsupported-encoding
