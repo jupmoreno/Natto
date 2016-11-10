@@ -17,6 +17,7 @@ import java.util.Base64;
 import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+// ASK: No hay q usar encode?
 public class XmppClientNegotiator implements ProtocolHandler {
 
     private final XmppData data;
@@ -53,6 +54,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
             // TODO Error
             me.requestClose();
         } else if (ret == 1) {
+            // FIXME: Mandar success cuando se termine de conectar con el servidor, sino no autentifica si el usuario es valido con su contraseña
             me.requestWrite(ByteBuffer.wrap("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes()));
             verified = true;
             NetAddress netAddress = data.getUserAddress(user);
@@ -246,6 +248,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
 
         appendNamespaces();
 
+        // FIXME: Sacar startttls
         retBuffer.put("><stream:features><starttls xmlns=\"urn:ietf:params:xml:ns:xmpp-tls\"></starttls><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
         retBuffer.put("<mechanism>PLAIN</mechanism></mechanisms>".getBytes());
 
@@ -253,11 +256,12 @@ public class XmppClientNegotiator implements ProtocolHandler {
         retBuffer.put("<method>zlib</method></compression>".getBytes());
 
         retBuffer.put("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>".getBytes());
+
+        // TODO: Register hacerlo o sacarlo?
         retBuffer.put("<register xmlns=\"http://jabber.org/features/iq-register\"/></stream:features>".getBytes());
 
         return NegotiationStatus.IN_PROCESS;
     }
-
 
     private void appendNamespaces() {
         for (int i = 0; i < reader.getNamespaceCount(); i++) {
@@ -278,12 +282,10 @@ public class XmppClientNegotiator implements ProtocolHandler {
             return handleInvalidUser();
         }
 
-        String[] userAndPass = user64.split(String.valueOf((char) 0));
+        String[] userAndPass = user.split(String.valueOf('\0'));
         user = userAndPass[1];
         return NegotiationStatus.FINISHED;
-
     }
-
 
     /**Error Handlers**/
 
