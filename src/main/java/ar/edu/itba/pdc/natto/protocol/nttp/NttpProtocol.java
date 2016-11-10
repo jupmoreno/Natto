@@ -13,7 +13,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto y helps.
     private final static String[] commands = {"help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced",};
-    private String[] authenticationMethods = {"plain",};
+    private String[] authenticationMethods = {"simple",};
     private String[] metrics = {"bytes", "accesses",};
     private String authMethod = "";
     private String user = "";
@@ -109,6 +109,16 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleAuth(String[] messageVec) {
+
+        if(messageVec.length == 1){
+            if(user != ""){
+                formulateResponse(NttpCode.ALREADY_AUTHORIZED, null);
+                return;
+            }
+
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[0]});
+        }
+
         if (messageVec.length >= 2 && messageVec[1].compareToIgnoreCase("--methods") == 0) {
 
             if (messageVec.length != 2) {
@@ -127,8 +137,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
                 return;
             }
 
-            if (messageVec[2].compareToIgnoreCase("plain") == 0) {
-                authMethod = "plain";
+            if (messageVec[2].compareToIgnoreCase("simple") == 0) {
+                authMethod = "simple";
                 formulateResponse(NttpCode.GO_AHEAD, null);
                 return;
             } else {
@@ -149,8 +159,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             }
 
             //Ahora vaildo usuario y contraseña según el método
-            if (authMethod.compareToIgnoreCase("plain") == 0) {
-                if (plainAuth(messageVec[1], messageVec[2])) {
+            if (authMethod.compareToIgnoreCase("simple") == 0) {
+                if (simpleAuth(messageVec[1], messageVec[2])) {
                     formulateResponse(NttpCode.LOGGED_IN, null);
                     return;
                 } else {
@@ -161,16 +171,20 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
         }
 
-        formulateResponse(NttpCode.WHAT, null);
+        formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[1]});
 
 
     }
 
-    private boolean plainAuth(String user, String password) {
-        //TODO: autorizarse bien
-        this.user = user;
-        authorized = true;
-        return true;
+    private boolean simpleAuth(String user, String password) {
+        String pass = nttpData.getPassword(user);
+        if(pass != null && pass.equals(password)){
+            this.user = user;
+            authorized = true;
+            return true;
+        }
+
+        return false;
     }
 
     private void handleQuit(String[] messageVec) {
