@@ -38,6 +38,8 @@ public class NttpHandler implements ProtocolHandler {
                         me.requestClose(); //TODO: esta bien?
                     }
                 }
+            }else{
+                me.requestRead();
             }
 
         }
