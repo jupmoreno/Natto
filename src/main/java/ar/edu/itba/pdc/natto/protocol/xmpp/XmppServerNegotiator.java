@@ -33,7 +33,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
     private String user64;
     private String username;
 
-  //  private ByteBuffer clientResponse = ByteBuffer.allocate(100000);
+    //  private ByteBuffer clientResponse = ByteBuffer.allocate(100000);
     private String tagClientResponse = null;
 
     private final XmppData data;
@@ -59,18 +59,18 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
         System.out.println("el buffer que me entra es " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
 
-        if(sentAuth){
-            System.out.println("meto en el client response el buffer " + new String(readBuffer.array(), readBuffer.position(),readBuffer.limit()));
+        if (sentAuth) {
+            System.out.println("meto en el client response el buffer " + new String(readBuffer.array(), readBuffer.position(), readBuffer.limit()));
             retBuffer.clear();
             retBuffer = readBuffer.duplicate();
 
             System.out.println("lo uqe tengo en el client response " + new String(retBuffer.array(), retBuffer.position(), retBuffer.position()));
         }
 
-
         int ret = handshake(me, other, readBuffer);
 
 
+        System.out.println("salgo del handshake");
         if (ret == -1) {
             // TODO Error
             me.requestClose();
@@ -83,19 +83,18 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
             // TODO: Mandarle algo al cliente y cerrarlo
         } else if (ret == 1) {
-
-            other.requestWrite(retBuffer);
-
-            //TODOOOOOO!!!!!!!!!!!!!
-            // TODO: crear nuevos handlers
             me.setHandler(new XmppParser(data));
             me.requestRead();
 
             // TODO: JP!
 
+            other.requestWrite(retBuffer);
             other.setHandler(new XmppParser(data));
             other.requestRead();
-//            other.requestWrite(ByteBuffer.wrap("<success xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\"></success>".getBytes()));
+
+        } else if (ret == 0) {
+            System.out.println("requesteo leer");
+            me.requestRead();
         }
     }
 
@@ -110,7 +109,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     }
 
-    public int handshake(Connection me, Connection other,  ByteBuffer readBuffer) {
+    public int handshake(Connection me, Connection other, ByteBuffer readBuffer) {
 
         System.out.println("Entro a handshake");
         NegotiationStatus readResult = NegotiationStatus.INCOMPLETE;
@@ -140,16 +139,21 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
                 case IN_PROCESS:
                     System.out.println("in process");
+
                     if (hasToWrite) {
                         me.requestWrite(retBuffer);
+                        System.out.println("EN HAS TO WRITE ESCRIBO  " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
                         hasToWrite = false;
-                    }
-                    if(haveToSendAuth){
+
+                    } else if (haveToSendAuth) {
+                        System.out.println("EN HAS TO WRITE AUTh  " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
+                        System.out.println("estoy aca?");
                         me.requestWrite(retBuffer);
                         haveToSendAuth = false;
                         sentAuth = true;
-                    }
-                    if(sentAuth){
+
+                    } else if (sentAuth) {
+                        System.out.println("EN HAS TO WRITE OTRO CASo  " + new String(retBuffer.array(), retBuffer.position(), retBuffer.limit()));
                         other.requestWrite(retBuffer);
                     }
 
@@ -157,7 +161,6 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
                 case INCOMPLETE:
                     System.out.println("incomplete");
-                    me.requestRead();
                     return 0;
 
                 case ERR:
@@ -166,6 +169,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
                         me.requestWrite(retBuffer);
                     }
                     me.requestClose();
+                    return -1;
             }
 
         }
@@ -193,6 +197,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
                 case AsyncXMLStreamReader.CHARACTERS:
                     System.out.println("characters");
                     if (inMech && reader.getText().equals("PLAIN")) {
+                        System.out.println("tiene plain");
                         hasPlain = true;
                     }
                     break;
@@ -229,17 +234,22 @@ public class XmppServerNegotiator implements ProtocolHandler {
             inMech = false;
         }
 
-        if(sentAuth && tagClientResponse != null && tagClientResponse.equals(reader.getName().toString())){
-            System.out.println("ACA TERMINO");
-            return NegotiationStatus.FINISHED;
+        if (sentAuth && tagClientResponse != null && tagClientResponse.equals(reader.getName().toString())) {
+            if (reader.getLocalName().equals("success")) {
+                return NegotiationStatus.FINISHED;
+            }else{
+                return NegotiationStatus.ERR;
+            }
 
         }
 
-        if(sentAuth && tagClientResponse == null){
-            System.out.println("me llego el tag ultimo que dice successss !!!!");
-            return NegotiationStatus.FINISHED;
+        if (sentAuth && tagClientResponse == null) {
+            if (reader.getLocalName().equals("success")) {
+                return NegotiationStatus.FINISHED;
+            }else{
+                return NegotiationStatus.ERR;
+            }
         }
-
 
 
 //        if (reader.getLocalName().equals("success") && hasPlain) {
@@ -253,8 +263,8 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     private NegotiationStatus handleStartElement() {
 
-        if(sentAuth && tagClientResponse == null){
-            System.out.println("el primer tag que le voy a mandar al cliente es "+reader.getName().toString());
+        if (sentAuth && tagClientResponse == null) {
+            System.out.println("el primer tag que le voy a mandar al cliente es " + reader.getName().toString());
             tagClientResponse = reader.getName().toString();
         }
 
