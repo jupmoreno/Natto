@@ -3,9 +3,9 @@ package ar.edu.itba.pdc.natto.proxy.handlers.impl;
 import ar.edu.itba.pdc.natto.dispatcher.ChannelOperation;
 import ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber;
 import ar.edu.itba.pdc.natto.io.Closeables;
+import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler;
-import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,8 +14,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -25,7 +23,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     private static final Logger logger = LoggerFactory.getLogger(ProxyConnectionHandler.class);
 
     private static final int READ_BUFFER_SIZE = 1024;
-    private static final int WRITE_BUFFER_SIZE = 10000;
+    private static final int WRITE_BUFFER_SIZE = 1024;
 
     private final DispatcherSubscriber subscriber;
 
@@ -34,8 +32,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     private Connection connection;
 
     private final ByteBuffer readBuffer;
-    //    private final ByteBuffer writeBuffer; // TODO:
-    private final Queue<ByteBuffer> messages; // TODO: Remove (?
+    private final ByteBuffer writeBuffer;
 
     private boolean readRequested = false;
     private boolean closeRequested = false;
@@ -55,8 +52,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         this.connection = this;
 
         this.readBuffer = ByteBuffer.allocate(READ_BUFFER_SIZE);
-//        this.writeBuffer = ByteBuffer.allocate(WRITE_BUFFER_SIZE); // TODO: // TODO: Size protocolo dependiente?
-        this.messages = new ConcurrentLinkedQueue<>(); // TODO: Remove (?
+        this.writeBuffer = ByteBuffer.allocate(WRITE_BUFFER_SIZE);
     }
 
     @Override
@@ -148,21 +144,25 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     }
 
     @Override
-    public void requestWrite(ByteBuffer buffer) {
+    public void requestWrite(ByteBuffer source) {
         if (!channel.isConnectionPending()) {
+
+            while (writeBuffer.position() < writeBuffer.limit() && source.hasRemaining()) {
+                writeBuffer.put(source.get());
+            }
+
             subscriber.subscribe(channel, ChannelOperation.WRITE, this);
-            messages.offer(buffer); // TODO: Aca o afuera del if?
         }
     }
 
     @Override
     public void handle_write() {
-        checkState(!messages.isEmpty());
+        checkState(writeBuffer.position() != 0);
 
-        ByteBuffer buffer = messages.peek();
+        writeBuffer.flip();
 
         try {
-            channel.write(buffer);
+            channel.write(writeBuffer);
         } catch (IOException exception) {
             logger.error("Can't write to channel", exception);
 
@@ -171,19 +171,18 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
             return;
         }
 
-        if (!buffer.hasRemaining()) {
-            messages.remove();
+        if (!writeBuffer.hasRemaining()) {
+            subscriber.unsubscribe(channel, ChannelOperation.WRITE);
 
-            if (messages.isEmpty()) {
-                subscriber.unsubscribe(channel, ChannelOperation.WRITE);
-
-                if (closeRequested) {
-                    forceClose();
-                } else {
-                    handler.afterWrite(this, connection);
-                }
+            if (closeRequested) {
+                forceClose();
+                return;
             }
         }
+
+        writeBuffer.compact();
+
+        handler.afterWrite(this, connection);
     }
 
     @Override
@@ -200,7 +199,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         closeRequested = true;
         subscriber.unsubscribe(channel, ChannelOperation.READ);
 
-        if (messages.isEmpty()) {
+        if (writeBuffer.position() == 0) {
             handler.beforeClose(this, connection);
             Closeables.closeSilently(channel);
         }
