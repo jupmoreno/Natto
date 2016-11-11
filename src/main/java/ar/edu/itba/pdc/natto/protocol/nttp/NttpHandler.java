@@ -70,11 +70,11 @@ public class NttpHandler implements ProtocolHandler {
         String[] commandStrs = command.toString().split(" ");
 
         if (commandStrs.length == 4) {
-            return commandStrs[0].equals(".") && commandStrs[1].equals("10");
+            return commandStrs[0].equals(".") && commandStrs[1].equals("11");
         }
 
         if (commandStrs.length > 4) {
-            return commandStrs[1].equals(".") && commandStrs[2].equals("10");
+            return commandStrs[1].equals(".") && commandStrs[2].equals(NttpCode.BYE_BYE.getCode());
         }
 
         return false;

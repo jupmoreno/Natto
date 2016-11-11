@@ -105,6 +105,8 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
     @Override
     public void requestRead() {
+        checkState(channel.isOpen()); // TODO: Remove (jp)
+
         if (!channel.isConnectionPending()) {
             subscriber.subscribe(channel, ChannelOperation.READ, this);
         }
@@ -135,6 +137,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         }
 
         if (bytesRead > 0) {
+            checkState(channel.isOpen()); // TODO: Remove (jp)
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
             readBuffer.flip();
@@ -151,6 +154,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
                 writeBuffer.put(source.get());
             }
 
+            checkState(channel.isOpen()); // TODO: Remove (jp)
             subscriber.subscribe(channel, ChannelOperation.WRITE, this);
         }
     }
@@ -172,6 +176,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         }
 
         if (!writeBuffer.hasRemaining()) {
+            checkState(channel.isOpen()); // TODO: Remove (jp)
             subscriber.unsubscribe(channel, ChannelOperation.WRITE);
 
             if (closeRequested) {
@@ -197,6 +202,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         }
 
         closeRequested = true;
+        checkState(channel.isOpen()); // TODO: Remove (jp)
         subscriber.unsubscribe(channel, ChannelOperation.READ);
 
         if (writeBuffer.position() == 0) {

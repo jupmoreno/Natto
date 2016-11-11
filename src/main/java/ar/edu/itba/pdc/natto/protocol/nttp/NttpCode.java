@@ -13,7 +13,8 @@ public enum NttpCode {
     TRANSFORMATION_ENABLED('.', 7, "\"Transformation Enabled\""),
     TRANSFORMATION_DISABLED('.', 8, "\"Transformation Disabled\""),
     METRIC_METHODS('.', 9, "\"Metric methods\""),
-    BYE_BYE('.', 10, "\"Bye bye\""),
+    WELCOME('.', 10, "\"Welcome\""),
+    BYE_BYE('.', 11, "\"Bye bye\""),
     WHAT('?', 0, "\"What?\""),
     WRONG_ARGS('!', 0, "\"Wrong arguments\""),
     METHOD_NOT_SUPPORTED('!', 1, "\"Authentication method not supported\""),
@@ -24,6 +25,8 @@ public enum NttpCode {
     USER_ALREADY_UNSILENCED('!', 6, "\"This user was not silenced\""),
     MUST_AUTH('!', 7, "\"You need to authenticate\""),
     TOO_MUCH_OUTPUT('!', 8, "\"Too much output to process\""),
+    VERSION_NOT_SUPPORTED('!', 9, "\"Version not supported\""),
+    HELLO_FIRST('!', 10, "\"Hello first\""),
     SERVER_ERROR('X', 0, "\"Server Error\""),;
 
     private char type;

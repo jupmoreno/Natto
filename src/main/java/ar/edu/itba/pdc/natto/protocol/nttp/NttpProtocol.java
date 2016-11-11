@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.natto.protocol.nttp;
 
+import ar.edu.itba.pdc.natto.net.NetAddress;
 import ar.edu.itba.pdc.natto.protocol.Protocol;
 import ar.edu.itba.pdc.natto.protocol.xmpp.XmppData;
 
@@ -9,18 +10,21 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
     private final NttpData nttpData;
     private final XmppData xmppData;
+    private final static double supportedVersion = 1.1;
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto y helps.
-    private final static String[] commands = {"help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced",};
+    private final static String[] commands = {"hello", "help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced", "multiplex"};
     private String[] authenticationMethods = {"simple",};
     private String[] metrics = {"bytes", "accesses",};
     private String authMethod = "";
     private String user = "";
+    private boolean hello = false;
     private String[] helps = {
+            "Initiates dialog with the user. Needs the head values --version along with the version.",
             "Without parameter: shows all the available commands. With parameter @command: shows information about the use of @command",
-            "With head value --methods: shows the available authentication methods. " +
-                    "With head value --request and parameter @method: requests authentication by using the specified @method. +" +
+            "With head --methods and without value: shows the available authentication methods. " +
+                    "With head --request and value @method: requests authentication by using the specified @method. +" +
                     "With parameters @user and @password and after authentication requested: authenticates user with the specific @user and @password.",
             "Quits and ends connection.",
             "Recieves an @user as parameter. Silences @user",
@@ -28,9 +32,10 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             "Recieves a \"true\" or \"false\" as parameter. Enables l33t transformations if parameter is \"true\", or disables l33t transformations if parameter is \"false\".",
             "Without parameters: shows all available metrics. " +
                     "With parameter @metric: shows the information about @metric. +" +
-                    "With head value --methods and without parameters: shows the available metrics.",
+                    "With head --methods and without value: shows the available metrics.",
             "Shows the state of relevant variables.",
             "Shows the silenced users.",
+            "With parameters @user, @host and @port: changes host and port of the given @user.",
     };
 
     public NttpProtocol(NttpData nttpData, XmppData xmppData) {
@@ -64,6 +69,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             handleSilence(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("unsilence") == 0) {
             handleUnsilence(messageVec);
+        } else if (messageVec[0].compareToIgnoreCase("hello") == 0) {
+            handleHello(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("transformation") == 0) {
             handleTransformation(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("metrics") == 0) {
@@ -78,6 +85,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             handleState(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("getSilenced") == 0) {
             handleGetSilenced(messageVec);
+        } else if (messageVec[0].compareToIgnoreCase("multiplex") == 0) {
+            handleMultiplex(messageVec);
         } else {
             handleDefault();
         }
@@ -85,7 +94,50 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         return sb;
     }
 
+    private void handleHello(String[] messageVec) {
+
+        if(messageVec.length != 3){
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[0]});
+            return;
+        }
+
+        if(messageVec[1].compareToIgnoreCase("--version") != 0){
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[0]});
+            return;
+        }
+
+        double version = 0;
+
+        try{
+            version = Double.valueOf(messageVec[2]);
+        }catch (NumberFormatException e){
+            formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+            return;
+        }
+
+        if(version > supportedVersion){
+            formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+            return;
+        }else if(version < 0){
+            formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+            return;
+        }
+
+        hello = true;
+        authorized = false;
+        authMethod = "";
+        user = "";
+
+        formulateResponse(NttpCode.WELCOME, null);
+
+    }
+
     private void handleHelp(String[] messageVec) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
         if (messageVec.length == 1) {
             formulateResponse(NttpCode.OK, commands);
             return;
@@ -109,14 +161,19 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleAuth(String[] messageVec) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if(authorized){
+            formulateResponse(NttpCode.ALREADY_AUTHORIZED, null);
+            return;
+        }
 
         if(messageVec.length == 1){
-            if(user != ""){
-                formulateResponse(NttpCode.ALREADY_AUTHORIZED, null);
-                return;
-            }
-
             formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[0]});
+            return;
         }
 
         if (messageVec.length >= 2 && messageVec[1].compareToIgnoreCase("--methods") == 0) {
@@ -148,10 +205,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         }
 
         if (messageVec.length == 3) {
-            if (authorized) {
-                formulateResponse(NttpCode.ALREADY_AUTHORIZED, null);
-                return;
-            }
 
             if (authMethod.equals("")) {
                 formulateResponse(NttpCode.WITHOUT_AUTH_METHOD, new String[] {"Use auth --request to select the authentication method. Use auth --methods to see available authentication methods."});
@@ -160,7 +213,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
             //Ahora vaildo usuario y contraseña según el método
             if (authMethod.compareToIgnoreCase("simple") == 0) {
-                if (simpleAuth(messageVec[1], messageVec[2])) {
+                if (simpleAuth(messageVec[1], messageVec[2  ])) {
                     formulateResponse(NttpCode.LOGGED_IN, null);
                     return;
                 } else {
@@ -189,12 +242,13 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
     private void handleQuit(String[] messageVec) {
 
+
         if (messageVec.length != 1) {
             formulateResponse(NttpCode.WRONG_ARGS, null);
             return;
         }
 
-        if (user.equals("")) {
+        if (!authorized) {
             formulateResponse(NttpCode.BYE_BYE, null);
             return;
         }
@@ -208,7 +262,12 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleMetrics(String[] messageVec) {
-        if (user.equals("")) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
             formulateResponse(NttpCode.MUST_AUTH, null);
             return;
         }
@@ -240,7 +299,12 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleTransformation(String[] messageVec) {
-        if (user.equals("")) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
             formulateResponse(NttpCode.MUST_AUTH, null);
             return;
         }
@@ -264,7 +328,12 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleSilence(String[] messageVec) {
-        if (user.equals("")) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
             formulateResponse(NttpCode.MUST_AUTH, null);
             return;
         }
@@ -284,10 +353,13 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
     }
 
-
     private void handleUnsilence(String[] messageVec) {
-        System.out.println("el usuario que quiero unsilenciar es " + messageVec[1]);
-        if (user.equals("")) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
             formulateResponse(NttpCode.MUST_AUTH, null);
             return;
         }
@@ -306,8 +378,14 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         formulateResponse(NttpCode.USER_UNSILENCED, null);
     }
 
+
     private void handleGetSilenced(String[] messageVec) {
-        if (user.equals("")) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
             formulateResponse(NttpCode.MUST_AUTH, null);
             return;
         }
@@ -321,10 +399,16 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     }
 
     private void handleState(String[] messageVec) {
-        if (user.equals("")) {
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
             formulateResponse(NttpCode.MUST_AUTH, null);
             return;
         }
+
         if (messageVec.length != 1) {
             formulateResponse(NttpCode.WRONG_ARGS, null);
             return;
@@ -334,6 +418,44 @@ public class NttpProtocol implements Protocol<StringBuilder> {
                 "User: " + user,
         };
         formulateResponse(NttpCode.OK, states);
+    }
+
+    private void handleMultiplex(String[] messageVec) {
+
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
+            formulateResponse(NttpCode.MUST_AUTH, null);
+            return;
+        }
+
+        if(messageVec.length != 4){
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[10]});
+            return;
+        }
+
+        String user = messageVec[1];
+        String host = messageVec[2];
+        int port = 0;
+
+        try{
+            port = Integer.valueOf(messageVec[3]);
+        }catch (NumberFormatException e){
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[10]});
+            return;
+        }
+
+        if(port < 0 || port > 65535){
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[10]});
+            return;
+        }
+
+        xmppData.setUserAddress(user, new NetAddress(host,port));
+        formulateResponse(NttpCode.OK, null);
+
     }
 
     private void handleDefault() {
