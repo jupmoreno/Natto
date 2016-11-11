@@ -9,9 +9,12 @@ import java.nio.ByteBuffer;
 import static com.google.common.base.Preconditions.checkState;
 
 public class NttpHandler implements ProtocolHandler {
+    private static final int MAX_SIZE = 5000;
+    private ByteBuffer buffer = ByteBuffer.allocate(MAX_SIZE);
 
     private NttpProtocol protocol;
     private NttpParser parser;
+    private boolean shouldClose = false;
 
     public NttpHandler(NttpData nttpData, XmppData xmppData) {
         protocol = new NttpProtocol(nttpData, xmppData);
@@ -27,18 +30,18 @@ public class NttpHandler implements ProtocolHandler {
     public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
 
         while (buffer.hasRemaining()) {
-            StringBuilder request = parser.fromByteBuffer(buffer);
+            StringBuilder request = parser.parse(buffer);
 
             if (request != null) {
                 StringBuilder response = protocol.process(request);
                 System.out.println("RESPONSE: " + response); // TODO: Remove
                 if (response != null) {
-                    me.requestWrite(parser.toByteBuffer(response));
+                    me.requestWrite(toByteBuffer(response));
                     if (isQuit(response)) {
-                        me.requestClose(); //TODO: esta bien?
+                        shouldClose = true;
                     }
                 }
-            }else{
+            } else {
                 me.requestRead();
             }
 
@@ -47,7 +50,15 @@ public class NttpHandler implements ProtocolHandler {
 
     @Override
     public void afterWrite(Connection me, Connection other) {
-        me.requestRead();
+        if (buffer.hasRemaining()) {
+            me.requestWrite(buffer);
+        } else {
+            if (shouldClose) {
+                me.requestClose();
+            } else {
+                me.requestRead();
+            }
+        }
     }
 
     @Override
@@ -67,5 +78,14 @@ public class NttpHandler implements ProtocolHandler {
         }
 
         return false;
+    }
+
+    private ByteBuffer toByteBuffer(StringBuilder message) {
+        buffer.clear();
+        // TODO: Ver
+        buffer.put(message.toString().getBytes());
+        buffer.flip();
+
+        return buffer;
     }
 }

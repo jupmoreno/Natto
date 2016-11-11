@@ -32,7 +32,7 @@
 //    }
 //
 //    @Override
-//    public ByteBuffer fromByteBuffer(ByteBuffer buffer) {
+//    public ByteBuffer parse(ByteBuffer buffer) {
 //
 //        if (buffer == null) {
 //            return null;
