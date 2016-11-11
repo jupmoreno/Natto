@@ -29,7 +29,7 @@ public class NttpHandler implements ProtocolHandler {
     @Override
     public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
 
-        while (buffer.hasRemaining()) {
+        while (!shouldClose && buffer.hasRemaining()) {
             StringBuilder request = parser.parse(buffer);
 
             if (request != null) {
