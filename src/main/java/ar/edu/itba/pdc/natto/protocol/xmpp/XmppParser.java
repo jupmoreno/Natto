@@ -9,6 +9,7 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -29,7 +30,7 @@ public class XmppParser implements ProtocolHandler {
 
 
     ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
-    StringBuilder sb = new StringBuilder();
+    //   StringBuilder sb = new StringBuilder();
 
 
     public XmppParser(XmppData data) {
@@ -69,6 +70,7 @@ public class XmppParser implements ProtocolHandler {
 
     private ByteBuffer parse(ByteBuffer buffer) {
 
+        System.out.println("me llega el byte buffer " + new String(buffer.array(), buffer.position(), buffer.limit()));
         if (buffer == null) {
             return null;
         }
@@ -105,9 +107,9 @@ public class XmppParser implements ProtocolHandler {
                         break;
 
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-                        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-                        sb.setLength(0);
-                        return ret;
+//                        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+//                        sb.setLength(0);
+                        return retBuffer;
 
                     case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
                         break;
@@ -122,9 +124,9 @@ public class XmppParser implements ProtocolHandler {
         }
 
         //TODO ?
-        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-        sb.setLength(0);
-        return ret;
+//        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+//        sb.setLength(0);
+        return retBuffer;
     }
 
 
@@ -133,14 +135,26 @@ public class XmppParser implements ProtocolHandler {
             return;
         }
 
-        sb.append("<?xml ");
+        System.out.println("el buffer antes de ponerle nada en el start " + String.valueOf(StandardCharsets.UTF_8.decode(retBuffer)));
+        System.out.println("el buffer idem "+ retBuffer);
+//        retBuffer.put("<?xml ".getBytes());
+//        sb.append("<?xml ");
         String version = parser.getVersion();
         String encoding = parser.getCharacterEncodingScheme();
         if (version != null)
-            sb.append("version=\"" + version + "\" ");
-        if (encoding != null)
-            sb.append("encoding=\"" + encoding + "\"");
-        sb.append("?>");
+            retBuffer.put("version=\"".getBytes());//.put(version.getBytes()).put("\" ".getBytes());
+        System.out.println("el ret buffer " + retBuffer);
+        System.out.println("Despeus de ponerle lo primero " + String.valueOf(StandardCharsets.UTF_8.decode(retBuffer)));
+        // sb.append("version=\"" + version + "\" ");
+        if (encoding != null) {
+            retBuffer.put("encoding=\"".getBytes()).put(encoding.getBytes()).put("\"".getBytes());
+            //sb.append("encoding=\"" + encoding + "\"");
+
+        }
+        System.out.println("despues de ponerle lo segundo " +String.valueOf(StandardCharsets.UTF_8.decode(retBuffer)));
+
+        retBuffer.put("?>".getBytes());
+//        sb.append("?>");
 
     }
 
@@ -154,34 +168,42 @@ public class XmppParser implements ProtocolHandler {
         } else if (name.equals("body") && inMessage) {
             inBody = true;
         }
-
-        sb.append("<");
+        retBuffer.put("<".getBytes());
+//        sb.append("<");
         if (parser.getPrefix().length() != 0) {
-            sb.append(parser.getPrefix()).append(":");
+            retBuffer.put(parser.getPrefix().getBytes()).put(":".getBytes());
+//            sb.append(parser.getPrefix()).append(":");
         }
-        sb.append(name);
+        retBuffer.put(name.getBytes());
+//        sb.append(name);
 
 
         for (int i = 0; i < parser.getAttributeCount(); i++) {
-            sb.append(" ");
+            retBuffer.put(" ".getBytes());
+//            sb.append(" ");
             if (!parser.getAttributePrefix(i).isEmpty()) {
-                sb.append(parser.getAttributePrefix(i)).append(":");
+                retBuffer.put(parser.getAttributePrefix(i).getBytes()).put(":".getBytes());
+//                sb.append(parser.getAttributePrefix(i)).append(":");
             }
-            sb.append(parser.getAttributeLocalName(i)).append("=\"").append(parser.getAttributeValue(i)).append("\"");
+            retBuffer.put(parser.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(parser.getAttributeValue(i).getBytes()).put("\"".getBytes());
+//            sb.append(parser.getAttributeLocalName(i)).append("=\"").append(parser.getAttributeValue(i)).append("\"");
         }
 
 
         for (int i = 0; i < parser.getNamespaceCount(); i++) {
-            sb.append(" ").append("xmlns");
+            retBuffer.put(" ".getBytes()).put("xmlns".getBytes());
+//            sb.append(" ").append("xmlns");
             if (!parser.getNamespacePrefix(i).isEmpty()) {
-                sb.append(":").append(parser.getNamespacePrefix(i));
+                retBuffer.put(":".getBytes()).put(parser.getNamespacePrefix(i).getBytes());
+//                sb.append(":").append(parser.getNamespacePrefix(i));
             }
 
-            sb.append("=\"").append(parser.getNamespaceURI(i)).append("\"");
+            retBuffer.put("=\"".getBytes()).put(parser.getNamespaceURI(i).getBytes()).put("\"".getBytes());
+//            sb.append("=\"").append(parser.getNamespaceURI(i)).append("\"");
         }
 
-
-        sb.append(">");
+        retBuffer.put(">".getBytes());
+//        sb.append(">");
     }
 
     public void handleCharacters() {
@@ -191,68 +213,91 @@ public class XmppParser implements ProtocolHandler {
                 switch (c) {
                     case 'a':
                         if (xmppData.isTransformEnabled())
-                            sb.append("4");
+                            retBuffer.put("4".getBytes());
+//                            sb.append("4");
                         else
-                            sb.append(c);
+                            retBuffer.put("a".getBytes());
+//                            sb.append(c);
                         break;
                     case 'e':
                         if (xmppData.isTransformEnabled())
-                            sb.append("3");
+                            retBuffer.put("3".getBytes());
+//                            sb.append("3");
                         else
-                            sb.append(c);
+                            retBuffer.put("e".getBytes());
+//                            sb.append(c);
                         break;
                     case 'i':
                         if (xmppData.isTransformEnabled())
-                            sb.append("1");
+                            retBuffer.put("1".getBytes());
+//                            sb.append("1");
                         else
-                            sb.append(c);
+                            retBuffer.put("i".getBytes());
+//                            sb.append(c);
                         break;
-                    case 'o':
+                    case 'o': ///TODO POR ACAAA
+
                         if (xmppData.isTransformEnabled())
-                            sb.append("0");
+                            retBuffer.put("0".getBytes());
+//                            sb.append("0");
                         else
-                            sb.append(c);
+                            retBuffer.put("o".getBytes());
+//                            sb.append(c);.
                         break;
                     case 'c':
                         if (xmppData.isTransformEnabled())
-                            sb.append("&lt;");
+                            retBuffer.put("&lt;".getBytes());
+//                            sb.append("&lt;");
+
                         else
-                            sb.append(c);
+                            retBuffer.put("c".getBytes());
+//                            sb.append(c);
                         break;
                     case '<':
-                        sb.append("&lt;");
+                        retBuffer.put("&lt;".getBytes());
+//                        sb.append("&lt;");
+
                         break;
                     case '>':
-                        sb.append("&gt;");
+                        retBuffer.put("&gt;".getBytes());
+//                        sb.append("&gt;");
                         break;
                     case '&':
-                        sb.append("&amp;");
+                        retBuffer.put("&amp;".getBytes());
+//                        sb.append("&amp;");
                         break;
                     case '\'':
-                        sb.append("&apos;");
+                        retBuffer.put("&apos;".getBytes());
+//                        sb.append("&apos;");
                         break;
                     case '\"':
-                        sb.append("&quot;");
+                        retBuffer.put("&quot;".getBytes());
+//                        sb.append("&quot;");
                         break;
                     default:
-                        sb.append(c);
+                        retBuffer.putChar(c);
+//                        sb.append(c);
                         break;
                 }
             }
         } else
 
         {
-            sb.append(parser.getText());
+            retBuffer.put(parser.getText().getBytes());
+//            sb.append(parser.getText());
         }
 
     }
 
     private void handleEndElement() {
-        sb.append("</");
+        retBuffer.put("</".getBytes());
+//        sb.append("</");
         if (parser.getPrefix().length() != 0) {
-            sb.append(parser.getPrefix()).append(":");
+            retBuffer.put(parser.getPrefix().getBytes()).put(":".getBytes());
+//            sb.append(parser.getPrefix()).append(":");
         }
-        sb.append(parser.getName().getLocalPart()).append(">");
+        retBuffer.put(parser.getName().getLocalPart().getBytes()).put(">".getBytes());
+//        sb.append(parser.getName().getLocalPart()).append(">");
 
 
         if (parser.getName().getLocalPart().equals("body"))
@@ -270,16 +315,18 @@ public class XmppParser implements ProtocolHandler {
      */
     private ByteBuffer handleWrongFormat() {
         error = true;
-        sb.setLength(0);
+//        sb.setLength(0);
 
         /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
         if (initialSetup) {
-            sb.append("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>");
+            retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>".getBytes());
+//            sb.append("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>");
         }
-        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
-        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-        sb.setLength(0);
-        return ret;
+        retBuffer.put("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
+//        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
+//        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
+//        sb.setLength(0);
+        return retBuffer;
     }
 
 }
