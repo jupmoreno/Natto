@@ -22,6 +22,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 // ASK: No hay q usar encode?
 public class XmppClientNegotiator implements ProtocolHandler {
     private static final Logger logger = LoggerFactory.getLogger(XmppClientNegotiator.class);
+    private static long id = 0;
 
     private final XmppData data;
 
@@ -30,11 +31,12 @@ public class XmppClientNegotiator implements ProtocolHandler {
 
     private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
 
-    private boolean verified = false;
     private boolean inAuth = false;
-    private boolean initialStream = true;
+    private boolean invalidAuth = false;
+    private boolean initialStreamSent = false;
+    private boolean initialStreamReceived = false;
 
-    private StringBuilder auxUser = new StringBuilder();
+    private final StringBuilder userBuilder = new StringBuilder();
     private String user;
     private String user64;
 
@@ -53,31 +55,49 @@ public class XmppClientNegotiator implements ProtocolHandler {
     public void afterRead(Connection me, Connection other, ByteBuffer readBuffer) {
         int ret = handshake(me, readBuffer);
 
+        if (hasToWrite) {
+            hasToWrite = false;
+            retBuffer.flip();
+            me.requestWrite(retBuffer);
+        }
+
         if (ret == -1) {
-            //TODO HACER ALGO MAS JP????
-            logger.error("Failed to parse xmpp message");
             me.requestClose();
         } else if (ret == 1) {
-            verified = true;
-            NetAddress netAddress = data.getUserAddress(user);
-            InetSocketAddress socketAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort());
+            Exception exception = null;
 
-            InetSocketAddress serverAddress = new InetSocketAddress(netAddress.getAddress(), netAddress.getPort());
+            logger.info("User " + user + " connected");
+            NetAddress netAddress = data.getUserAddress(user);
+
+            InetSocketAddress serverAddress = new InetSocketAddress(" dsads ", netAddress.getPort());
             XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user);
 
             try {
                 me.requestConnect(serverAddress, serverNegotiator);
-            } catch (IOException exception) {
+            } catch (IOException ioException) {
+                exception = ioException;
+            } catch (IllegalArgumentException illegalException) {
+                exception = illegalException;
+            }
+
+            if (exception != null) {
                 logger.error("Failed to request server connection", exception);
+
+                handleError(XmppErrors.REMOTE_CONNECTION_FAILED); // TODO: Este error?
+                retBuffer.flip();
+                me.requestWrite(retBuffer);
                 me.requestClose();
-                // TODO: Hacer algo mas? JP
             }
         }
     }
 
     @Override
     public void afterWrite(Connection me, Connection other) {
-        me.requestRead();
+        if (retBuffer.hasRemaining()) {
+            me.requestWrite(retBuffer);
+        } else {
+            me.requestRead();
+        }
     }
 
     @Override
@@ -85,56 +105,64 @@ public class XmppClientNegotiator implements ProtocolHandler {
         // TODO:
     }
 
+    // TODO: Acordarse de hacer el compact dsp de mandar a escribir
+    // TODO: Cerrar el parser
     private int handshake(Connection connection, ByteBuffer readBuffer) {
-        NegotiationStatus readResult = NegotiationStatus.INCOMPLETE;
+        NegotiationStatus readResult;
+        int ret;
 
         if (reader.getInputFeeder().needMoreInput()) {
             try {
-                retBuffer.clear();
                 reader.getInputFeeder().feedInput(readBuffer);
-
             } catch (XMLStreamException e) {
-                return handleWrongFormat(connection);
+                // if the state is such that this method should not be called (has not yet
+                // consumed existing input data, or has been marked as closed)
+                // TODO: This should never happen
+                checkState(false);
+                handleError(XmppErrors.INTERNAL_SERVER);
+                return -1;
             }
         } else {
-            // TODO:
+            // Method called to check whether it is ok to feed more data: parser returns true if
+            // it has no more content to parse (and it is ok to feed more); otherwise false
+            // (and no data should yet be fed).
+            // TODO: This should never happen
             checkState(false);
+            handleError(XmppErrors.INTERNAL_SERVER);
+            return -1;
         }
 
-        while (readResult != NegotiationStatus.FINISHED) {
-
+        do {
             try {
                 readResult = generateResp();
             } catch (XMLStreamException e) {
-                return handleWrongFormat(connection);
+                handleError(XmppErrors.BAD_FORMAT);
+                return -1;
             }
 
             switch (readResult) {
-
                 case FINISHED:
                     return 1;
 
                 case IN_PROCESS:
-                    connection.requestWrite(retBuffer);
-                    retBuffer.clear();
+//                    connection.requestWrite(retBuffer);
+//                    retBuffer.clear();
                     break;
 
-                case ERR:
-                    if (hasToWrite) {
-                        connection.requestWrite(retBuffer);
-                        hasToWrite = false;
-                    }
-                    auxUser.setLength(0);
+                case ERROR:
+//                    if (hasToWrite) {
+//                        connection.requestWrite(retBuffer);
+//                        hasToWrite = false;
+//                    }
+//                    userBuilder.setLength(0);
                     return -1;
-
 
                 case INCOMPLETE:
                     return 0;
             }
+        } while (readResult != NegotiationStatus.FINISHED);
 
-        }
-
-        return 0;
+        return 1;
     }
 
     private NegotiationStatus generateResp() throws XMLStreamException {
@@ -142,30 +170,29 @@ public class XmppClientNegotiator implements ProtocolHandler {
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
-                    NegotiationStatus vs = handleStartDocument();
-                    if (vs != null) {
-                        return vs;
-                    }
-                    break;
+                    return handleStartDocument();
 
                 case AsyncXMLStreamReader.START_ELEMENT:
-
-                    if (reader.getLocalName().equals("stream") && reader.getPrefix().equals("stream")) {
-                        initialStream = false;
-                        return handleStreamStream();
-                    }
-                    handleStartElement();
-                    break;
+                    return handleStartElement();
 
                 case AsyncXMLStreamReader.CHARACTERS:
-                    if (inAuth) {
-                        auxUser.append(reader.getText());
+                    if (!invalidAuth && inAuth) {
+                        userBuilder.append(reader.getText());
+                    } else {
+                        // Ignore
                     }
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
                     if (reader.getLocalName().equals("auth")) {
-                        return getUser();
+                        if (!invalidAuth) {
+                            return getUser();
+                        }
+
+                        invalidAuth = false;
+                        inAuth = false;
+                    } else {
+                        checkState(false); // TODO: For testing...
                     }
 
                     return NegotiationStatus.IN_PROCESS;
@@ -178,163 +205,205 @@ public class XmppClientNegotiator implements ProtocolHandler {
             }
         }
 
-        return NegotiationStatus.ERR;
+        return NegotiationStatus.ERROR;
     }
 
     private NegotiationStatus handleStartDocument() {
-        if (reader.getVersion() != null && reader.getEncoding() != null) {
-            retBuffer.put("<?xml ".getBytes());
-            if (reader.getVersion() != null) {
-                retBuffer.put("version='".getBytes()).put(reader.getVersion().getBytes()).put("' ".getBytes());
-            }
+        String version = reader.getVersion();
+        String encoding = reader.getEncoding();
 
-            if (reader.getEncoding() == null) {
-                retBuffer.put("encoding='UTF-8'?>".getBytes());
-            } else {
-                retBuffer.put("encoding=".getBytes()).put(reader.getVersion().getBytes()).put("?>".getBytes());
-            }
+        if (version == null && encoding == null) {
             return NegotiationStatus.IN_PROCESS;
         }
-        return null;
 
-    }
-
-
-    private NegotiationStatus handleStartElement() {
-
-        if (reader.getLocalName().equals("auth")) {
-            inAuth = true;
-            for (int i = 0; i < reader.getAttributeCount(); i++) {
-                if (reader.getAttributeLocalName(i).equals("mechanism") && reader.getAttributeValue(i).equals("PLAIN")) {
-                    return NegotiationStatus.IN_PROCESS;
-                }
-            }
-            return NegotiationStatus.ERR;
+        if (version != null && !version.equals("1.0")) {
+            // Optional
+            handleError(XmppErrors.INVALID_XML);
+            return NegotiationStatus.ERROR;
         }
 
-        if (reader.getLocalName().equals("message") || reader.getLocalName().equals("iq") || reader.getLocalName().equals("presence"))
-            return handleNotAuthorized();
-
-        return NegotiationStatus.ERR;
-    }
-
-    private NegotiationStatus handleStreamStream() {
-        retBuffer.put("<stream:stream".getBytes());
-
-        //TODO meter id ver como se hace
-
-        for (int i = 0; i < reader.getAttributeCount(); i++) {
-
-            if (reader.getAttributeLocalName(i).equals("version") && !reader.getAttributeValue(i).equals("\"1.0\"") && !reader.getAttributeValue(i).equals("'1.0'") && !reader.getAttributeValue(i).equals("1.0")) {
-                return handleWrongVersion();
-            }
-            retBuffer.put(" ".getBytes());
-            if (!reader.getAttributePrefix(i).isEmpty()) {
-                retBuffer.put(reader.getAttributePrefix(i).getBytes()).put(":".getBytes());
-            }
-
-            if (reader.getAttributeLocalName(i).equals("to")) {
-                retBuffer.put("from=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
-
-            } else if (reader.getAttributeLocalName(i).equals("from")) {
-                retBuffer.put("to=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
-            } else {
-                retBuffer.put(reader.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("\"".getBytes());
-            }
+        if (encoding != null && !encoding.equals("UTF-8")) {
+            handleError(XmppErrors.UNSUPPORTED_ENCODING);
+            return NegotiationStatus.ERROR;
         }
-
-        appendNamespaces();
-
-        retBuffer.put("><stream:features><mechanisms xmlns=\"urn:ietf:params:xml:ns:xmpp-sasl\">".getBytes());
-        retBuffer.put("<mechanism>PLAIN</mechanism></mechanisms>".getBytes());
-
-        retBuffer.put("<compression xmlns=\"http://jabber.org/features/compress\">".getBytes());
-        retBuffer.put("<method>zlib</method></compression>".getBytes());
-
-        retBuffer.put("<auth xmlns=\"http://jabber.org/features/iq-auth\"/>".getBytes());
-
-        retBuffer.put("</stream:features>".getBytes());
 
         return NegotiationStatus.IN_PROCESS;
     }
 
-    private void appendNamespaces() {
-        for (int i = 0; i < reader.getNamespaceCount(); i++) {
-            retBuffer.put("xmlns".getBytes());
-            if (!reader.getNamespacePrefix(i).isEmpty()) {
-                retBuffer.put(":".getBytes()).put(reader.getNamespacePrefix(i).getBytes());
+    private NegotiationStatus handleStartElement() {
+        String local = reader.getLocalName();
+
+        if (!initialStreamReceived) {
+            if (local.equals("stream")) {
+                return handleStream();
+            } else {
+                // TODO: Ignorar todo hasta q llegue un stream no?
+                return NegotiationStatus.IN_PROCESS;
             }
-            retBuffer.put("=\"".getBytes()).put(reader.getNamespaceURI(i).getBytes()).put("\" ".getBytes());
+        } else {
+            if (local.equals("stream")) {
+                // closing the existing stream for this entity
+                // because a new stream has been initiated that conflicts with the
+                // existing stream
+                handleError(XmppErrors.CONFLICT);
+                return NegotiationStatus.ERROR;
+            }
+
+            if (local.equals("auth")) {
+                return handleAuth();
+            }
+
+            if (local.equals("message") || local.equals("iq") || local.equals("presence")) {
+                handleError(XmppErrors.NOT_AUTHORIZED);
+                return NegotiationStatus.ERROR;
+            }
+
+            // TODO: Ver si hay mas casos validos
+            handleError(XmppErrors.UNSOPPORTED_STANZA_TYPE);
+            return NegotiationStatus.ERROR;
         }
+    }
+
+    private NegotiationStatus handleStream() {
+        String prefix = reader.getPrefix();
+
+        // The entity has sent a namespace prefix that is unsupported, or has
+        // sent no namespace prefix on an element that needs such a prefix
+        if (prefix == null || !prefix.equals("stream")) {
+            handleError(XmppErrors.BAD_NAMESPACE_PREFIX);
+            return NegotiationStatus.ERROR;
+        }
+
+        // The root <stream/> element ("stream header") MUST be qualified by the namespace
+        // 'http://etherx.jabber.org/streams'
+        if (!reader.getNamespaceURI("stream").equals("http://etherx.jabber.org/streams")) {
+            handleError(XmppErrors.INVALID_NAMESPACE);
+            return NegotiationStatus.ERROR;
+        }
+
+        return handleStreamStream();
+    }
+
+    private NegotiationStatus handleStreamStream() {
+        boolean hasTo = false;
+
+        retBuffer.put(XmppMessages.VERSION_AND_ENCODING.getBytes());
+        retBuffer.put(XmppMessages.INITIAL_STREAM_START.getBytes());
+
+        //TODO Hacer el ID
+        for (int i = 0; i < reader.getAttributeCount(); i++) {
+            if (reader.getAttributeLocalName(i).equals("version")) {
+                if (!reader.getAttributeValue(i).equals("1.0")) {
+                    handleError(XmppErrors.UNSUPPORTED_VERSION);
+                    return NegotiationStatus.ERROR;
+                }
+            } else if (reader.getAttributeLocalName(i).equals("to")) {
+                hasTo = true;
+                retBuffer.put("from='".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("'".getBytes());
+            } else if (reader.getAttributeLocalName(i).equals("from")) {
+                retBuffer.put("to='".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("'".getBytes());
+            }
+
+            // TODO: Ignoramos todo el resto no?
+        }
+
+        if (!hasTo) {
+            handleError(XmppErrors.HOST_UNKNOWN); // TODO: Este error?
+            return NegotiationStatus.ERROR;
+        }
+
+        retBuffer.put("id='".getBytes()).put(String.valueOf(id).getBytes()).put("'>".getBytes());
+
+        retBuffer.put(XmppMessages.STREAM_FEATURES.getBytes());
+
+        initialStreamReceived = true;
+        initialStreamSent = true;
+        hasToWrite = true;
+
+        return NegotiationStatus.IN_PROCESS;
+    }
+
+    private NegotiationStatus handleAuth() {
+        inAuth = true;
+
+        if (!reader.getPrefix().equals("")) {
+            handleError(XmppErrors.BAD_NAMESPACE_PREFIX);
+            return NegotiationStatus.ERROR;
+        }
+
+        if (!reader.getNamespaceURI().equals("urn:ietf:params:xml:ns:xmpp-sasl")) {
+            handleError(XmppErrors.INVALID_NAMESPACE);
+            return NegotiationStatus.ERROR;
+        }
+
+        // TODO: Validar q solo haya 1 atributo (mechanism)?
+        // TODO: Validar q mechanism tenga PLAIN (error sino)
+        for (int i = 0; i < reader.getAttributeCount(); i++) {
+            if (reader.getAttributeLocalName(i).equals("mechanism")) {
+                String mech = reader.getAttributeValue(i);
+
+                if (mech.equals("PLAIN")) {
+                    return NegotiationStatus.IN_PROCESS;
+                } else {
+                    invalidAuth = true;
+                    handleError(XmppErrors.INVALID_MECHANISM);
+                    return NegotiationStatus.IN_PROCESS;
+                }
+            }
+        }
+
+        return NegotiationStatus.ERROR;
     }
 
     private NegotiationStatus getUser() {
-        user64 = auxUser.toString();
+        boolean error = false;
+        byte[] base64;
 
         try {
-            user = new String(Base64.getDecoder().decode(user64), UTF_8);
-            String[] userAndPass = user.split(String.valueOf('\0'), 3);
-            user = userAndPass[1];
-        } catch (Exception e) {
-            return handleInvalidUser();
+            base64 = Base64.getDecoder().decode(userBuilder.toString());
+            user64 = new String(base64, UTF_8);
+            String[] userAndPass = user64.split(String.valueOf('\0'), 3);
+
+            if (userAndPass.length != 3) {
+                // TODO: Validar algo mas?
+                error = true;
+            } else {
+                user = userAndPass[1];
+            }
+        } catch (IllegalArgumentException exception) {
+            error = true;
         }
+
+        if (error) {
+            handleError(XmppErrors.INCORRECT_ENCODING);
+            return NegotiationStatus.ERROR;
+        }
+
         return NegotiationStatus.FINISHED;
     }
 
-    /**Error Handlers**/
-
     /**
-     * RFC 4.9.3.25.  unsupported-version
+     * ERROR HANDLER
+     * If the error is triggered by the initial stream header, the receiving entity MUST still send
+     * the opening '<stream>' tag.
      */
-    private NegotiationStatus handleWrongVersion() {
-        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
-        if (initialStream) {
-            retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'".getBytes());
-        }
-        retBuffer.put("><stream:error><unsupported-version xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
-        hasToWrite = true;
-        return NegotiationStatus.ERR;
-    }
+    private void handleError(XmppErrors error) {
+        logger.warn("Client sent messages with errors");
 
-
-    /**
-     * RFC 4.9.3.1.  bad-format
-     */
-    private int handleWrongFormat(Connection connection) {
-        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
-        if (initialStream) {
-            connection.requestWrite(ByteBuffer.wrap("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'><stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
-            auxUser.setLength(0);
-            return -1;
-        }
-        connection.requestWrite(ByteBuffer.wrap("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes()));
-        auxUser.setLength(0);
-        return -1;
-    }
-
-    /**
-     * RFC 4.9.3.12.  not-authorized
-     */
-    private NegotiationStatus handleNotAuthorized() {
-        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
-        if (initialStream) {
-            retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>".getBytes());
-        }
-        retBuffer.put("<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
-        hasToWrite = true;
-        return NegotiationStatus.ERR;
-    }
-
-
-    /**
-     * RFC 4.9.3.22.  unsupported-encoding
-     */
-    private NegotiationStatus handleInvalidUser() {
         retBuffer.clear();
-        retBuffer.put("<stream:error><unsupported-encoding xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
-        retBuffer.flip();
-        hasToWrite = true;
-        return NegotiationStatus.ERR;
 
+        if (!initialStreamSent) {
+            retBuffer.put(XmppMessages.INITIAL_STREAM.getBytes());
+            initialStreamSent = true;
+        }
+
+        retBuffer.put(error.getBytes());
+
+        if (error.shouldClose()) {
+            retBuffer.put(XmppMessages.END_STREAM.getBytes());
+        }
+
+        userBuilder.setLength(0);
+        hasToWrite = true;
     }
 }

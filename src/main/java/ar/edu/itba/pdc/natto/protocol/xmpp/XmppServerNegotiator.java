@@ -146,7 +146,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
                 case INCOMPLETE:
                     return 0;
 
-                case ERR:
+                case ERROR:
                     if (hasToWrite) {
                         me.requestWrite(retBuffer);
                     }
@@ -190,7 +190,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
             }
         }
 
-        return NegotiationStatus.ERR;
+        return NegotiationStatus.ERROR;
 
     }
 
@@ -213,7 +213,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
             if (reader.getLocalName().equals("success")) {
                 return NegotiationStatus.FINISHED;
             }else{
-                return NegotiationStatus.ERR;
+                return NegotiationStatus.ERROR;
             }
         }
 
@@ -221,7 +221,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
             if (reader.getLocalName().equals("success")) {
                 return NegotiationStatus.FINISHED;
             }else{
-                return NegotiationStatus.ERR;
+                return NegotiationStatus.ERROR;
             }
         }
 
@@ -267,6 +267,6 @@ public class XmppServerNegotiator implements ProtocolHandler {
         retBuffer.clear();
         retBuffer = ByteBuffer.wrap("<stream:error><not-authorized xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
         hasToWrite = true;
-        return NegotiationStatus.ERR;
+        return NegotiationStatus.ERROR;
     }
 }
