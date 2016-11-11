@@ -88,6 +88,10 @@ public class NttpParser implements Parser<StringBuilder> {
     }
 
     public ByteBuffer toByteBuffer(StringBuilder message) {
-        return ByteBuffer.wrap(message.toString().getBytes());
+        retBuffer.clear();
+        retBuffer.put(message.toString().getBytes());
+        retBuffer.flip();
+
+        return retBuffer;
     }
 }
