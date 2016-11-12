@@ -12,6 +12,8 @@ public enum XmppMessages {
             + "<compression xmlns='http://jabber.org/features/compress'><method>zlib</method></compression>" // TODO: Preguntarle a Diego si tiene q tenerlo
             + "<auth xmlns='http://jabber.org/features/iq-auth'/>"
             + "</stream:features>"),
+    AUTH_START("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>"),
+    AUTH_STOP("</auth>")
     ;
 
     private final byte[] bytes;

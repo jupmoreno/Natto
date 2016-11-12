@@ -1,5 +1,8 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
+import static com.google.common.base.Preconditions.checkState;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import ar.edu.itba.pdc.natto.net.NetAddress;
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
 import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
@@ -10,38 +13,37 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Base64;
+import javax.xml.stream.XMLStreamException;
 
-import static com.google.common.base.Preconditions.checkState;
-import static java.nio.charset.StandardCharsets.UTF_8;
-
-// ASK: No hay q usar encode?
-@SuppressWarnings("Duplicates") // TODO: Remove
 public class XmppClientNegotiator implements ProtocolHandler {
     private static final Logger logger = LoggerFactory.getLogger(XmppClientNegotiator.class);
+
+    private static final int BUFFER_SIZE = 10000;
+
     private static long id = 0;
 
-    private final XmppData data;
+    private final AsyncXMLInputFactory inputF = new InputFactoryImpl();
+    private final AsyncXMLStreamReader<AsyncByteBufferFeeder> reader =
+            inputF.createAsyncForByteBuffer();
 
-    private AsyncXMLInputFactory inputF = new InputFactoryImpl();
-    private AsyncXMLStreamReader<AsyncByteBufferFeeder> reader = inputF.createAsyncForByteBuffer();
-
-    private ByteBuffer retBuffer = ByteBuffer.allocate(10000);
+    private final ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 
     private boolean inAuth = false;
     private boolean invalidAuth = false;
     private boolean initialStreamSent = false;
     private boolean initialStreamReceived = false;
+    private boolean hasToWrite = false;
 
     private final StringBuilder userBuilder = new StringBuilder();
     private String user;
     private String user64;
+    private String toServer;
 
-    private boolean hasToWrite = false;
+    private final XmppData data;
 
     public XmppClientNegotiator(XmppData data) {
         this.data = data;
@@ -49,7 +51,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
 
     @Override
     public void afterConnect(Connection me, Connection other) {
-        checkState(false);
+        throw new IllegalStateException("Not a connectable handler");
     }
 
     @Override
@@ -68,8 +70,10 @@ public class XmppClientNegotiator implements ProtocolHandler {
             logger.info("User " + user + " connected");
 
             NetAddress netAddress = data.getUserAddress(user);
-            InetSocketAddress serverAddress = new InetSocketAddress(" dsads ", netAddress.getPort());
-            XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user);
+            InetSocketAddress serverAddress = new InetSocketAddress(netAddress.getAddress(),
+                    netAddress.getPort());
+            XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user,
+                    toServer);
 
             try {
                 me.requestConnect(serverAddress, serverNegotiator);
@@ -81,7 +85,9 @@ public class XmppClientNegotiator implements ProtocolHandler {
                 me.requestWrite(retBuffer);
                 me.requestClose();
             }
+        }
 
+        if (ret != 0) {
             try {
                 reader.closeCompletely(); // TODO: O usar close() ????
             } catch (XMLStreamException exception) {
@@ -95,6 +101,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
         if (retBuffer.hasRemaining()) {
             me.requestWrite(retBuffer);
         } else {
+            retBuffer.clear();
             me.requestRead();
         }
     }
@@ -104,20 +111,16 @@ public class XmppClientNegotiator implements ProtocolHandler {
         // TODO:
     }
 
-    // TODO: Acordarse de hacer el compact dsp de mandar a escribir
-    // TODO: Cerrar el parser
     private int handshake(Connection connection, ByteBuffer readBuffer) {
         NegotiationStatus readResult;
-        int ret;
 
         if (reader.getInputFeeder().needMoreInput()) {
             try {
                 reader.getInputFeeder().feedInput(readBuffer);
-            } catch (XMLStreamException e) {
-                // if the state is such that this method should not be called (has not yet
+            } catch (XMLStreamException exception) {
+                // If the state is such that this method should not be called (has not yet
                 // consumed existing input data, or has been marked as closed)
-                // TODO: This should never happen
-                checkState(false);
+                // This should never happen
                 handleError(XmppErrors.INTERNAL_SERVER);
                 return -1;
             }
@@ -125,8 +128,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
             // Method called to check whether it is ok to feed more data: parser returns true if
             // it has no more content to parse (and it is ok to feed more); otherwise false
             // (and no data should yet be fed).
-            // TODO: This should never happen
-            checkState(false);
+            // This should never happen
             handleError(XmppErrors.INTERNAL_SERVER);
             return -1;
         }
@@ -134,7 +136,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
         do {
             try {
                 readResult = generateResp();
-            } catch (XMLStreamException e) {
+            } catch (XMLStreamException exception) {
                 handleError(XmppErrors.BAD_FORMAT);
                 return -1;
             }
@@ -144,20 +146,17 @@ public class XmppClientNegotiator implements ProtocolHandler {
                     return 1;
 
                 case IN_PROCESS:
-//                    connection.requestWrite(retBuffer);
-//                    retBuffer.clear();
                     break;
-
-                case ERROR:
-//                    if (hasToWrite) {
-//                        connection.requestWrite(retBuffer);
-//                        hasToWrite = false;
-//                    }
-//                    userBuilder.setLength(0);
-                    return -1;
 
                 case INCOMPLETE:
                     return 0;
+
+                case ERROR:
+                    return -1;
+
+                default:
+                    handleError(XmppErrors.INTERNAL_SERVER);
+                    return -1;
             }
         } while (readResult != NegotiationStatus.FINISHED);
 
@@ -165,7 +164,6 @@ public class XmppClientNegotiator implements ProtocolHandler {
     }
 
     private NegotiationStatus generateResp() throws XMLStreamException {
-
         while (reader.hasNext()) {
             switch (reader.next()) {
                 case AsyncXMLStreamReader.START_DOCUMENT:
@@ -284,12 +282,9 @@ public class XmppClientNegotiator implements ProtocolHandler {
     }
 
     private NegotiationStatus handleStreamStream() {
-        boolean hasTo = false;
-
         retBuffer.put(XmppMessages.VERSION_AND_ENCODING.getBytes());
         retBuffer.put(XmppMessages.INITIAL_STREAM_START.getBytes());
 
-        //TODO Hacer el ID
         for (int i = 0; i < reader.getAttributeCount(); i++) {
             if (reader.getAttributeLocalName(i).equals("version")) {
                 if (!reader.getAttributeValue(i).equals("1.0")) {
@@ -297,21 +292,25 @@ public class XmppClientNegotiator implements ProtocolHandler {
                     return NegotiationStatus.ERROR;
                 }
             } else if (reader.getAttributeLocalName(i).equals("to")) {
-                hasTo = true;
-                retBuffer.put("from='".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("'".getBytes());
+                toServer = reader.getAttributeValue(i);
+                retBuffer.put("from='".getBytes())
+                        .put(toServer.getBytes())
+                        .put("' ".getBytes());
             } else if (reader.getAttributeLocalName(i).equals("from")) {
-                retBuffer.put("to='".getBytes()).put(reader.getAttributeValue(i).getBytes()).put("'".getBytes());
+                retBuffer.put("to='".getBytes())
+                        .put(reader.getAttributeValue(i).getBytes())
+                        .put("' ".getBytes());
             }
-
-            // TODO: Ignoramos todo el resto no?
         }
 
-        if (!hasTo) {
+        if (toServer == null) {
             handleError(XmppErrors.HOST_UNKNOWN); // TODO: Este error?
             return NegotiationStatus.ERROR;
         }
 
-        retBuffer.put("id='".getBytes()).put(String.valueOf(id).getBytes()).put("'>".getBytes());
+        retBuffer.put("id='".getBytes())
+                .put(String.valueOf(id).getBytes())
+                .put("'>".getBytes());
 
         retBuffer.put(XmppMessages.STREAM_FEATURES.getBytes());
 
@@ -336,7 +335,6 @@ public class XmppClientNegotiator implements ProtocolHandler {
         }
 
         // TODO: Validar q solo haya 1 atributo (mechanism)?
-        // TODO: Validar q mechanism tenga PLAIN (error sino)
         for (int i = 0; i < reader.getAttributeCount(); i++) {
             if (reader.getAttributeLocalName(i).equals("mechanism")) {
                 String mech = reader.getAttributeValue(i);
@@ -363,17 +361,8 @@ public class XmppClientNegotiator implements ProtocolHandler {
             user64 = new String(base64, UTF_8);
             String[] userAndPass = user64.split(String.valueOf('\0'), 3);
 
-            if (userAndPass.length != 3) {
-                // TODO: No hay q hacer esto (JP)
-                error = true;
-            } else {
-                user = userAndPass[1];
-            }
-        } catch (IllegalArgumentException exception) {
-            error = true;
-        }
-
-        if (error) {
+            user = userAndPass[1]; // TODO: Validar?
+        } catch (Exception exception) {
             handleError(XmppErrors.INCORRECT_ENCODING);
             return NegotiationStatus.ERROR;
         }
@@ -381,16 +370,13 @@ public class XmppClientNegotiator implements ProtocolHandler {
         return NegotiationStatus.FINISHED;
     }
 
-    /**
-     * ERROR HANDLER
-     * If the error is triggered by the initial stream header, the receiving entity MUST still send
-     * the opening '<stream>' tag.
-     */
     private void handleError(XmppErrors error) {
         logger.warn("Client sent messages with errors");
 
         retBuffer.clear();
 
+        // If the error is triggered by the initial stream header, the receiving entity MUST still
+        // send the opening '<stream>' tag.
         if (!initialStreamSent) {
             retBuffer.put(XmppMessages.INITIAL_STREAM.getBytes());
             initialStreamSent = true;

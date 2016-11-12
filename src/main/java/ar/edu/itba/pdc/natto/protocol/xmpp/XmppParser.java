@@ -21,7 +21,6 @@ public class XmppParser implements ProtocolHandler {
     private AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
 
-
     private XmppData xmppData;
 
     private boolean inMessage = false;
@@ -32,7 +31,6 @@ public class XmppParser implements ProtocolHandler {
 
     ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     //   StringBuilder sb = new StringBuilder();
-
 
     public XmppParser(XmppData data) {
         this.xmppData = data;
