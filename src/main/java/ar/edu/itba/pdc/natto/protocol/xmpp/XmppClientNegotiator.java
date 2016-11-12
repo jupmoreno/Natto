@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 // ASK: No hay q usar encode?
+@SuppressWarnings("Duplicates") // TODO: Remove
 public class XmppClientNegotiator implements ProtocolHandler {
     private static final Logger logger = LoggerFactory.getLogger(XmppClientNegotiator.class);
     private static long id = 0;
@@ -64,29 +65,27 @@ public class XmppClientNegotiator implements ProtocolHandler {
         if (ret == -1) {
             me.requestClose();
         } else if (ret == 1) {
-            Exception exception = null;
-
             logger.info("User " + user + " connected");
-            NetAddress netAddress = data.getUserAddress(user);
 
+            NetAddress netAddress = data.getUserAddress(user);
             InetSocketAddress serverAddress = new InetSocketAddress(" dsads ", netAddress.getPort());
             XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user);
 
             try {
                 me.requestConnect(serverAddress, serverNegotiator);
-            } catch (IOException ioException) {
-                exception = ioException;
-            } catch (IllegalArgumentException illegalException) {
-                exception = illegalException;
-            }
-
-            if (exception != null) {
+            } catch (IOException | IllegalArgumentException exception) {
                 logger.error("Failed to request server connection", exception);
 
                 handleError(XmppErrors.REMOTE_CONNECTION_FAILED); // TODO: Este error?
                 retBuffer.flip();
                 me.requestWrite(retBuffer);
                 me.requestClose();
+            }
+
+            try {
+                reader.closeCompletely(); // TODO: O usar close() ????
+            } catch (XMLStreamException exception) {
+                logger.error("Failed to correctly close parser", exception);
             }
         }
     }
@@ -365,7 +364,7 @@ public class XmppClientNegotiator implements ProtocolHandler {
             String[] userAndPass = user64.split(String.valueOf('\0'), 3);
 
             if (userAndPass.length != 3) {
-                // TODO: Validar algo mas?
+                // TODO: No hay q hacer esto (JP)
                 error = true;
             } else {
                 user = userAndPass[1];

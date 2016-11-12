@@ -12,6 +12,9 @@ import org.slf4j.LoggerFactory;
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
 
+import static com.google.common.base.Preconditions.checkState;
+
+@SuppressWarnings("Duplicates") // TODO: Remove
 public class XmppServerNegotiator implements ProtocolHandler {
     private static final Logger logger = LoggerFactory.getLogger(XmppServerNegotiator.class);
 
@@ -30,6 +33,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
     private boolean verified = false;
     private String user64;
     private String username;
+    private final String toServer;
 
     private String tagClientResponse = null;
 
@@ -39,26 +43,36 @@ public class XmppServerNegotiator implements ProtocolHandler {
         this.user64 = user64;
         this.username = username;
         this.data = data;
+        this.toServer = "localhost"; // TODO: Recibir en parametros
     }
 
 
     @Override
     public void afterConnect(Connection me, Connection other) {
-        me.requestWrite(ByteBuffer.wrap(("<?xml version=\"1.0\"?>" +
-                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" " +
-                "version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" " +
-                "xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
+        retBuffer.clear();
+        retBuffer.put(XmppMessages.VERSION_AND_ENCODING.getBytes());
+        retBuffer.put(XmppMessages.INITIAL_STREAM_START.getBytes());
+        retBuffer.put("to='".getBytes()).put(toServer.getBytes()).put("' ".getBytes());
+        retBuffer.put("xmlns:xml='http://www.w3.org/XML/1998/namespace'>".getBytes());
+        retBuffer.flip();
+
+        me.requestWrite(retBuffer);
+
+//        me.requestWrite(ByteBuffer.wrap(("<?xml version=\"1.0\"?>" +
+//                "<stream:stream xmlns:stream=\"http://etherx.jabber.org/streams\" " +
+//                "version=\"1.0\" xmlns=\"jabber:client\" to=\"localhost\" " +
+//                "xml:lang=\"en\" xmlns:xml=\"http://www.w3.org/XML/1998/namespace\">").getBytes()));
 
     }
 
     @Override
     public void afterRead(Connection me, Connection other, ByteBuffer readBuffer) {
-
-
         if (sentAuth) {
-            retBuffer.clear();
-            retBuffer = readBuffer.duplicate();
-
+            // TODO
+            readBuffer.put(readBuffer);
+            retBuffer.flip();
+            other.requestWrite(retBuffer);
+            return;
         }
 
         int ret = handshake(me, other, readBuffer);
@@ -91,8 +105,11 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     @Override
     public void afterWrite(Connection me, Connection other) {
-        me.requestRead();
-
+        if (retBuffer.hasRemaining()) {
+            me.requestWrite(retBuffer);
+        } else {
+            me.requestRead();
+        }
     }
 
     @Override
@@ -108,8 +125,22 @@ public class XmppServerNegotiator implements ProtocolHandler {
             try {
                 reader.getInputFeeder().feedInput(readBuffer);
             } catch (XMLStreamException e) {
-                return handleWrongFormat(me);
+                // if the state is such that this method should not be called (has not yet
+                // consumed existing input data, or has been marked as closed)
+                // TODO: This should never happen
+                checkState(false);
+
+                handleError(XmppErrors.INTERNAL_SERVER);
+                return -1;
             }
+        } else {
+            // Method called to check whether it is ok to feed more data: parser returns true if
+            // it has no more content to parse (and it is ok to feed more); otherwise false
+            // (and no data should yet be fed).
+            // TODO: This should never happen
+            checkState(false);
+            handleError(XmppErrors.INTERNAL_SERVER);
+            return -1;
         }
 
         while (readResult != NegotiationStatus.FINISHED) {
@@ -212,7 +243,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
         if (sentAuth && tagClientResponse != null && tagClientResponse.equals(reader.getName().toString())) {
             if (reader.getLocalName().equals("success")) {
                 return NegotiationStatus.FINISHED;
-            }else{
+            } else {
                 return NegotiationStatus.ERROR;
             }
         }
@@ -220,7 +251,7 @@ public class XmppServerNegotiator implements ProtocolHandler {
         if (sentAuth && tagClientResponse == null) {
             if (reader.getLocalName().equals("success")) {
                 return NegotiationStatus.FINISHED;
-            }else{
+            } else {
                 return NegotiationStatus.ERROR;
             }
         }

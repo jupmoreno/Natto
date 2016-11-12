@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkState;
 
+@SuppressWarnings("Duplicates") // TODO: Remove
 public class XmppParser implements ProtocolHandler {
 
     private final static int BUFFER_MAX_SIZE = 10000;
@@ -45,48 +46,74 @@ public class XmppParser implements ProtocolHandler {
 
     @Override
     public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
-        ByteBuffer ret = parse(buffer);
-        if (error) {
+        int ret = parse(buffer);
+
+        if (ret == -1) {
             me.requestClose();
             //TODO: mandar bien mensaje de error ESTO ES ASI?
             other.requestClose();
+        } else if (ret == 1) {
+            // TODO
+        } else {
+            // TODO
         }
-        other.requestWrite(ret);
+
+        // TODO Ver
+        retBuffer.flip();
+        other.requestWrite(retBuffer);
 
     }
 
     @Override
     public void afterWrite(Connection me, Connection other) {
-        other.requestRead();
+        if (retBuffer.hasRemaining()) {
+            me.requestWrite(retBuffer);
+        } else {
+            me.requestRead();
+        }
     }
 
     @Override
     public void beforeClose(Connection me, Connection other) {
-
+        // TODO
     }
 
+    /**
+     * PARSER METHODS
+     */
 
-    /*PARSER*/
-
-    private ByteBuffer parse(ByteBuffer buffer) {
-
-        System.out.println("me llega el byte buffer " + new String(buffer.array(), buffer.position(), buffer.limit()));
-        if (buffer == null) {
-            return null;
-        }
-
+    private int parse(ByteBuffer buffer) {
+        // TODO: Esto puede estar haciendo cualca
+        buffer.mark();
+        System.out.println("Me llega el byte buffer " + StandardCharsets.UTF_8.decode(buffer));
+        buffer.rewind();
 
         if (parser.getInputFeeder().needMoreInput()) {
             try {
                 parser.getInputFeeder().feedInput(buffer);
-                retBuffer.clear();
-
             } catch (XMLStreamException e) {
-                return handleWrongFormat();
+                // if the state is such that this method should not be called (has not yet
+                // consumed existing input data, or has been marked as closed)
+                // TODO: This should never happen
+                checkState(false);
+
+                // TODO
+                // Al cliente XmppErrors.INTERNAL_SERVER
+                // Al servidor </stream:stream>
+                return -1;
             }
+        } else {
+            // Method called to check whether it is ok to feed more data: parser returns true if
+            // it has no more content to parse (and it is ok to feed more); otherwise false
+            // (and no data should yet be fed).
+            // TODO: This should never happen
+            checkState(false);
+            // TODO
+            // Al cliente XmppErrors.INTERNAL_SERVER
+            // Al servidor </stream:stream>
+            return -1;
         }
 
-        /*Parsing Starts*/
         try {
             while (parser.hasNext()) {
                 switch (parser.next()) {
@@ -107,62 +134,53 @@ public class XmppParser implements ProtocolHandler {
                         break;
 
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
-//                        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-//                        sb.setLength(0);
-                        return retBuffer;
-
-                    case AsyncXMLStreamReader.PROCESSING_INSTRUCTION:
-                        break;
+                        return 0;
 
                     default:
                         break;
                 }
             }
         } catch (XMLStreamException e) {
-            return handleWrongFormat();
+            // Al cliente XmppErrors.BAD_FORMAT
+            // Al servidor </stream:stream>
+            return -1;
 
         }
 
-        //TODO ?
-//        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-//        sb.setLength(0);
-        return retBuffer;
+        // TODO: Acordarse de hacer el endOfInput cuando recibe </stream:stream>
+        // Esta en estado END_DOCUMENT
+        return 1;
     }
 
 
-    private void handleStartDocument() {
-        if (parser.getVersion() == null && parser.getEncoding() == null) {
-            return;
-        }
-
-        System.out.println("el buffer antes de ponerle nada en el start " + String.valueOf(StandardCharsets.UTF_8.decode(retBuffer)));
-        System.out.println("el buffer idem "+ retBuffer);
-//        retBuffer.put("<?xml ".getBytes());
-//        sb.append("<?xml ");
+    private boolean handleStartDocument() {
         String version = parser.getVersion();
-        String encoding = parser.getCharacterEncodingScheme();
-        if (version != null)
-            retBuffer.put("version=\"".getBytes());//.put(version.getBytes()).put("\" ".getBytes());
-        System.out.println("el ret buffer " + retBuffer);
-        System.out.println("Despeus de ponerle lo primero " + String.valueOf(StandardCharsets.UTF_8.decode(retBuffer)));
-        // sb.append("version=\"" + version + "\" ");
-        if (encoding != null) {
-            retBuffer.put("encoding=\"".getBytes()).put(encoding.getBytes()).put("\"".getBytes());
-            //sb.append("encoding=\"" + encoding + "\"");
+        String encoding = parser.getEncoding();
 
+        // TODO Mandarlo siempre no?
+//        if (version == null && encoding == null) {
+//            return true;
+//        }
+
+        if (encoding != null && !encoding.equals("UTF-8")) {
+            // TODO:
+            // Al cliente XmppErrors.UNSUPPORTED_ENCODING
+            // Al servidor cerrar conexion
+            return false;
         }
-        System.out.println("despues de ponerle lo segundo " +String.valueOf(StandardCharsets.UTF_8.decode(retBuffer)));
 
-        retBuffer.put("?>".getBytes());
-//        sb.append("?>");
+        retBuffer.put(XmppMessages.VERSION_AND_ENCODING.getBytes());
 
+        return true;
     }
 
     private void handleStartElement() {
-        String name = parser.getName().getLocalPart().toString();
+        String name = parser.getName().getLocalPart();
+
         if (name.equals("stream") && parser.getPrefix().equals("stream")) {
             initialSetup = false;
         }
+
         if (name.equals("message")) {
             inMessage = true;
         } else if (name.equals("body") && inMessage) {
@@ -306,27 +324,4 @@ public class XmppParser implements ProtocolHandler {
             inMessage = false;
 
     }
-
-
-    /**Error Handlers**/
-
-    /**
-     * RFC 4.9.3.1.  bad-format
-     */
-    private ByteBuffer handleWrongFormat() {
-        error = true;
-//        sb.setLength(0);
-
-        /* RFC 4.9.1.2. If the error is triggered by the initial stream header, the receiving entity MUST still send the opening <stream> tag*/
-        if (initialSetup) {
-            retBuffer.put("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>".getBytes());
-//            sb.append("<stream:stream xmlns:stream='http://etherx.jabber.org/streams'>");
-        }
-        retBuffer.put("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>".getBytes());
-//        sb.append("<stream:error><bad-format xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error></stream:stream>");
-//        ByteBuffer ret = ByteBuffer.wrap(sb.toString().getBytes());
-//        sb.setLength(0);
-        return retBuffer;
-    }
-
 }
