@@ -10,7 +10,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
     private final NttpData nttpData;
     private final XmppData xmppData;
-    private final static double supportedVersion = 1.1;
+    private final static int supportedVersionMajor = 1;
+    private final static int supportedVersionMinor = 1;
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto y helps.
@@ -106,19 +107,43 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             return;
         }
 
-        double version = 0;
+        int major = 0;
+        int minor = 0;
+        String[] version = messageVec[2].split("\\.");
 
-        try{
-            version = Double.valueOf(messageVec[2]);
-        }catch (NumberFormatException e){
-            formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
-            return;
-        }
-
-        if(version > supportedVersion){
-            formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
-            return;
-        }else if(version < 0){
+        if(version.length == 1){
+            try {
+                major = Integer.valueOf(version[0]);
+                if(major > supportedVersionMajor){
+                    formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                    return;
+                }else if(major < 0){
+                    formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                    return;
+                }
+            }catch (NumberFormatException e){
+                formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                return;
+            }
+        }else if(version.length == 2){
+            try {
+                major = Integer.valueOf(version[0]);
+                minor = Integer.valueOf(version[1]);
+                if(major > supportedVersionMajor){
+                    formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                    return;
+                }else if(minor < 0 || major < 0){
+                    formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                    return;
+                }else if(major == supportedVersionMajor && minor > supportedVersionMinor){
+                    formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                    return;
+                }
+            }catch (NumberFormatException e){
+                formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
+                return;
+            }
+        }else if(version.length != 2 && version.length != 1){
             formulateResponse(NttpCode.VERSION_NOT_SUPPORTED, null);
             return;
         }
