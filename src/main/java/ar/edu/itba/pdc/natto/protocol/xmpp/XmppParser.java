@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkState;
 
-@SuppressWarnings("Duplicates") // TODO: Remove
 public class XmppParser implements ProtocolHandler {
 
     private final static int BUFFER_MAX_SIZE = 10000;
@@ -25,21 +24,19 @@ public class XmppParser implements ProtocolHandler {
 
     private boolean inMessage = false;
     private boolean inBody = false;
-    private boolean initialSetup = true;
-    private boolean error = false;
 
 
     ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     //   StringBuilder sb = new StringBuilder();
 
-    public XmppParser(XmppData data) {
+    public XmppParser(XmppData data, String user) {
         this.xmppData = data;
     }
 
 
     @Override
     public void afterConnect(Connection me, Connection other) {
-        checkState(false);
+        throw new IllegalStateException(""); // TODO
     }
 
     @Override
@@ -76,40 +73,35 @@ public class XmppParser implements ProtocolHandler {
         // TODO
     }
 
-    /**
-     * PARSER METHODS
-     */
-
     private int parse(ByteBuffer buffer) {
-        // TODO: Esto puede estar haciendo cualca
-        buffer.mark();
-        System.out.println("Me llega el byte buffer " + StandardCharsets.UTF_8.decode(buffer));
-        buffer.rewind();
+        if (buffer == null) {
+            checkState(!parser.getInputFeeder().needMoreInput());
+        } else {
+            if (parser.getInputFeeder().needMoreInput()) {
+                try {
+                    parser.getInputFeeder().feedInput(buffer);
+                } catch (XMLStreamException e) {
+                    // if the state is such that this method should not be called (has not yet
+                    // consumed existing input data, or has been marked as closed)
+                    // TODO: This should never happen
+                    checkState(false);
 
-        if (parser.getInputFeeder().needMoreInput()) {
-            try {
-                parser.getInputFeeder().feedInput(buffer);
-            } catch (XMLStreamException e) {
-                // if the state is such that this method should not be called (has not yet
-                // consumed existing input data, or has been marked as closed)
+                    // TODO
+                    // Al cliente XmppErrors.INTERNAL_SERVER
+                    // Al servidor </stream:stream>
+                    return -1;
+                }
+            } else {
+                // Method called to check whether it is ok to feed more data: parser returns true if
+                // it has no more content to parse (and it is ok to feed more); otherwise false
+                // (and no data should yet be fed).
                 // TODO: This should never happen
                 checkState(false);
-
                 // TODO
                 // Al cliente XmppErrors.INTERNAL_SERVER
                 // Al servidor </stream:stream>
                 return -1;
             }
-        } else {
-            // Method called to check whether it is ok to feed more data: parser returns true if
-            // it has no more content to parse (and it is ok to feed more); otherwise false
-            // (and no data should yet be fed).
-            // TODO: This should never happen
-            checkState(false);
-            // TODO
-            // Al cliente XmppErrors.INTERNAL_SERVER
-            // Al servidor </stream:stream>
-            return -1;
         }
 
         try {
@@ -142,7 +134,6 @@ public class XmppParser implements ProtocolHandler {
             // Al cliente XmppErrors.BAD_FORMAT
             // Al servidor </stream:stream>
             return -1;
-
         }
 
         // TODO: Acordarse de hacer el endOfInput cuando recibe </stream:stream>
@@ -173,48 +164,52 @@ public class XmppParser implements ProtocolHandler {
     }
 
     private void handleStartElement() {
-        String name = parser.getName().getLocalPart();
+        String local = parser.getLocalName();
+        String prefix = parser.getPrefix();
 
-        if (name.equals("stream") && parser.getPrefix().equals("stream")) {
-            initialSetup = false;
-        }
-
-        if (name.equals("message")) {
+        if (local.equals("message")) {
             inMessage = true;
-        } else if (name.equals("body") && inMessage) {
+        } else if (local.equals("body") && inMessage) {
             inBody = true;
         }
+
         retBuffer.put("<".getBytes());
 //        sb.append("<");
-        if (parser.getPrefix().length() != 0) {
-            retBuffer.put(parser.getPrefix().getBytes()).put(":".getBytes());
+        if (prefix != null && !prefix.isEmpty()) {
+            retBuffer.put(prefix.getBytes())
+                    .put(":".getBytes());
 //            sb.append(parser.getPrefix()).append(":");
         }
-        retBuffer.put(name.getBytes());
+        retBuffer.put(local.getBytes());
 //        sb.append(name);
-
+        retBuffer.put(" ".getBytes());
+//            sb.append(" ");
 
         for (int i = 0; i < parser.getAttributeCount(); i++) {
-            retBuffer.put(" ".getBytes());
-//            sb.append(" ");
             if (!parser.getAttributePrefix(i).isEmpty()) {
-                retBuffer.put(parser.getAttributePrefix(i).getBytes()).put(":".getBytes());
+                retBuffer.put(parser.getAttributePrefix(i).getBytes())
+                        .put(":".getBytes());
 //                sb.append(parser.getAttributePrefix(i)).append(":");
             }
-            retBuffer.put(parser.getAttributeLocalName(i).getBytes()).put("=\"".getBytes()).put(parser.getAttributeValue(i).getBytes()).put("\"".getBytes());
+            retBuffer.put(parser.getAttributeLocalName(i).getBytes())
+                    .put("='".getBytes())
+                    .put(parser.getAttributeValue(i).getBytes())
+                    .put("' ".getBytes());
 //            sb.append(parser.getAttributeLocalName(i)).append("=\"").append(parser.getAttributeValue(i)).append("\"");
         }
 
-
         for (int i = 0; i < parser.getNamespaceCount(); i++) {
-            retBuffer.put(" ".getBytes()).put("xmlns".getBytes());
+            retBuffer.put("xmlns".getBytes());
 //            sb.append(" ").append("xmlns");
             if (!parser.getNamespacePrefix(i).isEmpty()) {
-                retBuffer.put(":".getBytes()).put(parser.getNamespacePrefix(i).getBytes());
+                retBuffer.put(":".getBytes())
+                        .put(parser.getNamespacePrefix(i).getBytes());
 //                sb.append(":").append(parser.getNamespacePrefix(i));
             }
 
-            retBuffer.put("=\"".getBytes()).put(parser.getNamespaceURI(i).getBytes()).put("\"".getBytes());
+            retBuffer.put("='".getBytes())
+                    .put(parser.getNamespaceURI(i).getBytes())
+                    .put("' ".getBytes());
 //            sb.append("=\"").append(parser.getNamespaceURI(i)).append("\"");
         }
 
@@ -223,103 +218,107 @@ public class XmppParser implements ProtocolHandler {
     }
 
     public void handleCharacters() {
-
-        if (inBody) { //TODO: se leetea?
+        if (inBody) {
             for (char c : parser.getText().toCharArray()) {
-                switch (c) {
-                    case 'a':
-                        if (xmppData.isTransformEnabled())
-                            retBuffer.put("4".getBytes());
-//                            sb.append("4");
-                        else
-                            retBuffer.put("a".getBytes());
-//                            sb.append(c);
-                        break;
-                    case 'e':
-                        if (xmppData.isTransformEnabled())
-                            retBuffer.put("3".getBytes());
-//                            sb.append("3");
-                        else
-                            retBuffer.put("e".getBytes());
-//                            sb.append(c);
-                        break;
-                    case 'i':
-                        if (xmppData.isTransformEnabled())
-                            retBuffer.put("1".getBytes());
-//                            sb.append("1");
-                        else
-                            retBuffer.put("i".getBytes());
-//                            sb.append(c);
-                        break;
-                    case 'o': ///TODO POR ACAAA
-
-                        if (xmppData.isTransformEnabled())
-                            retBuffer.put("0".getBytes());
-//                            sb.append("0");
-                        else
-                            retBuffer.put("o".getBytes());
-//                            sb.append(c);.
-                        break;
-                    case 'c':
-                        if (xmppData.isTransformEnabled())
-                            retBuffer.put("&lt;".getBytes());
-//                            sb.append("&lt;");
-
-                        else
-                            retBuffer.put("c".getBytes());
-//                            sb.append(c);
-                        break;
-                    case '<':
-                        retBuffer.put("&lt;".getBytes());
-//                        sb.append("&lt;");
-
-                        break;
-                    case '>':
-                        retBuffer.put("&gt;".getBytes());
-//                        sb.append("&gt;");
-                        break;
-                    case '&':
-                        retBuffer.put("&amp;".getBytes());
-//                        sb.append("&amp;");
-                        break;
-                    case '\'':
-                        retBuffer.put("&apos;".getBytes());
-//                        sb.append("&apos;");
-                        break;
-                    case '\"':
-                        retBuffer.put("&quot;".getBytes());
-//                        sb.append("&quot;");
-                        break;
-                    default:
-                        retBuffer.putChar(c);
-//                        sb.append(c);
-                        break;
-                }
+                transform(c);
             }
-        } else
-
-        {
+        } else {
             retBuffer.put(parser.getText().getBytes());
 //            sb.append(parser.getText());
         }
+    }
 
+    private void transform(char c) {
+        boolean changed = true;
+
+        if (xmppData.isTransformEnabled()) {
+            switch (c) {
+                case 'a':
+                    retBuffer.put("4".getBytes());
+//                            sb.append("4");
+                    break;
+
+                case 'e':
+                    retBuffer.put("3".getBytes());
+//                            sb.append("3");
+                    break;
+
+                case 'i':
+                    retBuffer.put("1".getBytes());
+//                            sb.append("1");
+                    break;
+
+                case 'o':
+                    retBuffer.put("0".getBytes());
+//                            sb.append("0");
+                    break;
+
+                case 'c':
+                    retBuffer.put("&lt;".getBytes());
+//                            sb.append("&lt;");
+                    break;
+
+                default:
+                    changed = false;
+            }
+        }
+
+        if (!changed) {
+            switch (c) {
+                case '<':
+                    retBuffer.put("&lt;".getBytes());
+//                        sb.append("&lt;");
+                    break;
+
+                case '>':
+                    retBuffer.put("&gt;".getBytes());
+//                        sb.append("&gt;");
+                    break;
+
+                case '&':
+                    retBuffer.put("&amp;".getBytes());
+//                        sb.append("&amp;");
+                    break;
+
+                case '\'':
+                    retBuffer.put("&apos;".getBytes());
+//                        sb.append("&apos;");
+                    break;
+
+                case '\"':
+                    retBuffer.put("&quot;".getBytes());
+//                        sb.append("&quot;");
+                    break;
+
+                default:
+                    retBuffer.put(String.valueOf(c).getBytes());
+//                        sb.append(c);
+                    break;
+            }
+        }
     }
 
     private void handleEndElement() {
+        String local = parser.getLocalName();
+        String prefix = parser.getPrefix();
+
         retBuffer.put("</".getBytes());
-//        sb.append("</");
-        if (parser.getPrefix().length() != 0) {
-            retBuffer.put(parser.getPrefix().getBytes()).put(":".getBytes());
+//        sb.append("</");}
+
+        if (prefix != null && prefix.isEmpty()) {
+            retBuffer.put(parser.getPrefix().getBytes())
+                    .put(":".getBytes());
 //            sb.append(parser.getPrefix()).append(":");
         }
-        retBuffer.put(parser.getName().getLocalPart().getBytes()).put(">".getBytes());
+
+        retBuffer.put(local.getBytes())
+                .put(">".getBytes());
 //        sb.append(parser.getName().getLocalPart()).append(">");
 
-
-        if (parser.getName().getLocalPart().equals("body"))
+        if (local.equals("body") && inMessage) {
             inBody = false;
-        if (parser.getName().getLocalPart().equals("message"))
+        } else if (local.equals("message")) {
             inMessage = false;
-
+        }
     }
 }
