@@ -353,13 +353,12 @@ public class XmppClientNegotiator implements ProtocolHandler {
     }
 
     private NegotiationStatus getUser() {
-        boolean error = false;
-        byte[] base64;
+        user64 = userBuilder.toString();
 
         try {
-            base64 = Base64.getDecoder().decode(userBuilder.toString());
-            user64 = new String(base64, UTF_8);
-            String[] userAndPass = user64.split(String.valueOf('\0'), 3);
+            byte[] base64Array = Base64.getDecoder().decode(user64);
+            String base64String = new String(base64Array, UTF_8);
+            String[] userAndPass = base64String.split(String.valueOf('\0'), 3);
 
             user = userAndPass[1]; // TODO: Validar?
         } catch (Exception exception) {
