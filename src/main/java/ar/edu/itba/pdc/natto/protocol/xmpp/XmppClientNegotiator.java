@@ -5,7 +5,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import ar.edu.itba.pdc.natto.net.NetAddress;
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
-import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -19,7 +18,7 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 import javax.xml.stream.XMLStreamException;
 
-public class XmppClientNegotiator implements ProtocolHandler {
+public class XmppClientNegotiator extends ProtocolHandler {
     private static final Logger logger = LoggerFactory.getLogger(XmppClientNegotiator.class);
 
     private static final int BUFFER_SIZE = 10000;
@@ -50,22 +49,22 @@ public class XmppClientNegotiator implements ProtocolHandler {
     }
 
     @Override
-    public void afterConnect(Connection me, Connection other) {
+    public void afterConnect() {
         throw new IllegalStateException("Not a connectable handler");
     }
 
     @Override
-    public void afterRead(Connection me, Connection other, ByteBuffer readBuffer) {
-        int ret = handshake(me, readBuffer);
+    public void afterRead(ByteBuffer readBuffer) {
+        int ret = handshake(readBuffer);
 
         if (hasToWrite) {
             hasToWrite = false;
             retBuffer.flip();
-            me.requestWrite(retBuffer);
+            connection.requestWrite(retBuffer);
         }
 
         if (ret == -1) {
-            me.requestClose();
+            connection.requestClose();
         } else if (ret == 1) {
             logger.info("User " + user + " connected");
 
@@ -75,15 +74,21 @@ public class XmppClientNegotiator implements ProtocolHandler {
             XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user,
                     toServer);
 
+            XmppParser clientParser = new XmppParser(data, user);
+            serverNegotiator.link(clientParser);
+            clientParser.link(serverNegotiator);
+            connection.setHandler(clientParser);
+
             try {
-                me.requestConnect(serverAddress, serverNegotiator);
+                connection.requestConnect(serverAddress, serverNegotiator);
             } catch (IOException | IllegalArgumentException exception) {
                 logger.error("Failed to request server connection", exception);
 
                 handleError(XmppErrors.REMOTE_CONNECTION_FAILED); // TODO: Este error?
                 retBuffer.flip();
-                me.requestWrite(retBuffer);
-                me.requestClose();
+                connection.requestWrite(retBuffer);
+                connection.requestClose();
+                // TODO: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             }
         }
 
@@ -97,21 +102,21 @@ public class XmppClientNegotiator implements ProtocolHandler {
     }
 
     @Override
-    public void afterWrite(Connection me, Connection other) {
+    public void afterWrite() {
         if (retBuffer.hasRemaining()) {
-            me.requestWrite(retBuffer);
+            connection.requestWrite(retBuffer);
         } else {
             retBuffer.clear();
-            me.requestRead();
+            connection.requestRead();
         }
     }
 
     @Override
-    public void beforeClose(Connection me, Connection other) {
+    public void beforeClose() {
         // TODO:
     }
 
-    private int handshake(Connection connection, ByteBuffer readBuffer) {
+    private int handshake(ByteBuffer readBuffer) {
         NegotiationStatus readResult;
 
         if (reader.getInputFeeder().needMoreInput()) {

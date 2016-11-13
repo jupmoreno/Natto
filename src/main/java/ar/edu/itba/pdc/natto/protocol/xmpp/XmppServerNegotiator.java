@@ -1,7 +1,7 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
-import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
+import ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -15,18 +15,18 @@ import java.nio.ByteBuffer;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public class XmppServerNegotiator implements ProtocolHandler {
+public class XmppServerNegotiator extends ProtocolHandler implements LinkedProtocolHandler {
     private static final Logger logger = LoggerFactory.getLogger(XmppServerNegotiator.class);
 
     private static final int BUFFER_SIZE = 10000;
+    private static final ByteBuffer closeBuffer = ByteBuffer.wrap(
+            XmppMessages.END_STREAM.getBytes()).asReadOnlyBuffer(); // TODO: Test
 
     private final AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private final AsyncXMLStreamReader<AsyncByteBufferFeeder> reader =
             inputF.createAsyncForByteBuffer();
 
     private final ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-    private final ByteBuffer closeBuffer = ByteBuffer.wrap(
-            XmppMessages.END_STREAM.getBytes());
 
     private boolean authSent = false;
     private boolean inMechanism = false;
@@ -42,6 +42,8 @@ public class XmppServerNegotiator implements ProtocolHandler {
 
     private String tagClientResponse = null;
 
+    private LinkedProtocolHandler link;
+
     public XmppServerNegotiator(XmppData data, String user64, String user, String toServer) {
         this.data = checkNotNull(data, "User can't be null");
         this.user64 = checkNotNull(user64, "Base 64 data can't be null");
@@ -50,7 +52,36 @@ public class XmppServerNegotiator implements ProtocolHandler {
     }
 
     @Override
-    public void afterConnect(Connection me, Connection other) {
+    public void link(LinkedProtocolHandler link) {
+        this.link = link;
+    }
+
+    @Override
+    public void requestRead() {
+        connection.requestRead();
+    }
+
+    @Override
+    public void requestWrite(ByteBuffer buffer) {
+        connection.requestWrite(buffer);
+    }
+
+    @Override
+    public void finishedWriting() {
+        if (retBuffer.hasRemaining()) {
+            link.requestWrite(retBuffer);
+        } else {
+            link.requestClose();
+        }
+    }
+
+    @Override
+    public void requestClose() {
+        connection.requestClose();
+    }
+
+    @Override
+    public void afterConnect() {
         retBuffer.clear();
         retBuffer.put(XmppMessages.VERSION_AND_ENCODING.getBytes());
         retBuffer.put(XmppMessages.INITIAL_STREAM_START.getBytes());
@@ -60,54 +91,56 @@ public class XmppServerNegotiator implements ProtocolHandler {
         retBuffer.put("xmlns:xml='http://www.w3.org/XML/1998/namespace'>".getBytes());
         retBuffer.flip();
 
-        me.requestWrite(retBuffer);
+        connection.requestWrite(retBuffer);
     }
 
     @Override
-    public void afterRead(Connection me, Connection other, ByteBuffer readBuffer) {
+    public void afterRead(final ByteBuffer readBuffer) {
         int ret = handshake(readBuffer);
 
         if (ret == -1) {
-            me.requestWrite(closeBuffer);
-            me.requestClose();
+            connection.requestWrite(closeBuffer);
+            connection.requestClose();
 
             retBuffer.flip();
-            other.requestWrite(retBuffer);
-            other.requestClose();
+            link.requestWrite(retBuffer);
         } else if (ret == 1) {
             authSent = true;
 
             retBuffer.flip();
-            me.requestWrite(retBuffer);
+            connection.requestWrite(retBuffer);
         } else if (ret == 0) {
-            me.requestRead();
+            connection.requestRead();
         }
     }
 
     @Override
-    public void afterWrite(Connection me, Connection other) {
+    public void afterWrite() {
         if (authSent) {
             if (retBuffer.hasRemaining()) {
-                me.requestWrite(retBuffer);
+                connection.requestWrite(retBuffer);
             } else {
-                me.setHandler(null);
-                me.requestRead();
+                XmppForwarder handler = new XmppForwarder();
+                handler.link(link);
+                link.link(handler);
 
-                other.setHandler(null);
-                other.requestRead();
+                connection.setHandler(handler);
+                connection.requestRead();
+
+                link.requestRead();
             }
         } else {
             if (retBuffer.hasRemaining()) {
-                me.requestWrite(retBuffer);
+                connection.requestWrite(retBuffer);
             } else {
                 retBuffer.clear();
-                me.requestRead();
+                connection.requestRead();
             }
         }
     }
 
     @Override
-    public void beforeClose(Connection me, Connection other) {
+    public void beforeClose() {
 
     }
 

@@ -1,7 +1,7 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
-import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
+import ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler;
 import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
@@ -9,101 +9,132 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 import static com.google.common.base.Preconditions.checkState;
 
-public class XmppParser implements ProtocolHandler {
-
+public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler {
     private final static int BUFFER_MAX_SIZE = 10000;
 
-    private AsyncXMLInputFactory inputF = new InputFactoryImpl();
-    private AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
+    private final AsyncXMLInputFactory inputF = new InputFactoryImpl();
+    private final AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
 
-    private XmppData xmppData;
+    private final ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
+    private final XmppData xmppData;
+    private final String user;
+
+    private LinkedProtocolHandler link;
 
     private boolean inMessage = false;
     private boolean inBody = false;
 
-
-    ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     //   StringBuilder sb = new StringBuilder();
 
     public XmppParser(XmppData data, String user) {
         this.xmppData = data;
-    }
-
-
-    @Override
-    public void afterConnect(Connection me, Connection other) {
-        throw new IllegalStateException(""); // TODO
+        this.user = user;
     }
 
     @Override
-    public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
-        int ret = parse(buffer);
-
-        if (ret == -1) {
-            me.requestClose();
-            //TODO: mandar bien mensaje de error ESTO ES ASI?
-            other.requestClose();
-        } else if (ret == 1) {
-            // TODO
-        } else {
-            // TODO
-        }
-
-        // TODO Ver
-        retBuffer.flip();
-        other.requestWrite(retBuffer);
-
+    public void link(LinkedProtocolHandler link) {
+        this.link = link;
     }
 
     @Override
-    public void afterWrite(Connection me, Connection other) {
+    public void requestRead() {
+        connection.requestRead();
+    }
+
+    @Override
+    public void requestWrite(ByteBuffer buffer) {
+        connection.requestWrite(buffer);
+    }
+
+    @Override
+    public void finishedWriting() {
         if (retBuffer.hasRemaining()) {
-            me.requestWrite(retBuffer);
+            link.requestWrite(retBuffer);
         } else {
-            me.requestRead();
+            retBuffer.clear();
+            if (parser.getInputFeeder().needMoreInput()) {
+                connection.requestRead();
+            } else {
+                int ret = parse();
+
+                if (ret == -1) {
+                    checkState(false);
+                    // TODO:
+                } else if (ret == 1) {
+                    retBuffer.flip();
+                    link.requestWrite(retBuffer);
+                } else {
+                    connection.requestRead();
+                }
+            }
         }
     }
 
     @Override
-    public void beforeClose(Connection me, Connection other) {
-        // TODO
+    public void requestClose() {
+        connection.requestClose();
     }
 
-    private int parse(ByteBuffer buffer) {
-        if (buffer == null) {
-            checkState(!parser.getInputFeeder().needMoreInput());
-        } else {
-            if (parser.getInputFeeder().needMoreInput()) {
-                try {
-                    parser.getInputFeeder().feedInput(buffer);
-                } catch (XMLStreamException e) {
-                    // if the state is such that this method should not be called (has not yet
-                    // consumed existing input data, or has been marked as closed)
-                    // TODO: This should never happen
-                    checkState(false);
+    @Override
+    public void afterConnect() {
+        throw new IllegalStateException("Not a connectable handler");
+    }
 
-                    // TODO
-                    // Al cliente XmppErrors.INTERNAL_SERVER
-                    // Al servidor </stream:stream>
-                    return -1;
-                }
-            } else {
-                // Method called to check whether it is ok to feed more data: parser returns true if
-                // it has no more content to parse (and it is ok to feed more); otherwise false
-                // (and no data should yet be fed).
+    @Override
+    public void afterRead(ByteBuffer buffer) {
+        if (parser.getInputFeeder().needMoreInput()) {
+            try {
+                parser.getInputFeeder().feedInput(buffer);
+            } catch (XMLStreamException e) {
+                // if the state is such that this method should not be called (has not yet
+                // consumed existing input data, or has been marked as closed)
                 // TODO: This should never happen
                 checkState(false);
+
                 // TODO
                 // Al cliente XmppErrors.INTERNAL_SERVER
                 // Al servidor </stream:stream>
-                return -1;
+                return;
             }
+        } else {
+            // Method called to check whether it is ok to feed more data: parser returns true if
+            // it has no more content to parse (and it is ok to feed more); otherwise false
+            // (and no data should yet be fed).
+            // TODO: This should never happen
+            checkState(false);
+            // TODO
+            // Al cliente XmppErrors.INTERNAL_SERVER
+            // Al servidor </stream:stream>
+            return;
         }
 
+        int ret = parse();
+
+        if (ret == -1) {
+            checkState(false);
+            // TODO:
+        } else if (ret == 1) {
+            retBuffer.flip();
+            link.requestWrite(retBuffer);
+        } else {
+            connection.requestRead();
+        }
+    }
+
+    @Override
+    public void afterWrite() {
+        link.finishedWriting();
+    }
+
+    @Override
+    public void beforeClose() {
+        // TODO
+    }
+
+    private int parse() {
         try {
             while (parser.hasNext()) {
                 switch (parser.next()) {
@@ -113,15 +144,15 @@ public class XmppParser implements ProtocolHandler {
 
                     case AsyncXMLStreamReader.START_ELEMENT:
                         handleStartElement();
-                        break;
+                        return 1;
 
                     case AsyncXMLStreamReader.CHARACTERS:
                         handleCharacters();
-                        break;
+                        return 1;
 
                     case AsyncXMLStreamReader.END_ELEMENT:
                         handleEndElement();
-                        break;
+                        return 1;
 
                     case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                         return 0;
@@ -143,6 +174,10 @@ public class XmppParser implements ProtocolHandler {
 
 
     private boolean handleStartDocument() {
+        if (true) { // TODO: Remove
+            return false;
+        }
+
         String version = parser.getVersion();
         String encoding = parser.getEncoding();
 
@@ -191,6 +226,7 @@ public class XmppParser implements ProtocolHandler {
                         .put(":".getBytes());
 //                sb.append(parser.getAttributePrefix(i)).append(":");
             }
+
             retBuffer.put(parser.getAttributeLocalName(i).getBytes())
                     .put("='".getBytes())
                     .put(parser.getAttributeValue(i).getBytes())
@@ -213,7 +249,7 @@ public class XmppParser implements ProtocolHandler {
 //            sb.append("=\"").append(parser.getNamespaceURI(i)).append("\"");
         }
 
-        retBuffer.put(">".getBytes());
+        retBuffer.put(XmppMessages.INITIAL_STREAM_END.getBytes());
 //        sb.append(">");
     }
 
@@ -305,7 +341,7 @@ public class XmppParser implements ProtocolHandler {
         retBuffer.put("</".getBytes());
 //        sb.append("</");}
 
-        if (prefix != null && prefix.isEmpty()) {
+        if (prefix != null && !prefix.isEmpty()) {
             retBuffer.put(parser.getPrefix().getBytes())
                     .put(":".getBytes());
 //            sb.append(parser.getPrefix()).append(":");

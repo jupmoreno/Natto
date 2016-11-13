@@ -4,12 +4,19 @@ import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 
 import java.nio.ByteBuffer;
 
-public interface ProtocolHandler {
-    void afterConnect(final Connection me, final Connection other);
+public abstract class ProtocolHandler {
+    protected Connection connection;
 
-    void afterRead(final Connection me, final Connection other, final ByteBuffer buffer);
+    public void setConnection(Connection connection) {
+        // TODO: Validar algo?
+        this.connection = connection;
+    }
 
-    void afterWrite(final Connection me, final Connection other);
+    public abstract void afterConnect();
 
-    void beforeClose(final Connection me, final Connection other);
+    public abstract void afterRead(final ByteBuffer buffer);
+
+    public abstract void afterWrite();
+
+    public abstract void beforeClose();
 }

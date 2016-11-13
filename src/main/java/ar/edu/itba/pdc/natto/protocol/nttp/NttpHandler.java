@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 
 import static com.google.common.base.Preconditions.checkState;
 
-public class NttpHandler implements ProtocolHandler {
+public class NttpHandler extends ProtocolHandler {
     private static final int MAX_SIZE = 5000;
     private ByteBuffer buffer = ByteBuffer.allocate(MAX_SIZE);
 
@@ -22,12 +22,12 @@ public class NttpHandler implements ProtocolHandler {
     }
 
     @Override
-    public void afterConnect(Connection me, Connection other) {
-        checkState(false);
+    public void afterConnect() {
+        throw new IllegalStateException("Not a connectable handler");
     }
 
     @Override
-    public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
+    public void afterRead(ByteBuffer buffer) {
 
         while (!shouldClose && buffer.hasRemaining()) {
             StringBuilder request = parser.parse(buffer);
@@ -36,33 +36,33 @@ public class NttpHandler implements ProtocolHandler {
                 StringBuilder response = protocol.process(request);
                 System.out.println("RESPONSE: " + response); // TODO: Remove
                 if (response != null) {
-                    me.requestWrite(toByteBuffer(response));
+                    connection.requestWrite(toByteBuffer(response));
                     if (isQuit(response)) {
                         shouldClose = true;
                     }
                 }
             } else {
-                me.requestRead();
+                connection.requestRead();
             }
 
         }
     }
 
     @Override
-    public void afterWrite(Connection me, Connection other) {
+    public void afterWrite() {
         if (buffer.hasRemaining()) {
-            me.requestWrite(buffer);
+            connection.requestWrite(buffer);
         } else {
             if (shouldClose) {
-                me.requestClose();
+                connection.requestClose();
             } else {
-                me.requestRead();
+                connection.requestRead();
             }
         }
     }
 
     @Override
-    public void beforeClose(Connection me, Connection other) {
+    public void beforeClose() {
         // TODO:
     }
 

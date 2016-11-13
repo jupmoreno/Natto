@@ -53,11 +53,14 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
         this.readBuffer = ByteBuffer.allocate(READ_BUFFER_SIZE);
         this.writeBuffer = ByteBuffer.allocate(WRITE_BUFFER_SIZE);
+
+        handler.setConnection(this);
     }
 
     @Override
     public void setHandler(ProtocolHandler handler) {
         this.handler = checkNotNull(handler, "Handler can't be null");
+        this.handler.setConnection(this);
     }
 
     @Override
@@ -90,7 +93,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
                 subscriber.unsubscribe(channel, ChannelOperation.CONNECT);
 
-                handler.afterConnect(this, connection);
+                handler.afterConnect();
             }
         } catch (IOException exception) {
             logger.error("Couldn't establish connection with server", exception);
@@ -141,7 +144,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
             readBuffer.flip();
-            handler.afterRead(this, connection, readBuffer);
+            handler.afterRead(readBuffer);
             readBuffer.clear();
         }
     }
@@ -187,7 +190,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
         writeBuffer.compact();
 
-        handler.afterWrite(this, connection);
+        handler.afterWrite();
     }
 
     @Override
@@ -206,14 +209,14 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         subscriber.unsubscribe(channel, ChannelOperation.READ);
 
         if (writeBuffer.position() == 0) {
-            handler.beforeClose(this, connection);
+            handler.beforeClose();
             Closeables.closeSilently(channel);
         }
     }
 
     private void forceClose() {
         alive = false;
-        handler.beforeClose(this, connection);
+        handler.beforeClose();
         Closeables.closeSilently(channel);
     }
 }

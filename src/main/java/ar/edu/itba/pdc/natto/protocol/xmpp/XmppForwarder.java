@@ -1,43 +1,67 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
-import static com.google.common.base.Preconditions.checkState;
-
+import ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler;
 import ar.edu.itba.pdc.natto.protocol.ProtocolHandler;
-import ar.edu.itba.pdc.natto.proxy.handlers.Connection;
 
 import java.nio.ByteBuffer;
 
 
-public class XmppForwarder implements ProtocolHandler {
+public class XmppForwarder extends ProtocolHandler implements LinkedProtocolHandler {
     private static final int BUFFER_SIZE = 1024;
 
-    private ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+    private final ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+
+    private LinkedProtocolHandler link;
 
     @Override
-    public void afterConnect(Connection me, Connection other) {
-        checkState(false);
+    public void link(LinkedProtocolHandler link) {
+        this.link = link;
     }
 
     @Override
-    public void afterRead(Connection me, Connection other, ByteBuffer buffer) {
-        retBuffer.clear();
-        retBuffer.put(buffer);
-        retBuffer.flip();
-
-        other.requestWrite(buffer);
+    public void requestRead() {
+        connection.requestRead();
     }
 
     @Override
-    public void afterWrite(Connection me, Connection other) {
+    public void requestWrite(ByteBuffer buffer) {
+        connection.requestWrite(buffer);
+    }
+
+    @Override
+    public void finishedWriting() {
         if (retBuffer.hasRemaining()) {
-            other.requestWrite(retBuffer);
+            link.requestWrite(retBuffer);
         } else {
-            me.requestRead();
+            retBuffer.clear();
+            connection.requestRead();
         }
     }
 
     @Override
-    public void beforeClose(Connection me, Connection other) {
+    public void requestClose() {
+        connection.requestClose();
+    }
 
+    @Override
+    public void afterConnect() {
+        throw new IllegalStateException("Not a connectable handler");
+    }
+
+    @Override
+    public void afterRead(ByteBuffer buffer) {
+        retBuffer.put(buffer);
+        retBuffer.flip();
+        link.requestWrite(retBuffer);
+    }
+
+    @Override
+    public void afterWrite() {
+        link.finishedWriting();
+    }
+
+    @Override
+    public void beforeClose() {
+        // TODO
     }
 }
