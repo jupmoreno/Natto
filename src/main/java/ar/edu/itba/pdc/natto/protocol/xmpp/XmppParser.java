@@ -265,37 +265,39 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
     }
 
     private void transform(char c) {
-        boolean changed = true;
+        boolean changed = false;
 
         if (xmppData.isTransformEnabled()) {
             switch (c) {
                 case 'a':
+                    changed = true;
                     retBuffer.put("4".getBytes());
 //                            sb.append("4");
                     break;
 
                 case 'e':
+                    changed = true;
                     retBuffer.put("3".getBytes());
 //                            sb.append("3");
                     break;
 
                 case 'i':
+                    changed = true;
                     retBuffer.put("1".getBytes());
 //                            sb.append("1");
                     break;
 
                 case 'o':
+                    changed = true;
                     retBuffer.put("0".getBytes());
 //                            sb.append("0");
                     break;
 
                 case 'c':
+                    changed = true;
                     retBuffer.put("&lt;".getBytes());
 //                            sb.append("&lt;");
                     break;
-
-                default:
-                    changed = false;
             }
         }
 
