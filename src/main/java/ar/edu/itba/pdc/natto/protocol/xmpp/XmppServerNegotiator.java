@@ -63,7 +63,10 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
 
     @Override
     public void requestWrite(ByteBuffer buffer) {
+        int before = buffer.remaining();
         connection.requestWrite(buffer);
+        System.out.println("LA CANTIDAD DE BYTES QUE ESCRIBI SON DEL SERVER NEG " + (before - buffer.remaining()));
+        data.moreBytesTransferred(before - buffer.remaining());
     }
 
     @Override
@@ -120,7 +123,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
             if (retBuffer.hasRemaining()) {
                 connection.requestWrite(retBuffer);
             } else {
-                XmppForwarder handler = new XmppForwarder();
+                XmppForwarder handler = new XmppForwarder(data);
                 handler.link(link);
                 link.link(handler);
 

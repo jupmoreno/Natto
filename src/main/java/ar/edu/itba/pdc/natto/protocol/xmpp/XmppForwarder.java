@@ -13,6 +13,14 @@ public class XmppForwarder extends ProtocolHandler implements LinkedProtocolHand
 
     private LinkedProtocolHandler link;
 
+    private XmppData data;
+
+    public XmppForwarder(XmppData data) {
+        this.data = data;
+        data.newAccepted();
+    }
+
+
     @Override
     public void link(LinkedProtocolHandler link) {
         this.link = link;

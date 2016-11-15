@@ -20,6 +20,10 @@ public class XmppData {
     private long bytesTransferred = 0;
     private long accessesAmount = 0;
 
+
+
+    private long acceptedAmount = 0;
+
     public XmppData(Map<String, NetAddress> usersAddress, Set<String> usersSilenced) {
         this.usersAddress = usersAddress;
         this.usersSilenced = usersSilenced;
@@ -93,5 +97,17 @@ public class XmppData {
 
     public long getAccessesAmount() {
         return accessesAmount;
+    }
+
+    public long getAcceptedAmount() {
+        return acceptedAmount;
+    }
+
+    public void setAcceptedAmount(long acceptedAmount) {
+        this.acceptedAmount = acceptedAmount;
+    }
+
+    public void newAccepted(){
+        this.acceptedAmount++ ;
     }
 }

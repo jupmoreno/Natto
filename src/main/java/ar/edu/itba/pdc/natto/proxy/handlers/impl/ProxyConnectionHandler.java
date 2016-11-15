@@ -91,6 +91,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
                 logger.info("Established connection with server on " + serverAddress);
 
+
                 subscriber.unsubscribe(channel, ChannelOperation.CONNECT);
 
                 handler.afterConnect();

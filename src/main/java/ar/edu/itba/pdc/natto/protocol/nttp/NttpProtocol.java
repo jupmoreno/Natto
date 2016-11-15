@@ -17,7 +17,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
     // Siempre que se modifique un comando hay que modificar esto y helps.
     private final static String[] commands = {"hello", "help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced", "multiplex"};
     private String[] authenticationMethods = {"simple",};
-    private String[] metrics = {"bytes", "accesses",};
+    private String[] metrics = {"bytes", "accesses", "accepted", };
     private String authMethod = "";
     private String user = "";
     private boolean hello = false;
@@ -301,6 +301,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             String[] metricsRet = {
                     "bytes: " + xmppData.getBytesTransferred(),
                     "acceses: " + xmppData.getAccessesAmount(),
+                    "accepted: " + xmppData.getAcceptedAmount(),
             };
             formulateResponse(NttpCode.OK, metricsRet);
             return;
@@ -315,6 +316,9 @@ public class NttpProtocol implements Protocol<StringBuilder> {
                 return;
             } else if (messageVec[1].compareToIgnoreCase("accesses") == 0) {
                 formulateResponse(NttpCode.OK, new String[] {"accesses: " + xmppData.getAccessesAmount()});
+                return;
+            } else if (messageVec[1].compareToIgnoreCase("accepted:") == 0){
+                formulateResponse(NttpCode.OK, new String[] {"accepted: " + xmppData.getAcceptedAmount()});
                 return;
             }
         }

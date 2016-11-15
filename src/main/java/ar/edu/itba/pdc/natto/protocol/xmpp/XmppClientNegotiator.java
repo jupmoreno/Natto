@@ -45,12 +45,22 @@ public class XmppClientNegotiator extends ProtocolHandler {
     private final XmppData data;
 
     public XmppClientNegotiator(XmppData data) {
+
         this.data = data;
+        data.newAccess();
     }
 
     @Override
     public void afterConnect() {
         throw new IllegalStateException("Not a connectable handler");
+    }
+
+    public void requestWrite(ByteBuffer buffer){
+        int before = buffer.remaining();
+        connection.requestWrite(buffer);
+        data.moreBytesTransferred(before - buffer.remaining());
+        System.out.println("LA CANTIDAD DE BYTES QUE ESCRIBI SON DEL CLIENT  " + (before - buffer.remaining()));
+
     }
 
     @Override
@@ -60,7 +70,7 @@ public class XmppClientNegotiator extends ProtocolHandler {
         if (hasToWrite) {
             hasToWrite = false;
             retBuffer.flip();
-            connection.requestWrite(retBuffer);
+            requestWrite(retBuffer);
         }
 
         if (ret == -1) {
@@ -86,7 +96,7 @@ public class XmppClientNegotiator extends ProtocolHandler {
 
                 handleError(XmppErrors.REMOTE_CONNECTION_FAILED); // TODO: Este error?
                 retBuffer.flip();
-                connection.requestWrite(retBuffer);
+                requestWrite(retBuffer);
                 connection.requestClose();
                 // TODO: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             }
@@ -104,7 +114,7 @@ public class XmppClientNegotiator extends ProtocolHandler {
     @Override
     public void afterWrite() {
         if (retBuffer.hasRemaining()) {
-            connection.requestWrite(retBuffer);
+            requestWrite(retBuffer);
         } else {
             retBuffer.clear();
             connection.requestRead();

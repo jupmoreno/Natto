@@ -46,7 +46,10 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
 
     @Override
     public void requestWrite(ByteBuffer buffer) {
+        int before = buffer.remaining();
         connection.requestWrite(buffer);
+        xmppData.moreBytesTransferred(before - buffer.remaining());
+        System.out.println("LA CANTIDAD DE BYTES QUE ESCRIBI SON DEL PARSER  " + (before - buffer.remaining()));
     }
 
     @Override
