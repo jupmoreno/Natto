@@ -20,7 +20,7 @@ public enum XmppErrors {
     UNSOPPORTED_STANZA_TYPE("<unsupported-stanza-type xmlns='urn:ietf:params:xml:ns:xmpp-streams'/>", true),
 
     // FAILURES
-    MALFORMED_REQUEST("", false), // TODO:
+    MALFORMED_REQUEST("<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><malformed-request/></failure>", false),
     INVALID_MECHANISM("<invalid-mechanism/>", false),
     INCORRECT_ENCODING("<incorrect-encoding/>", false);
 

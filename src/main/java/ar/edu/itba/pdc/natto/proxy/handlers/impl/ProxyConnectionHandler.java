@@ -136,7 +136,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
         // The channel has reached end-of-stream
         if (bytesRead == -1) {
-            logger.info("Channel reached EOF, closing");
+            logger.warn("Channel reached EOF, closing");
 
             forceClose();
 
@@ -185,7 +185,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
             subscriber.unsubscribe(channel, ChannelOperation.WRITE);
 
             if (closeRequested) {
-                // TODO
+                // TODO JPM
                 forceClose();
 
                 return;

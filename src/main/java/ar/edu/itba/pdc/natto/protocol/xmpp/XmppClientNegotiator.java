@@ -104,7 +104,7 @@ public class XmppClientNegotiator extends ProtocolHandler {
             if (!connection.requestConnect(serverAddress, serverNegotiator)) {
                 logger.error("Failed to request server connection");
 
-                handleError(XmppErrors.REMOTE_CONNECTION_FAILED); // TODO: Este error?
+                handleError(XmppErrors.REMOTE_CONNECTION_FAILED);
                 retBuffer.flip();
                 requestWrite();
 
@@ -249,7 +249,6 @@ public class XmppClientNegotiator extends ProtocolHandler {
             if (local.equals("stream")) {
                 return handleStream();
             } else {
-                // TODO: Ignorar todo hasta q llegue un stream no?
                 return NegotiationStatus.IN_PROCESS;
             }
         } else {
@@ -270,7 +269,6 @@ public class XmppClientNegotiator extends ProtocolHandler {
                 return NegotiationStatus.ERROR;
             }
 
-            // TODO: Ver si hay mas casos validos
             handleError(XmppErrors.UNSOPPORTED_STANZA_TYPE);
             return NegotiationStatus.ERROR;
         }
@@ -319,7 +317,7 @@ public class XmppClientNegotiator extends ProtocolHandler {
         }
 
         if (toServer == null) {
-            handleError(XmppErrors.HOST_UNKNOWN); // TODO: Este error?
+            handleError(XmppErrors.HOST_UNKNOWN);
             return NegotiationStatus.ERROR;
         }
 
@@ -349,7 +347,6 @@ public class XmppClientNegotiator extends ProtocolHandler {
             return NegotiationStatus.ERROR;
         }
 
-        // TODO: Validar q solo haya 1 atributo (mechanism)?
         for (int i = 0; i < reader.getAttributeCount(); i++) {
             if (reader.getAttributeLocalName(i).equals("mechanism")) {
                 String mech = reader.getAttributeValue(i);
@@ -393,9 +390,12 @@ public class XmppClientNegotiator extends ProtocolHandler {
             String base64String = new String(base64Array, UTF_8);
             String[] userAndPass = base64String.split(String.valueOf('\0'), 3);
 
-            user = userAndPass[1]; // TODO: Validar?
-        } catch (Exception exception) {
+            user = userAndPass[1];
+        } catch (IllegalArgumentException exception) {
             handleError(XmppErrors.INCORRECT_ENCODING);
+            return NegotiationStatus.ERROR;
+        } catch (Exception exception){
+            handleError(XmppErrors.MALFORMED_REQUEST);
             return NegotiationStatus.ERROR;
         }
 
