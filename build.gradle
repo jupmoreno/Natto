@@ -35,3 +35,18 @@ jar {
         configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
+
+task fatJar(type: Jar) {
+    baseName = 'Natto'
+
+    manifest {
+        attributes 'Implementation-Title': 'Natto',
+                'Implementation-Version': version,
+                'Main-Class': mainClassName
+    }
+
+    baseName = project.name + '-all'
+
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
