@@ -279,7 +279,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             return;
         }
 
-        //TODO: desloguarse bien y terminar la conección
+        //TODO: desloguarse bien y terminar la conección  JPM
         user = "";
         authMethod = "";
         authorized = false;

@@ -62,7 +62,7 @@ public class NttpHandler extends ProtocolHandler {
 
     @Override
     public void beforeClose() {
-        // TODO:
+        // TODO: JPM
     }
 
     private boolean isQuit(StringBuilder command) {
@@ -81,7 +81,6 @@ public class NttpHandler extends ProtocolHandler {
 
     private ByteBuffer toByteBuffer(StringBuilder message) {
         buffer.clear();
-        // TODO: Ver
         buffer.put(message.toString().getBytes());
         buffer.flip();
 
