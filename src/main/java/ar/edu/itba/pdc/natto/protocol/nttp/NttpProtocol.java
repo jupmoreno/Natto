@@ -15,7 +15,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
     private boolean authorized = false;
     // Siempre que se modifique un comando hay que modificar esto y helps.
-    private final static String[] commands = {"hello", "help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced", "multiplex"};
+    private final static String[] commands = {"hello", "help", "auth", "quit", "silence", "unsilence", "transformation", "metrics", "state", "getSilenced", "multiplex", "getMultiplex"};
     private String[] authenticationMethods = {"simple",};
     private String[] metrics = {"bytes", "accesses", "accepted", };
     private String authMethod = "";
@@ -25,7 +25,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             "Initiates dialog with the user. Needs the head values --version along with the version.",
             "Without parameter: shows all the available commands. With parameter @command: shows information about the use of @command",
             "With head --methods and without value: shows the available authentication methods. " +
-                    "With head --request and value @method: requests authentication by using the specified @method. +" +
+                    "With head --request and value @method: requests authentication by using the specified @method. " +
                     "With parameters @user and @password and after authentication requested: authenticates user with the specific @user and @password.",
             "Quits and ends connection.",
             "Recieves an @user as parameter. Silences @user",
@@ -37,6 +37,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             "Shows the state of relevant variables.",
             "Shows the silenced users.",
             "With parameters @user, @host and @port: changes host and port of the given @user.",
+            "Shows the multiplexed users and the respective addres and port.",
     };
 
     public NttpProtocol(NttpData nttpData, XmppData xmppData) {
@@ -82,6 +83,8 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             handleHelp(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("state") == 0) {
             handleState(messageVec);
+        } else if (messageVec[0].compareToIgnoreCase("getMultiplex") == 0) {
+            handleGetMultiplex(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("getSilenced") == 0) {
             handleGetSilenced(messageVec);
         } else if (messageVec[0].compareToIgnoreCase("multiplex") == 0) {
@@ -405,7 +408,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         formulateResponse(NttpCode.USER_UNSILENCED, null);
     }
 
-
     private void handleGetSilenced(String[] messageVec) {
         if(!hello){
             formulateResponse(NttpCode.HELLO_FIRST, null);
@@ -421,9 +423,9 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             return;
         }
 
-        String[] users = xmppData.getUsersSilenced().toArray(new String[xmppData.getUsersSilenced().size()]);
-        formulateResponse(NttpCode.OK, users);
+        formulateResponse(NttpCode.OK, xmppData.getUsersSilenced());
     }
+
 
     private void handleState(String[] messageVec) {
         if(!hello){
@@ -482,6 +484,27 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
         xmppData.setUserAddress(user, new NetAddress(host,port));
         formulateResponse(NttpCode.OK, null);
+
+    }
+
+    private void handleGetMultiplex(String[] messageVec) {
+
+        if(!hello){
+            formulateResponse(NttpCode.HELLO_FIRST, null);
+            return;
+        }
+
+        if (!authorized) {
+            formulateResponse(NttpCode.MUST_AUTH, null);
+            return;
+        }
+
+        if(messageVec.length != 1){
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[11]});
+            return;
+        }
+
+        formulateResponse(NttpCode.OK, xmppData.getMultiplex());
 
     }
 
