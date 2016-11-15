@@ -4,7 +4,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import ar.edu.itba.pdc.natto.config.Defaults;
 import ar.edu.itba.pdc.natto.net.NetAddress;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multiset;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -71,8 +75,17 @@ public class XmppData {
         return transform;
     }
 
-    public Set<String> getUsersSilenced(){
-        return usersSilenced;
+    public String[] getUsersSilenced(){
+        return usersSilenced.toArray(new String[usersSilenced.size()]);
+    }
+
+    public String[] getMultiplex(){
+        List<String> list = new LinkedList<>();
+        for(Map.Entry<String, NetAddress> entry : usersAddress.entrySet()){
+            list.add("user: " + entry.getKey() + "\taddress: " + entry.getValue().getAddress() + "\tport: " + entry.getValue().getPort());
+        }
+
+        return list.toArray(new String[list.size()]);
     }
 
     public void newAccess(){
