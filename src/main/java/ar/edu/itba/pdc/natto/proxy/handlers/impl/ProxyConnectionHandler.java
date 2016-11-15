@@ -217,6 +217,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
     private void forceClose() {
         handler.beforeClose();
+        subscriber.cancel(channel);
         Closeables.closeSilently(channel);
     }
 }
