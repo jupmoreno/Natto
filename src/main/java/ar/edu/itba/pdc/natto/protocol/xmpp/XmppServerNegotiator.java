@@ -234,7 +234,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
         }
 
         if (encoding != null && !encoding.equals("UTF-8")) {
-            handleError(XmppErrors.INTERNAL_SERVER); // TODO: Que error?
+            handleError(XmppErrors.INTERNAL_SERVER);
             return NegotiationStatus.ERROR;
         }
 
@@ -249,7 +249,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
             if (local.equals("stream") && prefix != null && prefix.equals("stream")) {
                 initialStreamReceived = true;
             } else {
-                handleError(XmppErrors.INTERNAL_SERVER); // TODO: Que error?
+                handleError(XmppErrors.INTERNAL_SERVER);
                 return NegotiationStatus.ERROR;
             }
         } else if (!featuresReceived) {
@@ -257,7 +257,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
                 if (local.equals("features") && prefix != null && prefix.equals("stream")) {
                     inFeatures = true;
                 } else {
-                    handleError(XmppErrors.INTERNAL_SERVER); // TODO: Que error?
+                    handleError(XmppErrors.INTERNAL_SERVER);
                     return NegotiationStatus.ERROR;
                 }
             } else {
@@ -276,7 +276,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
 
         if (local.equals("features")) {
             if (!hasPlain) {
-                handleError(XmppErrors.INTERNAL_SERVER); // TODO: Que error?
+                handleError(XmppErrors.INTERNAL_SERVER);
                 return NegotiationStatus.ERROR;
             }
 
@@ -290,7 +290,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
         } else if (local.equals("mechanism")) {
             inMechanism = false;
         } else if (local.equals("stream") && prefix != null && prefix.equals("stream")) {
-            handleError(XmppErrors.INTERNAL_SERVER); // TODO: Que error?
+            handleError(XmppErrors.INTERNAL_SERVER);
             return NegotiationStatus.ERROR;
         }
 
