@@ -197,14 +197,14 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         }
 
         if(messageVec.length == 1){
-            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[0]});
+            formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[2]});
             return;
         }
 
         if (messageVec.length >= 2 && messageVec[1].compareToIgnoreCase("--methods") == 0) {
 
             if (messageVec.length != 2) {
-                formulateResponse(NttpCode.WRONG_ARGS, null);
+                formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[2]});
                 return;
             }
 
@@ -215,7 +215,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         if (messageVec.length >= 3 && messageVec[1].compareToIgnoreCase("--request") == 0) {
 
             if (messageVec.length != 3) {
-                formulateResponse(NttpCode.WRONG_ARGS, null);
+                formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[2]});
                 return;
             }
 
@@ -238,7 +238,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
             //Ahora vaildo usuario y contraseña según el método
             if (authMethod.compareToIgnoreCase("simple") == 0) {
-                if (simpleAuth(messageVec[1], messageVec[2  ])) {
+                if (simpleAuth(messageVec[1], messageVec[2])) {
                     formulateResponse(NttpCode.LOGGED_IN, null);
                     return;
                 } else {
@@ -249,7 +249,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
         }
 
-        formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[1]});
+        formulateResponse(NttpCode.WRONG_ARGS, new String[]{helps[2]});
 
 
     }
@@ -317,7 +317,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             } else if (messageVec[1].compareToIgnoreCase("accesses") == 0) {
                 formulateResponse(NttpCode.OK, new String[] {"accesses: " + xmppData.getAccessesAmount()});
                 return;
-            } else if (messageVec[1].compareToIgnoreCase("accepted:") == 0){
+            } else if (messageVec[1].compareToIgnoreCase("accepted") == 0){
                 formulateResponse(NttpCode.OK, new String[] {"accepted: " + xmppData.getAcceptedAmount()});
                 return;
             }

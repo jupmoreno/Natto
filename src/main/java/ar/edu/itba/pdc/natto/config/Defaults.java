@@ -9,3 +9,6 @@ public final class Defaults {
     public static final boolean SILENCE_ENABLED = false;
     public static final String CONFIG_PATH = "config.xml";
 }
+
+
+
