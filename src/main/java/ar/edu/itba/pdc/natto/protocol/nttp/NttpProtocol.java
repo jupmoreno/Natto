@@ -46,7 +46,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
 
 
     public StringBuilder process(StringBuilder message) {
-        System.out.println("Procesando... " + message);
         if (message == null)
             return null;
 
@@ -61,7 +60,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
         String[] messageVec = sb.toString().split(" ");
 
         if (messageVec.length == 0) {
-            //TODO
             sb.setLength(0);
             return message;
         }

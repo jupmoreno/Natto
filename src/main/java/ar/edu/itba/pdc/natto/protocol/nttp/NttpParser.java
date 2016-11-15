@@ -53,11 +53,9 @@ public class NttpParser implements Parser<StringBuilder> {
         while (charBuffer.hasRemaining() && (current = charBuffer.get()) != '\n') {
             ret.append(current);
             moved++;
-            System.out.println(buffer);
 
             if (ret.length() > MAX_SIZE) {
                 handleTooBig();
-                System.out.println("Devuelvo " + ret);
                 buffer.position(originalPosition + moved);
                 return ret;
             }
@@ -65,12 +63,10 @@ public class NttpParser implements Parser<StringBuilder> {
 
         if (current == '\n') {
             foundCommand = true;
-            System.out.println("Devuelvo " + ret);
             buffer.position(originalPosition + moved + 1);
             return ret;
         }
 
-        System.out.println("Devuelvooo null");
         buffer.position(originalPosition + moved);
         return null;
 
