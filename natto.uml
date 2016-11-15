@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>ar.edu.itba.pdc.natto</OriginalElement>
+  <nodes>
+    <node x="828.0" y="382.0">ar.edu.itba.pdc.natto.protocol.Parser</node>
+    <node x="687.0" y="775.0">ar.edu.itba.pdc.natto.proxy.MultiProtocolServer.Builder</node>
+    <node x="207.75" y="4.0">ar.edu.itba.pdc.natto.proxy.handlers.impl.ProxyConnectionHandler</node>
+    <node x="28.0" y="578.0">ar.edu.itba.pdc.natto.config.Defaults</node>
+    <node x="193.0" y="321.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppForwarder</node>
+    <node x="343.0" y="321.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppParser</node>
+    <node x="349.0" y="-213.0">ar.edu.itba.pdc.natto.Main</node>
+    <node x="151.0" y="-75.0">ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler</node>
+    <node x="21.0" y="499.0">ar.edu.itba.pdc.natto.config.Arguments</node>
+    <node x="232.0" y="429.0">ar.edu.itba.pdc.natto.io.Closeables</node>
+    <node x="486.0" y="603.0">ar.edu.itba.pdc.natto.proxy.ServerData</node>
+    <node x="808.0" y="326.0">ar.edu.itba.pdc.natto.protocol.nttp.NttpProtocol</node>
+    <node x="34.0" y="409.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppMessages</node>
+    <node x="0.0" y="321.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppServerNegotiator</node>
+    <node x="227.5" y="89.0">ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory</node>
+    <node x="679.0" y="368.0">ar.edu.itba.pdc.natto.protocol.nttp.NttpCode</node>
+    <node x="7.0" y="-75.0">ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler</node>
+    <node x="324.0" y="-75.0">ar.edu.itba.pdc.natto.proxy.handlers.Connection</node>
+    <node x="814.0" y="461.0">ar.edu.itba.pdc.natto.protocol.nttp.NttpParser</node>
+    <node x="352.0" y="366.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppData</node>
+    <node x="146.0" y="168.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppHandlerFactory</node>
+    <node x="682.0" y="412.0">ar.edu.itba.pdc.natto.protocol.nttp.NttpData</node>
+    <node x="329.0" y="168.0">ar.edu.itba.pdc.natto.protocol.nttp.NttpHandlerFactory</node>
+    <node x="661.0" y="321.0">ar.edu.itba.pdc.natto.protocol.nttp.NttpHandler</node>
+    <node x="584.0" y="-133.0">ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber</node>
+    <node x="500.0" y="479.0">ar.edu.itba.pdc.natto.proxy.Server</node>
+    <node x="482.0" y="361.0">ar.edu.itba.pdc.natto.protocol.xmpp.NegotiationStatus</node>
+    <node x="458.0" y="558.0">ar.edu.itba.pdc.natto.proxy.MultiProtocolServer</node>
+    <node x="138.0" y="232.0">ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler</node>
+    <node x="349.0" y="409.0">ar.edu.itba.pdc.natto.net.NetAddress</node>
+    <node x="43.0" y="364.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppErrors</node>
+    <node x="36.0" y="537.0">ar.edu.itba.pdc.natto.config.Config</node>
+    <node x="185.5" y="477.0">ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory</node>
+    <node x="469.0" y="321.0">ar.edu.itba.pdc.natto.protocol.xmpp.XmppClientNegotiator</node>
+    <node x="82.75" y="-154.0">ar.edu.itba.pdc.natto.proxy.handlers.SelectorHandler</node>
+    <node x="464.0" y="-133.0">ar.edu.itba.pdc.natto.dispatcher.Dispatcher</node>
+    <node x="512.5" y="-54.0">ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher</node>
+    <node x="168.0" y="556.0">ar.edu.itba.pdc.natto.proxy.handlers.impl.ProxyConnectionHandlerFactory</node>
+    <node x="356.0" y="232.0">ar.edu.itba.pdc.natto.protocol.ProtocolHandler</node>
+    <node x="216.0" y="598.0">ar.edu.itba.pdc.natto.dispatcher.ChannelOperation</node>
+    <node x="25.0" y="4.0">ar.edu.itba.pdc.natto.proxy.handlers.impl.Acceptor</node>
+    <node x="822.0" y="247.0">ar.edu.itba.pdc.natto.protocol.Protocol</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppServerNegotiator" target="ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler">
+      <point x="-43.25" y="-14.5" />
+      <point x="43.25" y="281.0" />
+      <point x="167.16666666666666" y="281.0" />
+      <point x="-58.33333333333334" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.handlers.impl.ProxyConnectionHandlerFactory" target="ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandlerFactory">
+      <point x="0.0" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppForwarder" target="ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler">
+      <point x="-32.5" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.handlers.impl.Acceptor" target="ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler">
+      <point x="0.0" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.nttp.NttpParser" target="ar.edu.itba.pdc.natto.protocol.Parser">
+      <point x="0.0" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.MultiProtocolServer" target="ar.edu.itba.pdc.natto.proxy.Server">
+      <point x="0.0" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppClientNegotiator" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandler">
+      <point x="0.0" y="-14.5" />
+      <point x="555.0" y="301.0" />
+      <point x="449.1" y="301.0" />
+      <point x="26.600000000000023" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppParser" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandler">
+      <point x="26.5" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppServerNegotiator" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandler">
+      <point x="43.25" y="-14.5" />
+      <point x="129.75" y="291.0" />
+      <point x="369.3" y="291.0" />
+      <point x="-53.19999999999999" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.nttp.NttpHandlerFactory" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory">
+      <point x="0.0" y="-14.5" />
+      <point x="406.5" y="143.0" />
+      <point x="361.75" y="143.0" />
+      <point x="44.75" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.handlers.AcceptHandler" target="ar.edu.itba.pdc.natto.proxy.handlers.SelectorHandler">
+      <point x="0.0" y="-14.5" />
+      <point x="69.0" y="-100.0" />
+      <point x="115.5" y="-100.0" />
+      <point x="-32.75" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppForwarder" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandler">
+      <point x="32.5" y="-14.5" />
+      <point x="290.5" y="301.0" />
+      <point x="395.9" y="301.0" />
+      <point x="-26.600000000000023" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.nttp.NttpHandler" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandler">
+      <point x="0.0" y="-14.5" />
+      <point x="715.5" y="291.0" />
+      <point x="475.7" y="291.0" />
+      <point x="53.19999999999999" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.handlers.impl.ProxyConnectionHandler" target="ar.edu.itba.pdc.natto.proxy.handlers.Connection">
+      <point x="47.0" y="-14.5" />
+      <point x="348.75" y="-21.0" />
+      <point x="376.0" y="-21.0" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppParser" target="ar.edu.itba.pdc.natto.protocol.LinkedProtocolHandler">
+      <point x="-26.5" y="-14.5" />
+      <point x="369.5" y="281.0" />
+      <point x="283.83333333333337" y="281.0" />
+      <point x="58.33333333333337" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.handlers.impl.ProxyConnectionHandler" target="ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler">
+      <point x="-47.0" y="-14.5" />
+      <point x="254.75" y="-21.0" />
+      <point x="227.5" y="-21.0" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.nttp.NttpProtocol" target="ar.edu.itba.pdc.natto.protocol.Protocol">
+      <point x="0.0" y="-14.5" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.protocol.xmpp.XmppHandlerFactory" target="ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory">
+      <point x="0.0" y="-14.5" />
+      <point x="227.5" y="143.0" />
+      <point x="272.25" y="143.0" />
+      <point x="-44.75" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher" target="ar.edu.itba.pdc.natto.dispatcher.Dispatcher">
+      <point x="-39.0" y="-14.5" />
+      <point x="551.5" y="-79.0" />
+      <point x="514.0" y="-79.0" />
+      <point x="0.0" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.proxy.handlers.ConnectionHandler" target="ar.edu.itba.pdc.natto.proxy.handlers.SelectorHandler">
+      <point x="0.0" y="-14.5" />
+      <point x="227.5" y="-100.0" />
+      <point x="181.0" y="-100.0" />
+      <point x="32.75" y="14.5" />
+    </edge>
+    <edge source="ar.edu.itba.pdc.natto.dispatcher.ConcreteDispatcher" target="ar.edu.itba.pdc.natto.dispatcher.DispatcherSubscriber">
+      <point x="39.0" y="-14.5" />
+      <point x="629.5" y="-79.0" />
+      <point x="667.0" y="-79.0" />
+      <point x="0.0" y="14.5" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="442.5" y="122.5" />
+  <SelectedNodes />
+  <Categories />
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+
