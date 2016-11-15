@@ -17,7 +17,6 @@ import java.nio.channels.SocketChannel;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     private static final Logger logger = LoggerFactory.getLogger(ProxyConnectionHandler.class);
@@ -29,14 +28,11 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
     private final SocketChannel channel;
     private ProtocolHandler handler;
-    private Connection connection;
 
     private final ByteBuffer readBuffer;
     private final ByteBuffer writeBuffer;
 
-    private boolean readRequested = false;
     private boolean closeRequested = false;
-    private boolean alive = true;
 
     public ProxyConnectionHandler(final SocketChannel channel,
                                   final DispatcherSubscriber subscriber,
@@ -49,7 +45,6 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
         this.channel = channel;
         this.handler = checkNotNull(handler, "Handler can't be null");
-        this.connection = this;
 
         this.readBuffer = ByteBuffer.allocate(READ_BUFFER_SIZE);
         this.writeBuffer = ByteBuffer.allocate(WRITE_BUFFER_SIZE);
@@ -64,23 +59,35 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     }
 
     @Override
-    public void requestConnect(final InetSocketAddress address,
-                               final ProtocolHandler serverProtocol) throws IOException {
+    public boolean requestConnect(final InetSocketAddress address,
+                                  final ProtocolHandler serverProtocol) {
         checkNotNull(address, "Address can't be null");
         checkNotNull(serverProtocol, "Protocol handler can't be null");
 
-        logger.info("Requested connection to: " + address);
+        logger.info("Requested connection to " + address);
 
-        SocketChannel serverChannel = SocketChannel.open();
-        serverChannel.configureBlocking(false);
-        serverChannel.connect(address);
+        SocketChannel serverChannel = null;
+
+        try {
+            serverChannel = SocketChannel.open();
+            serverChannel.configureBlocking(false);
+            serverChannel.connect(address);
+        } catch (IOException exception) {
+            logger.error("Can't initiate connection to server", exception);
+
+            if (serverChannel != null) {
+                Closeables.closeSilently(serverChannel);
+            }
+
+            return false;
+        }
 
         ProxyConnectionHandler serverHandler = new ProxyConnectionHandler(serverChannel, subscriber,
                 serverProtocol);
-        serverHandler.connection = this;
-        this.connection = serverHandler;
 
         subscriber.subscribe(serverChannel, ChannelOperation.CONNECT, serverHandler);
+
+        return true;
     }
 
     @Override
@@ -91,7 +98,6 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
                 logger.info("Established connection with server on " + serverAddress);
 
-
                 subscriber.unsubscribe(channel, ChannelOperation.CONNECT);
 
                 handler.afterConnect();
@@ -100,20 +106,18 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
             logger.error("Couldn't establish connection with server", exception);
 
             forceClose();
-
-//            // TODO: ?
-//            logger.info("Closing connection with client");
-//            connection.requestClose();
         }
     }
 
     @Override
-    public void requestRead() {
-        checkState(channel.isOpen()); // TODO: Remove (jp)
-
-        if (!channel.isConnectionPending()) {
-            subscriber.subscribe(channel, ChannelOperation.READ, this);
+    public boolean requestRead() {
+        if (closeRequested || channel.isConnectionPending() || !channel.isOpen()) {
+            return false;
         }
+
+        subscriber.subscribe(channel, ChannelOperation.READ, this);
+
+        return true;
     }
 
     @Override
@@ -123,7 +127,7 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         try {
             bytesRead = channel.read(readBuffer);
         } catch (IOException exception) {
-            logger.error("Can't read from channel", exception);
+            logger.error("Can't read from channel, closing...", exception);
 
             forceClose();
 
@@ -132,16 +136,14 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
         // The channel has reached end-of-stream
         if (bytesRead == -1) {
-            logger.info("Channel reached EOF");
+            logger.info("Channel reached EOF, closing");
 
-            // TODO: Is alive here?
             forceClose();
 
             return;
         }
 
         if (bytesRead > 0) {
-            checkState(channel.isOpen()); // TODO: Remove (jp)
             subscriber.unsubscribe(channel, ChannelOperation.READ);
 
             readBuffer.flip();
@@ -151,22 +153,22 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
     }
 
     @Override
-    public void requestWrite(ByteBuffer source) {
-        if (!channel.isConnectionPending()) {
-
-            while (writeBuffer.position() < writeBuffer.limit() && source.hasRemaining()) {
-                writeBuffer.put(source.get());
-            }
-
-            checkState(channel.isOpen()); // TODO: Remove (jp)
-            subscriber.subscribe(channel, ChannelOperation.WRITE, this);
+    public boolean requestWrite(ByteBuffer source) {
+        if (channel.isConnectionPending() || closeRequested || !channel.isOpen()) {
+            return false;
         }
+
+        while (writeBuffer.position() < writeBuffer.limit() && source.hasRemaining()) {
+            writeBuffer.put(source.get());
+        }
+
+        subscriber.subscribe(channel, ChannelOperation.WRITE, this);
+
+        return true;
     }
 
     @Override
     public void handle_write() {
-        checkState(writeBuffer.position() != 0);
-
         writeBuffer.flip();
 
         try {
@@ -180,11 +182,12 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
         }
 
         if (!writeBuffer.hasRemaining()) {
-            checkState(channel.isOpen()); // TODO: Remove (jp)
             subscriber.unsubscribe(channel, ChannelOperation.WRITE);
 
             if (closeRequested) {
+                // TODO
                 forceClose();
+
                 return;
             }
         }
@@ -196,27 +199,24 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
 
     @Override
     public boolean isAlive() {
-        return alive;
+        return channel.isOpen();
     }
 
     @Override
     public void requestClose() {
-        if (closeRequested) {
+        if (closeRequested || !channel.isOpen()) {
             return;
         }
 
         closeRequested = true;
-        checkState(channel.isOpen()); // TODO: Remove (jp)
         subscriber.unsubscribe(channel, ChannelOperation.READ);
 
         if (writeBuffer.position() == 0) {
-            handler.beforeClose();
-            Closeables.closeSilently(channel);
+            forceClose();
         }
     }
 
     private void forceClose() {
-        alive = false;
         handler.beforeClose();
         Closeables.closeSilently(channel);
     }

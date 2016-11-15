@@ -21,13 +21,13 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
     private final ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     private final XmppData xmppData;
     private final String user;
+    private final String toServer = "localhost"; // TODO: Recibir
 
     private LinkedProtocolHandler link;
 
     private boolean inMessage = false;
     private boolean inBody = false;
-
-    //   StringBuilder sb = new StringBuilder();
+    private boolean ignoreMessage = false;
 
     public XmppParser(XmppData data, String user) {
         this.xmppData = data;
@@ -46,10 +46,13 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
 
     @Override
     public void requestWrite(ByteBuffer buffer) {
+        if (ignoreMessage) {
+            return;
+        }
+
         int before = buffer.remaining();
         connection.requestWrite(buffer);
         xmppData.moreBytesTransferred(before - buffer.remaining());
-        System.out.println("LA CANTIDAD DE BYTES QUE ESCRIBI SON DEL PARSER  " + (before - buffer.remaining()));
     }
 
     @Override
@@ -61,18 +64,29 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
             if (parser.getInputFeeder().needMoreInput()) {
                 connection.requestRead();
             } else {
-                int ret = parse();
-
-                if (ret == -1) {
-                    checkState(false);
-                    // TODO:
-                } else if (ret == 1) {
-                    retBuffer.flip();
-                    link.requestWrite(retBuffer);
-                } else {
-                    connection.requestRead();
-                }
+                callParse();
             }
+        }
+    }
+
+    private void callParse() {
+        int ret = parse();
+
+        if (ret == -1) {
+            checkState(false);
+            // TODO:
+        } else if (ret == 1) {
+            retBuffer.flip();
+
+            if (ignoreMessage && retBuffer.hasRemaining()) {
+                int before = retBuffer.remaining();
+                connection.requestWrite(retBuffer);
+                xmppData.moreBytesTransferred(before - retBuffer.remaining());
+            } else {
+                link.requestWrite(retBuffer);
+            }
+        } else {
+            connection.requestRead();
         }
     }
 
@@ -121,7 +135,14 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
             // TODO:
         } else if (ret == 1) {
             retBuffer.flip();
-            link.requestWrite(retBuffer);
+
+            if (ignoreMessage) {
+                int before = retBuffer.remaining();
+                connection.requestWrite(retBuffer);
+                xmppData.moreBytesTransferred(before - retBuffer.remaining());
+            } else {
+                link.requestWrite(retBuffer);
+            }
         } else {
             connection.requestRead();
         }
@@ -129,6 +150,22 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
 
     @Override
     public void afterWrite() {
+        if (ignoreMessage) {
+            if (retBuffer.hasRemaining()) {
+                int before = retBuffer.remaining();
+                connection.requestWrite(retBuffer);
+                xmppData.moreBytesTransferred(before - retBuffer.remaining());
+            } else {
+                retBuffer.clear();
+
+                if (parser.getInputFeeder().needMoreInput()) {
+                    connection.requestRead();
+                } else {
+                    callParse();
+                }
+            }
+        }
+
         link.finishedWriting();
     }
 
@@ -204,66 +241,97 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
     private void handleStartElement() {
         String local = parser.getLocalName();
         String prefix = parser.getPrefix();
+        String toUser = null;
+
+        if (ignoreMessage) {
+            return;
+        }
 
         if (local.equals("message")) {
-            inMessage = true;
+            if (xmppData.isUserSilenced(user)) {
+                ignoreMessage = true;
+            } else {
+                inMessage = true;
+            }
         } else if (local.equals("body") && inMessage) {
             inBody = true;
         }
 
         retBuffer.put("<".getBytes());
-//        sb.append("<");
         if (prefix != null && !prefix.isEmpty()) {
             retBuffer.put(prefix.getBytes())
                     .put(":".getBytes());
-//            sb.append(parser.getPrefix()).append(":");
         }
+
         retBuffer.put(local.getBytes());
-//        sb.append(name);
         retBuffer.put(" ".getBytes());
-//            sb.append(" ");
 
         for (int i = 0; i < parser.getAttributeCount(); i++) {
-            if (!parser.getAttributePrefix(i).isEmpty()) {
-                retBuffer.put(parser.getAttributePrefix(i).getBytes())
-                        .put(":".getBytes());
-//                sb.append(parser.getAttributePrefix(i)).append(":");
-            }
+            if (ignoreMessage && parser.getAttributeLocalName(i).equals("from")) {
+                retBuffer.put("to='".getBytes())
+                        .put(parser.getAttributeValue(i).getBytes())
+                        .put("' from='".getBytes())
+                        .put(toServer.getBytes())
+                        .put("' ".getBytes());
+            } else if (ignoreMessage && parser.getAttributeLocalName(i).equals("to")) {
+                // Ignore
+            } else {
+                if (inMessage && parser.getAttributeLocalName(i).equals("to")) {
+                    toUser = parser.getAttributeValue(i);
+                }
 
-            retBuffer.put(parser.getAttributeLocalName(i).getBytes())
-                    .put("='".getBytes())
-                    .put(parser.getAttributeValue(i).getBytes())
-                    .put("' ".getBytes());
-//            sb.append(parser.getAttributeLocalName(i)).append("=\"").append(parser.getAttributeValue(i)).append("\"");
+                if (!parser.getAttributePrefix(i).isEmpty()) {
+                    retBuffer.put(parser.getAttributePrefix(i).getBytes())
+                            .put(":".getBytes());
+                }
+
+                retBuffer.put(parser.getAttributeLocalName(i).getBytes())
+                        .put("='".getBytes())
+                        .put(parser.getAttributeValue(i).getBytes())
+                        .put("' ".getBytes());
+            }
         }
 
         for (int i = 0; i < parser.getNamespaceCount(); i++) {
             retBuffer.put("xmlns".getBytes());
-//            sb.append(" ").append("xmlns");
             if (!parser.getNamespacePrefix(i).isEmpty()) {
                 retBuffer.put(":".getBytes())
                         .put(parser.getNamespacePrefix(i).getBytes());
-//                sb.append(":").append(parser.getNamespacePrefix(i));
             }
 
             retBuffer.put("='".getBytes())
                     .put(parser.getNamespaceURI(i).getBytes())
                     .put("' ".getBytes());
-//            sb.append("=\"").append(parser.getNamespaceURI(i)).append("\"");
         }
 
-        retBuffer.put(XmppMessages.INITIAL_STREAM_END.getBytes());
-//        sb.append(">");
+        retBuffer.put(">".getBytes());
+
+        if (ignoreMessage) {
+            retBuffer.put(("<error by='" + toServer + "' type='modify'><policy-violati" +
+                    "on xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/></error></message>").getBytes());
+        }
+
+        if (toUser != null) {
+            String[] username = toUser.split("@", 2);
+
+            if (xmppData.isUserSilenced(username[0])) {
+                retBuffer.clear();
+                ignoreMessage = true;
+            }
+        }
     }
 
     public void handleCharacters() {
+        if (ignoreMessage) {
+            return;
+        }
+
         if (inBody) {
             for (char c : parser.getText().toCharArray()) {
                 transform(c);
             }
         } else {
             retBuffer.put(parser.getText().getBytes());
-//            sb.append(parser.getText());
         }
     }
 
@@ -275,31 +343,26 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
                 case 'a':
                     changed = true;
                     retBuffer.put("4".getBytes());
-//                            sb.append("4");
                     break;
 
                 case 'e':
                     changed = true;
                     retBuffer.put("3".getBytes());
-//                            sb.append("3");
                     break;
 
                 case 'i':
                     changed = true;
                     retBuffer.put("1".getBytes());
-//                            sb.append("1");
                     break;
 
                 case 'o':
                     changed = true;
                     retBuffer.put("0".getBytes());
-//                            sb.append("0");
                     break;
 
                 case 'c':
                     changed = true;
                     retBuffer.put("&lt;".getBytes());
-//                            sb.append("&lt;");
                     break;
             }
         }
@@ -308,32 +371,26 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
             switch (c) {
                 case '<':
                     retBuffer.put("&lt;".getBytes());
-//                        sb.append("&lt;");
                     break;
 
                 case '>':
                     retBuffer.put("&gt;".getBytes());
-//                        sb.append("&gt;");
                     break;
 
                 case '&':
                     retBuffer.put("&amp;".getBytes());
-//                        sb.append("&amp;");
                     break;
 
                 case '\'':
                     retBuffer.put("&apos;".getBytes());
-//                        sb.append("&apos;");
                     break;
 
                 case '\"':
                     retBuffer.put("&quot;".getBytes());
-//                        sb.append("&quot;");
                     break;
 
                 default:
                     retBuffer.put(String.valueOf(c).getBytes());
-//                        sb.append(c);
                     break;
             }
         }
@@ -343,18 +400,23 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
         String local = parser.getLocalName();
         String prefix = parser.getPrefix();
 
+        if (ignoreMessage) {
+            if (local.equals("message")) {
+                ignoreMessage = false;
+            }
+
+            return;
+        }
+
         retBuffer.put("</".getBytes());
-//        sb.append("</");}
 
         if (prefix != null && !prefix.isEmpty()) {
             retBuffer.put(parser.getPrefix().getBytes())
                     .put(":".getBytes());
-//            sb.append(parser.getPrefix()).append(":");
         }
 
         retBuffer.put(local.getBytes())
                 .put(">".getBytes());
-//        sb.append(parser.getName().getLocalPart()).append(">");
 
         if (local.equals("body") && inMessage) {
             inBody = false;

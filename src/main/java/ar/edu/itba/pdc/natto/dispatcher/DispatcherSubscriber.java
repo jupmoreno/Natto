@@ -8,8 +8,6 @@ import java.nio.channels.SelectableChannel;
 public interface DispatcherSubscriber {
     void subscribe(SelectableChannel channel, ChannelOperation op, SelectorHandler connector);
 
-//    void subscribe(SelectableChannel channel, int op); // TODO:
-
     void unsubscribe(SelectableChannel channel, ChannelOperation op);
 
     void cancel(SelectableChannel channel);

@@ -56,7 +56,6 @@ public class Acceptor implements AcceptHandler {
 
                 subscriber.subscribe(client, ChannelOperation.READ, handlers.getHandler(client));
             }
-
         } catch (IOException exception) {
             logger.error("Can't accept new client connection", exception);
 

@@ -1,5 +1,6 @@
 package ar.edu.itba.pdc.natto.protocol.xmpp;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -12,7 +13,6 @@ import com.fasterxml.aalto.stax.InputFactoryImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -43,10 +43,10 @@ public class XmppClientNegotiator extends ProtocolHandler {
     private String toServer;
 
     private final XmppData data;
+    private boolean hasToClose = false;
 
     public XmppClientNegotiator(XmppData data) {
-
-        this.data = data;
+        this.data = checkNotNull(data, "Data can't be null");
         data.newAccess();
     }
 
@@ -55,27 +55,39 @@ public class XmppClientNegotiator extends ProtocolHandler {
         throw new IllegalStateException("Not a connectable handler");
     }
 
-    public void requestWrite(ByteBuffer buffer){
-        int before = buffer.remaining();
-        connection.requestWrite(buffer);
-        data.moreBytesTransferred(before - buffer.remaining());
-        System.out.println("LA CANTIDAD DE BYTES QUE ESCRIBI SON DEL CLIENT  " + (before - buffer.remaining()));
-
+    public void requestWrite() {
+        int before = retBuffer.remaining();
+        connection.requestWrite(retBuffer);
+        data.moreBytesTransferred(before - retBuffer.remaining());
     }
 
     @Override
     public void afterRead(ByteBuffer readBuffer) {
         int ret = handshake(readBuffer);
 
-        if (hasToWrite) {
-            hasToWrite = false;
-            retBuffer.flip();
-            requestWrite(retBuffer);
+        if (ret == 0) {
+            if (hasToWrite) {
+                hasToWrite = false;
+                retBuffer.flip();
+                requestWrite();
+            } else {
+                connection.requestRead();
+            }
+
+            return;
         }
 
         if (ret == -1) {
-            connection.requestClose();
-        } else if (ret == 1) {
+            hasToClose = true;
+
+            if (hasToWrite) {
+                hasToWrite = false;
+                retBuffer.flip();
+                requestWrite();
+            } else {
+                connection.requestClose();
+            }
+        } else {
             logger.info("User " + user + " connected");
 
             NetAddress netAddress = data.getUserAddress(user);
@@ -89,41 +101,41 @@ public class XmppClientNegotiator extends ProtocolHandler {
             clientParser.link(serverNegotiator);
             connection.setHandler(clientParser);
 
-            try {
-                connection.requestConnect(serverAddress, serverNegotiator);
-            } catch (IOException | IllegalArgumentException exception) {
-                logger.error("Failed to request server connection", exception);
+            if (!connection.requestConnect(serverAddress, serverNegotiator)) {
+                logger.error("Failed to request server connection");
 
                 handleError(XmppErrors.REMOTE_CONNECTION_FAILED); // TODO: Este error?
                 retBuffer.flip();
-                requestWrite(retBuffer);
-                connection.requestClose();
-                // TODO: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                requestWrite();
+
+                hasToClose = true;
             }
         }
 
-        if (ret != 0) {
-            try {
-                reader.closeCompletely(); // TODO: O usar close() ????
-            } catch (XMLStreamException exception) {
-                logger.error("Failed to correctly close parser", exception);
-            }
+        try {
+            reader.closeCompletely();
+        } catch (XMLStreamException exception) {
+            logger.error("Failed to correctly close parser", exception);
         }
     }
 
     @Override
     public void afterWrite() {
         if (retBuffer.hasRemaining()) {
-            requestWrite(retBuffer);
+            requestWrite();
         } else {
-            retBuffer.clear();
-            connection.requestRead();
+            if (hasToClose) {
+                connection.requestClose();
+            } else {
+                retBuffer.clear();
+                connection.requestRead();
+            }
         }
     }
 
     @Override
     public void beforeClose() {
-        // TODO:
+        // Intentionally
     }
 
     private int handshake(ByteBuffer readBuffer) {
@@ -190,24 +202,12 @@ public class XmppClientNegotiator extends ProtocolHandler {
                 case AsyncXMLStreamReader.CHARACTERS:
                     if (!invalidAuth && inAuth) {
                         userBuilder.append(reader.getText());
-                    } else {
-                        // Ignore
                     }
+
                     break;
 
                 case AsyncXMLStreamReader.END_ELEMENT:
-                    if (reader.getLocalName().equals("auth")) {
-                        if (!invalidAuth) {
-                            return getUser();
-                        }
-
-                        invalidAuth = false;
-                        inAuth = false;
-                    } else {
-                        checkState(false); // TODO: For testing...
-                    }
-
-                    return NegotiationStatus.IN_PROCESS;
+                    return handleEndElement();
 
                 case AsyncXMLStreamReader.EVENT_INCOMPLETE:
                     return NegotiationStatus.INCOMPLETE;
@@ -365,6 +365,24 @@ public class XmppClientNegotiator extends ProtocolHandler {
         }
 
         return NegotiationStatus.ERROR;
+    }
+
+    private NegotiationStatus handleEndElement() {
+        String local = reader.getLocalName();
+        String prefix = reader.getPrefix();
+
+        if (local.equals("auth")) {
+            if (!invalidAuth) {
+                return getUser();
+            }
+
+            invalidAuth = false;
+            inAuth = false;
+        } else if (local.equals("stream") && prefix != null && prefix.equals("stream")) {
+            return NegotiationStatus.ERROR;
+        }
+
+        return NegotiationStatus.IN_PROCESS;
     }
 
     private NegotiationStatus getUser() {

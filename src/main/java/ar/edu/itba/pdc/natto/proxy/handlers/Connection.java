@@ -9,12 +9,11 @@ import java.nio.ByteBuffer;
 public interface Connection {
     void setHandler(ProtocolHandler handler);
 
-    void requestConnect(final InetSocketAddress address,
-                              final ProtocolHandler serverProtocol) throws IOException;
+    boolean requestConnect(final InetSocketAddress address, final ProtocolHandler serverProtocol);
 
-    void requestWrite(ByteBuffer buffer);
+    boolean requestWrite(ByteBuffer buffer);
 
-    void requestRead();
+    boolean requestRead();
 
     boolean isAlive();
 

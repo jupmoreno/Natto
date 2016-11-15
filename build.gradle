@@ -3,6 +3,8 @@ apply plugin: 'application'
 apply plugin: 'idea'
 
 mainClassName = 'ar.edu.itba.pdc.natto.Main'
+sourceCompatibility = 1.8
+version = '0.1'
 
 repositories {
     mavenCentral()
@@ -10,7 +12,7 @@ repositories {
 
 dependencies {
     compile group: 'args4j', name: 'args4j', version: '2.33'
-    compile group: 'org.slf4j', name:'slf4j-api', version: '1.7.21'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.6.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.6.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.6.2'
@@ -18,4 +20,18 @@ dependencies {
     compile group: 'com.fasterxml', name: 'aalto-xml', version: '1.0.0'
     compile group: 'org.apache.commons', name: 'commons-configuration2', version: '2.1'
     compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.3'
+}
+
+jar {
+    baseName = 'Natto'
+
+    manifest {
+        attributes 'Implementation-Title': baseName,
+                'Implementation-Version': version,
+                'Main-Class': mainClassName
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }

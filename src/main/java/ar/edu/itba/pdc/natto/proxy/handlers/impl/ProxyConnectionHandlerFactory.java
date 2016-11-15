@@ -8,7 +8,6 @@ import ar.edu.itba.pdc.natto.protocol.ProtocolHandlerFactory;
 
 import java.nio.channels.SocketChannel;
 
-// TODO: Agregar <T>?
 public class ProxyConnectionHandlerFactory implements ConnectionHandlerFactory {
     private final DispatcherSubscriber subscriber;
     private final ProtocolHandlerFactory factory;

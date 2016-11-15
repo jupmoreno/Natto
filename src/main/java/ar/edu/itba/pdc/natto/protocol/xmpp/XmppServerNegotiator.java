@@ -19,8 +19,8 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
     private static final Logger logger = LoggerFactory.getLogger(XmppServerNegotiator.class);
 
     private static final int BUFFER_SIZE = 10000;
-    private static final ByteBuffer closeBuffer = ByteBuffer.wrap(
-            XmppMessages.END_STREAM.getBytes()).asReadOnlyBuffer(); // TODO: Test
+    private final ByteBuffer closeBuffer = ByteBuffer.wrap(
+            XmppMessages.END_STREAM.getBytes()).asReadOnlyBuffer();
 
     private final AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private final AsyncXMLStreamReader<AsyncByteBufferFeeder> reader =
@@ -39,8 +39,6 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
     private final String user64;
     private final String user;
     private final String toServer;
-
-    private String tagClientResponse = null;
 
     private LinkedProtocolHandler link;
 
@@ -65,7 +63,6 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
     public void requestWrite(ByteBuffer buffer) {
         int before = buffer.remaining();
         connection.requestWrite(buffer);
-        System.out.println("LA CANTIDAD DE BYTES QUE ESCRIBI SON DEL SERVER NEG " + (before - buffer.remaining()));
         data.moreBytesTransferred(before - buffer.remaining());
     }
 
@@ -94,26 +91,26 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
         retBuffer.put("xmlns:xml='http://www.w3.org/XML/1998/namespace'>".getBytes());
         retBuffer.flip();
 
-        connection.requestWrite(retBuffer);
+        requestWrite(retBuffer);
     }
 
     @Override
     public void afterRead(final ByteBuffer readBuffer) {
         int ret = handshake(readBuffer);
 
-        if (ret == -1) {
-            connection.requestWrite(closeBuffer);
+        if (ret == 0) {
+            connection.requestRead();
+        } else if (ret == -1) {
+            requestWrite(closeBuffer);
             connection.requestClose();
 
             retBuffer.flip();
             link.requestWrite(retBuffer);
-        } else if (ret == 1) {
+        } else {
             authSent = true;
 
             retBuffer.flip();
-            connection.requestWrite(retBuffer);
-        } else if (ret == 0) {
-            connection.requestRead();
+            requestWrite(retBuffer);
         }
     }
 
@@ -121,7 +118,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
     public void afterWrite() {
         if (authSent) {
             if (retBuffer.hasRemaining()) {
-                connection.requestWrite(retBuffer);
+                requestWrite(retBuffer);
             } else {
                 XmppForwarder handler = new XmppForwarder(data);
                 handler.link(link);
@@ -134,7 +131,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
             }
         } else {
             if (retBuffer.hasRemaining()) {
-                connection.requestWrite(retBuffer);
+                requestWrite(retBuffer);
             } else {
                 retBuffer.clear();
                 connection.requestRead();
@@ -226,7 +223,6 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
         }
 
         return NegotiationStatus.ERROR;
-
     }
 
     private NegotiationStatus handleStartDocument() {
@@ -276,6 +272,7 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
 
     private NegotiationStatus handleEndElement() {
         String local = reader.getLocalName();
+        String prefix = reader.getPrefix();
 
         if (local.equals("features")) {
             if (!hasPlain) {
@@ -292,6 +289,9 @@ public class XmppServerNegotiator extends ProtocolHandler implements LinkedProto
             return NegotiationStatus.FINISHED;
         } else if (local.equals("mechanism")) {
             inMechanism = false;
+        } else if (local.equals("stream") && prefix != null && prefix.equals("stream")) {
+            handleError(XmppErrors.INTERNAL_SERVER); // TODO: Que error?
+            return NegotiationStatus.ERROR;
         }
 
         return NegotiationStatus.IN_PROCESS;

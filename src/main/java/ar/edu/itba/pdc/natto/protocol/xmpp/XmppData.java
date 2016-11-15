@@ -13,15 +13,11 @@ public class XmppData {
     private NetAddress defaultAddress = new NetAddress(Defaults.SERVER_ADDRESS,
             Defaults.SERVER_PORT);
     private final Map<String, NetAddress> usersAddress;
-    private boolean silence = Defaults.SILENCE_ENABLED;
     private final Set<String> usersSilenced;
     private boolean transform = Defaults.TRANSFORMATION_ENABLED;
 
     private long bytesTransferred = 0;
     private long accessesAmount = 0;
-
-
-
     private long acceptedAmount = 0;
 
     public XmppData(Map<String, NetAddress> usersAddress, Set<String> usersSilenced) {
@@ -56,19 +52,15 @@ public class XmppData {
     }
 
     public boolean isUserSilenced(String name) {
-        return silence && usersSilenced.contains(name);
+        return usersSilenced.contains(checkNotNull(name).toLowerCase());
     }
 
     public void silenceUser(String name) {
-        usersSilenced.add(checkNotNull(name));
+        usersSilenced.add(checkNotNull(name).toLowerCase());
     }
 
     public void unsilenceUser(String name) {
-        usersSilenced.remove(checkNotNull(name));
-    }
-
-    public void setSilence(boolean enabled) {
-        this.silence = enabled;
+        usersSilenced.remove(checkNotNull(name).toLowerCase());
     }
 
     public void setTransformation(boolean enabled) {

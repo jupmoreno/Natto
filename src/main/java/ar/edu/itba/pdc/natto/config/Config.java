@@ -64,7 +64,9 @@ public class Config {
                 null);
         xmppSilencedUsers = new HashSet<>();
         if (silencedUsers != null) {
-            xmppSilencedUsers.addAll(silencedUsers);
+            for (String user : silencedUsers) {
+                xmppSilencedUsers.add(user.toLowerCase());
+            }
         }
 
         xmppTransformationEnabled = config.getBoolean("xmpp.transformation[@enabled]",

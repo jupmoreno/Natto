@@ -26,7 +26,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
 
     @Override
     public void handle_events() throws IOException {
-        if (selector.select() != 0) { // TODO: Timeout (?
+        if (selector.select() != 0) {
             Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 
             while (it.hasNext()) {
@@ -72,6 +72,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
 
     @Override
     public void subscribe(SelectableChannel channel, ChannelOperation op, SelectorHandler handler) {
+        checkNotNull(op, "Operation can't be null");
         checkNotNull(handler, "Handler can't be null");
 
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
@@ -86,7 +87,6 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
             logger.error("Requested subscription of closed channel", exception);
             throw new IllegalArgumentException("Channel closed");
         }
-
     }
 
     @Override
@@ -103,7 +103,7 @@ public class ConcreteDispatcher implements Dispatcher, DispatcherSubscriber {
         SelectionKey key = checkNotNull(channel, "Channel can't be null").keyFor(selector);
 
         if (key != null) {
-            key.cancel(); // TODO: Check && OPs oreadas?
+            key.cancel();
         }
     }
 }
