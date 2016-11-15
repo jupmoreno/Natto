@@ -34,7 +34,6 @@ public class NttpHandler extends ProtocolHandler {
 
             if (request != null) {
                 StringBuilder response = protocol.process(request);
-                System.out.println("RESPONSE: " + response); // TODO: Remove
                 if (response != null) {
                     connection.requestWrite(toByteBuffer(response));
                     if (isQuit(response)) {
