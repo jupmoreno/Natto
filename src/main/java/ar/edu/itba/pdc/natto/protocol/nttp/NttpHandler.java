@@ -83,7 +83,6 @@ public class NttpHandler extends ProtocolHandler {
         buffer.clear();
         buffer.put(message.toString().getBytes());
         buffer.flip();
-
         return buffer;
     }
 }

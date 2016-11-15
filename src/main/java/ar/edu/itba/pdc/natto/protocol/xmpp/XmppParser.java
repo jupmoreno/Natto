@@ -6,6 +6,8 @@ import com.fasterxml.aalto.AsyncByteBufferFeeder;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.stream.XMLStreamException;
 import java.nio.ByteBuffer;
@@ -13,6 +15,8 @@ import java.nio.ByteBuffer;
 import static com.google.common.base.Preconditions.checkState;
 
 public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler {
+    private static final Logger logger = LoggerFactory.getLogger(XmppParser.class);
+
     private final static int BUFFER_MAX_SIZE = 10000;
 
     private final AsyncXMLInputFactory inputF = new InputFactoryImpl();
@@ -182,7 +186,8 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
                         break;
                 }
             }
-        } catch (XMLStreamException e) {
+        } catch (XMLStreamException exception) {
+            logger.error("Can't parse message ", exception);
             return -1;
         }
 
