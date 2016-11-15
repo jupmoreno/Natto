@@ -185,7 +185,6 @@ public class ProxyConnectionHandler implements ConnectionHandler, Connection {
             subscriber.unsubscribe(channel, ChannelOperation.WRITE);
 
             if (closeRequested) {
-                // TODO JPM
                 forceClose();
 
                 return;

@@ -7,7 +7,7 @@ public enum XmppMessages {
     END_STREAM("</stream:stream>"),
     VERSION_AND_ENCODING("<?xml version='1.0' encoding='UTF-8'?>"),
     STREAM_FEATURES("<stream:features>"
-            + "<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><mechanism>PLAIN</mechanism></mechanisms>" //TODO JPM: compression ???
+            + "<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><mechanism>PLAIN</mechanism></mechanisms>"
             + "<auth xmlns='http://jabber.org/features/iq-auth'/>"
             + "</stream:features>"),
     AUTH_START("<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>"),

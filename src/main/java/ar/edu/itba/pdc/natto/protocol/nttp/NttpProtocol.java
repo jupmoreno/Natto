@@ -274,12 +274,6 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             return;
         }
 
-        if (!authorized) {
-            formulateResponse(NttpCode.BYE_BYE, null);
-            return;
-        }
-
-        //TODO: desloguarse bien y terminar la conección  JPM
         user = "";
         authMethod = "";
         authorized = false;

@@ -62,7 +62,7 @@ public class NttpHandler extends ProtocolHandler {
 
     @Override
     public void beforeClose() {
-        // TODO: JPM
+
     }
 
     private boolean isQuit(StringBuilder command) {

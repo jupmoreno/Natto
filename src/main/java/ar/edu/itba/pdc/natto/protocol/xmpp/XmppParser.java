@@ -18,6 +18,8 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
     private static final Logger logger = LoggerFactory.getLogger(XmppParser.class);
 
     private final static int BUFFER_MAX_SIZE = 10000;
+    private final ByteBuffer closeBuffer = ByteBuffer.wrap(
+            XmppMessages.END_STREAM.getBytes()).asReadOnlyBuffer();
 
     private final AsyncXMLInputFactory inputF = new InputFactoryImpl();
     private final AsyncXMLStreamReader<AsyncByteBufferFeeder> parser = inputF.createAsyncForByteBuffer();
@@ -78,8 +80,10 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
         int ret = parse();
 
         if (ret == -1) {
-            checkState(false);
-            // TODO: JPM ERROR
+            XmppForwarder forwarder = new XmppForwarder(xmppData);
+            forwarder.link(link);
+            link.link(forwarder);
+            connection.setHandler(forwarder);
         } else if (ret == 1) {
             retBuffer.flip();
 
@@ -111,22 +115,11 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
             try {
                 parser.getInputFeeder().feedInput(buffer);
             } catch (XMLStreamException e) {
-                // if the state is such that this method should not be called (has not yet
-                // consumed existing input data, or has been marked as closed)
-                // TODO: This should never happen JPM
-                checkState(false);
-                // Al cliente XmppErrors.INTERNAL_SERVER
-                // Al servidor </stream:stream>
                 return;
             }
         } else {
-            // Method called to check whether it is ok to feed more data: parser returns true if
-            // it has no more content to parse (and it is ok to feed more); otherwise false
-            // (and no data should yet be fed).
-            // TODO: This should never happen JPM
-            checkState(false);
-            // Al cliente XmppErrors.INTERNAL_SERVER
-            // Al servidor </stream:stream>
+            connection.requestWrite(closeBuffer);
+            connection.requestClose();
             return;
         }
 
@@ -156,7 +149,7 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
 
     @Override
     public void beforeClose() {
-        // TODO JPM
+        link.requestClose();
     }
 
     private int parse() {
