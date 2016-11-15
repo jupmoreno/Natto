@@ -90,7 +90,7 @@ public class MultiProtocolServer implements Server {
         } catch (IOException exception) {
             logger.error("Couldn't start Proxy Server", exception);
 
-            close(); // TODO: Sacar (?
+            close();
 
             throw exception;
         }
@@ -104,20 +104,12 @@ public class MultiProtocolServer implements Server {
         } catch (IOException exception) {
             logger.error("Dispatcher force closed", exception);
         } finally {
-            //stop(); // TODO: Sacar (?
+            stop();
         }
     }
 
     @Override
     public void stop() {
-        // TODO: Sacar (?
-        checkState(running);
-
-        running = false;
-
-        close();
-
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -126,6 +118,6 @@ public class MultiProtocolServer implements Server {
     }
 
     void close() {
-        // TODO: Sacar (?
+
     }
 }

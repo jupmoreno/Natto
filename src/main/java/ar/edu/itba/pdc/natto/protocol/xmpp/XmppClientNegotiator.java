@@ -96,7 +96,7 @@ public class XmppClientNegotiator extends ProtocolHandler {
             XmppServerNegotiator serverNegotiator = new XmppServerNegotiator(data, user64, user,
                     toServer);
 
-            XmppParser clientParser = new XmppParser(data, user);
+            XmppParser clientParser = new XmppParser(data, user, toServer);
             serverNegotiator.link(clientParser);
             clientParser.link(serverNegotiator);
             connection.setHandler(clientParser);

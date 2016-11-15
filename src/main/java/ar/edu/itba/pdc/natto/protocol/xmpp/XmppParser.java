@@ -21,7 +21,7 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
     private final ByteBuffer retBuffer = ByteBuffer.allocate(BUFFER_MAX_SIZE);
     private final XmppData xmppData;
     private final String user;
-    private final String toServer = "localhost"; // TODO: Recibir
+    private final String toServer;
 
     private LinkedProtocolHandler link;
 
@@ -29,9 +29,10 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
     private boolean inBody = false;
     private boolean ignoreMessage = false;
 
-    public XmppParser(XmppData data, String user) {
+    public XmppParser(XmppData data, String user, String toServer) {
         this.xmppData = data;
         this.user = user;
+        this.toServer = toServer;
     }
 
     @Override
@@ -74,7 +75,7 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
 
         if (ret == -1) {
             checkState(false);
-            // TODO:
+            // TODO: JPM ERROR
         } else if (ret == 1) {
             retBuffer.flip();
 
@@ -108,10 +109,8 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
             } catch (XMLStreamException e) {
                 // if the state is such that this method should not be called (has not yet
                 // consumed existing input data, or has been marked as closed)
-                // TODO: This should never happen
+                // TODO: This should never happen JPM
                 checkState(false);
-
-                // TODO
                 // Al cliente XmppErrors.INTERNAL_SERVER
                 // Al servidor </stream:stream>
                 return;
@@ -120,32 +119,14 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
             // Method called to check whether it is ok to feed more data: parser returns true if
             // it has no more content to parse (and it is ok to feed more); otherwise false
             // (and no data should yet be fed).
-            // TODO: This should never happen
+            // TODO: This should never happen JPM
             checkState(false);
-            // TODO
             // Al cliente XmppErrors.INTERNAL_SERVER
             // Al servidor </stream:stream>
             return;
         }
 
-        int ret = parse();
-
-        if (ret == -1) {
-            checkState(false);
-            // TODO:
-        } else if (ret == 1) {
-            retBuffer.flip();
-
-            if (ignoreMessage) {
-                int before = retBuffer.remaining();
-                connection.requestWrite(retBuffer);
-                xmppData.moreBytesTransferred(before - retBuffer.remaining());
-            } else {
-                link.requestWrite(retBuffer);
-            }
-        } else {
-            connection.requestRead();
-        }
+        callParse();
     }
 
     @Override
@@ -171,7 +152,7 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
 
     @Override
     public void beforeClose() {
-        // TODO
+        // TODO JPM
     }
 
     private int parse() {
@@ -202,36 +183,14 @@ public class XmppParser extends ProtocolHandler implements LinkedProtocolHandler
                 }
             }
         } catch (XMLStreamException e) {
-            // Al cliente XmppErrors.BAD_FORMAT
-            // Al servidor </stream:stream>
             return -1;
         }
 
-        // TODO: Acordarse de hacer el endOfInput cuando recibe </stream:stream>
-        // Esta en estado END_DOCUMENT
         return 1;
     }
 
 
     private boolean handleStartDocument() {
-        if (true) { // TODO: Remove
-            return false;
-        }
-
-        String version = parser.getVersion();
-        String encoding = parser.getEncoding();
-
-        // TODO Mandarlo siempre no?
-//        if (version == null && encoding == null) {
-//            return true;
-//        }
-
-        if (encoding != null && !encoding.equals("UTF-8")) {
-            // TODO:
-            // Al cliente XmppErrors.UNSUPPORTED_ENCODING
-            // Al servidor cerrar conexion
-            return false;
-        }
 
         retBuffer.put(XmppMessages.VERSION_AND_ENCODING.getBytes());
 
