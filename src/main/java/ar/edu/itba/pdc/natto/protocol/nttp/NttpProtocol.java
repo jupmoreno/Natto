@@ -32,7 +32,7 @@ public class NttpProtocol implements Protocol<StringBuilder> {
             "Recieves an @user as parameter. Unsilences @user",
             "Recieves a \"true\" or \"false\" as parameter. Enables l33t transformations if parameter is \"true\", or disables l33t transformations if parameter is \"false\".",
             "Without parameters: shows all available metrics. " +
-                    "With parameter @metric: shows the information about @metric. +" +
+                    "With parameter @metric: shows the information about @metric. " +
                     "With head --methods and without value: shows the available metrics.",
             "Shows the state of relevant variables.",
             "Shows the silenced users.",
